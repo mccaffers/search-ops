@@ -1,9 +1,9 @@
+// SearchOps Swift Package
+// Business logic for SearchOps iOS Application
 //
-//  File.swift
-//  
-//
-//  Created by Ryan McCaffery on 25/07/2023.
-//
+// (c) 2023 Ryan McCaffery
+// This code is licensed under MIT license (see LICENSE.txt for details)
+// ---------------------------------------
 
 import Foundation
 import SwiftyJSON

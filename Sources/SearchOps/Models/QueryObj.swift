@@ -1,9 +1,9 @@
+// SearchOps Swift Package
+// Business logic for SearchOps iOS Application
 //
-//  QueryObject.swift
-//  PocketSearch
-//
-//  Created by Ryan on 04/02/2023.
-//
+// (c) 2023 Ryan McCaffery
+// This code is licensed under MIT license (see LICENSE.txt for details)
+// ---------------------------------------
 
 import Foundation
 

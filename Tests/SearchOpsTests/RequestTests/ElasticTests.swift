@@ -1,9 +1,9 @@
+// SearchOps Swift Package
+// Business logic for SearchOps iOS Application
 //
-//  ElasticTests.swift
-//  SearchOpsTests
-//
-//  Created by Ryan McCaffery on 03/05/2023.
-//
+// (c) 2023 Ryan McCaffery
+// This code is licensed under MIT license (see LICENSE.txt for details)
+// ---------------------------------------
 
 import XCTest
 import SwiftyJSON
