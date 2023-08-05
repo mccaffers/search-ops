@@ -1,0 +1,25 @@
+{
+    "test_data": {
+        "mappings": {
+            "test_type": {
+                "properties": {
+                    "age": {
+                        "type": "long"
+                    },
+                    "last_updated": {
+                        "type": "long"
+                    },
+                    "name": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "type": "keyword",
+                                "ignore_above": 256
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,29 @@
+
+{
+    "took": 0,
+    "timed_out": false,
+    "_shards": {
+        "total": 1,
+        "successful": 1,
+        "skipped": 0,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 1,
+            "relation": "eq"
+        },
+        "max_score": 1.0,
+        "hits": [
+            {
+                "_index": "geoanalytics",
+                "_id": "9jOjkIQBf1RYjLM4w4JM",
+                "_score": 1.0,
+                "_source": {
+                    "array": [ "test" ],
+                    "two_elements": [ "test", "test2" ]
+                }
+            }
+        ]
+    }
+}

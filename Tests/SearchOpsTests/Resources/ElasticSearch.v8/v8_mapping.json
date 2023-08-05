@@ -1,0 +1,120 @@
+{
+  "geo" : {
+    "mappings" : {
+      "properties" : {
+        "boundings" : {
+          "properties" : {
+            "east" : {
+              "type" : "float"
+            },
+            "north" : {
+              "type" : "float"
+            },
+            "south" : {
+              "type" : "float"
+            },
+            "west" : {
+              "type" : "float"
+            }
+          }
+        },
+        "city" : {
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          },
+          "type" : "text"
+        },
+        "country" : {
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          },
+          "type" : "text"
+        },
+        "country_code" : {
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          },
+          "type" : "text"
+        },
+        "county" : {
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          },
+          "type" : "text"
+        },
+        "display_name" : {
+          "type" : "text"
+        },
+        "location" : {
+          "type" : "geo_point"
+        },
+        "name" : {
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          },
+          "type" : "text"
+        },
+        "state" : {
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          },
+          "type" : "text"
+        },
+        "street" : {
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          },
+          "type" : "text"
+        },
+        "type" : {
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          },
+          "type" : "text"
+        },
+        "wikidata" : {
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          },
+          "type" : "text"
+        },
+        "wikipedia" : {
+          "fields" : {
+            "keyword" : {
+              "ignore_above" : 256,
+              "type" : "keyword"
+            }
+          },
+          "type" : "text"
+        }
+      }
+    }
+  }
+}
