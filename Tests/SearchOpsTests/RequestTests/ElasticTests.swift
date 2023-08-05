@@ -241,7 +241,7 @@ final class ElasticTests: XCTestCase {
 		
 		XCTAssertEqual(output, "[test]")
 		
-		nameField = renderedObjects!.headers.first(where: {$0.squashedString == "twoEl"})
+		nameField = renderedObjects!.headers.first(where: {$0.squashedString == "two_elements"})
 		
 		output = Results.getValueForKey(fieldParts: nameField!.fieldParts,
 																		item:renderedObjects!.results[0])
