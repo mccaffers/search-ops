@@ -27,10 +27,10 @@ jobs:
           -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' 
           | xcpretty && exit ${PIPESTATUS[0]}
     - name: Convert coverage report to sonarqube format
-      script: |
+      run: >
           bash xccov-to-sonarqube-generic.sh Build/Logs/Test/*.xcresult/ > sonarqube-generic-coverage.xml
     - name: Generate and upload code analysis report
-      script: |
+      run: >
           export PATH=$PATH:$CM_BUILD_DIR/sonar-scanner/bin
           sonar-scanner \
             -Dsonar.projectKey="mccaffers_SearchOps" \
