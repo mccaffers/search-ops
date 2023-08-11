@@ -32,6 +32,8 @@ jobs:
     - name: Convert coverage report to sonarqube format
       run: >
           bash ./.github/workflows/xccov-to-sonarqube-generic.sh *.xcresult/ > sonarqube-generic-coverage.xml
+    - name: Setup sonarqube
+      uses: warchant/setup-sonar-scanner@v3
     - name: Generate and upload code analysis report
       run: >
           export PATH=$PATH:$CM_BUILD_DIR/sonar-scanner/bin
