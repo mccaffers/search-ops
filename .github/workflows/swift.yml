@@ -59,8 +59,7 @@ jobs:
           args: >
             -Dsonar.projectKey="mccaffers_SearchOps" 
             -Dsonar.organization="mccaffers" 
-            -Dsonar.host.url="https://sonarcloud.io" 
-
+            
     # - name: Setup sonarqube
     #   uses: warchant/setup-sonar-scanner@v3
     # - name: Generate and upload code analysis report
