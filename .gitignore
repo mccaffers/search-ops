@@ -90,3 +90,7 @@ fastlane/test_output
 iOSInjectionProject/
 
 **/.DS_Store
+
+sonarqube-generic-coverage.xml
+TestResult*
+TestResult.xcresult/

@@ -21,26 +21,29 @@ jobs:
     #   run: xcodebuild build  -scheme SearchOpsTests  -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' 
     - name: Run tests
       run: >
-          xcodebuild test 
+          xcodebuild 
           -scheme SearchOpsTests 
-          -configuration Debug 
           -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' 
-          | xcpretty && exit ${PIPESTATUS[0]}
+          -resultBundlePath TestResult/ 
+          -enableCodeCoverage YES 
+          clean build test 
+          CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO 
+          | xcpretty -r junit && exit ${PIPESTATUS[0]}
     - name: Convert coverage report to sonarqube format
       run: >
-          bash ./xccov-to-sonarqube-generic.sh Build/Logs/Test/*.xcresult/ > sonarqube-generic-coverage.xml
+          bash ./.github/workflows/xccov-to-sonarqube-generic.sh *.xcresult/ > sonarqube-generic-coverage.xml
     - name: Generate and upload code analysis report
       run: >
           export PATH=$PATH:$CM_BUILD_DIR/sonar-scanner/bin
-          sonar-scanner \
-            -Dsonar.projectKey="mccaffers_SearchOps" \
-            -Dsonar.organization="mccaffers" \
-            -Dsonar.host.url="https://sonarcloud.io" \
-            -Dsonar.login="${{ secrets.SONAR_TOKEN }}" \
-            -Dsonar.c.file.suffixes=- \
-            -Dsonar.cpp.file.suffixes=- \
-            -Dsonar.objc.file.suffixes=- \
-            -Dsonar.projectVersion=1.0.0 \
-            -Dsonar.sources=. \
-            -Dsonar.cfamily.build-wrapper-output.bypass=true \
+          sonar-scanner 
+            -Dsonar.projectKey="mccaffers_SearchOps" 
+            -Dsonar.organization="mccaffers" 
+            -Dsonar.host.url="https://sonarcloud.io" 
+            -Dsonar.login="${{ secrets.SONAR_TOKEN }}" 
+            -Dsonar.c.file.suffixes=- 
+            -Dsonar.cpp.file.suffixes=- 
+            -Dsonar.objc.file.suffixes=- 
+            -Dsonar.projectVersion=1.0.0 
+            -Dsonar.sources=. 
+            -Dsonar.cfamily.build-wrapper-output.bypass=true 
             -Dsonar.coverageReportPaths=sonarqube-generic-coverage.xml
