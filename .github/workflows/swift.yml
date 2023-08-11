@@ -50,6 +50,8 @@ jobs:
           fetch-depth: 0          
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v3
+        with:
+          path: ${RUNNER_TEMP}
       - name: Run sonar-scanner
         uses: SonarSource/sonarcloud-github-action@master
         env:
@@ -59,7 +61,7 @@ jobs:
           args: >
             -Dsonar.projectKey=mccaffers_SearchOps
             -Dsonar.organization=mccaffers
-            -Dsonar.coverageReportPaths=sonarqube-generic-coverage.xml
+            -Dsonar.coverageReportPaths="${RUNNER_TEMP}/sonarqube-generic-coverage.xml"
             
     # - name: Setup sonarqube
     #   uses: warchant/setup-sonar-scanner@v3
