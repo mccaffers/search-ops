@@ -28,7 +28,7 @@ jobs:
           | xcpretty && exit ${PIPESTATUS[0]}
     - name: Convert coverage report to sonarqube format
       run: >
-          bash xccov-to-sonarqube-generic.sh Build/Logs/Test/*.xcresult/ > sonarqube-generic-coverage.xml
+          bash ./xccov-to-sonarqube-generic.sh Build/Logs/Test/*.xcresult/ > sonarqube-generic-coverage.xml
     - name: Generate and upload code analysis report
       run: >
           export PATH=$PATH:$CM_BUILD_DIR/sonar-scanner/bin
