@@ -26,6 +26,7 @@ jobs:
           -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' 
           -resultBundlePath TestResult/ 
           -enableCodeCoverage YES 
+          -derivedDataPath "${RUNNER_TEMP}/Build/DerivedData"
           clean build test 
           CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO 
           | xcpretty -r junit && exit ${PIPESTATUS[0]}
