@@ -43,11 +43,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      # - name: Checkout repository on branch
-      #   uses: actions/checkout@v2
-      #   with:
-      #     ref: ${{ github.HEAD_REF }}
-      #     fetch-depth: 0          
+      - name: Checkout repository on branch
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.HEAD_REF }}
+          fetch-depth: 0          
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v3
       - name: Run sonar-scanner
