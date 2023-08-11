@@ -32,20 +32,14 @@ jobs:
     - name: Convert coverage report to sonarqube format
       run: >
           bash ./.github/workflows/xccov-to-sonarqube-generic.sh *.xcresult/ > sonarqube-generic-coverage.xml
-    - name: Setup sonarqube
-      uses: warchant/setup-sonar-scanner@v3
-    - name: Generate and upload code analysis report
-      run: >
-          export PATH=$PATH:$CM_BUILD_DIR/sonar-scanner/bin
-          sonar-scanner 
-            -Dsonar.projectKey="mccaffers_SearchOps" 
-            -Dsonar.organization="mccaffers" 
-            -Dsonar.host.url="https://sonarcloud.io" 
-            -Dsonar.login="${{ secrets.SONAR_TOKEN }}" 
-            -Dsonar.c.file.suffixes=- 
-            -Dsonar.cpp.file.suffixes=- 
-            -Dsonar.objc.file.suffixes=- 
-            -Dsonar.projectVersion=1.0.0 
-            -Dsonar.sources=. 
-            -Dsonar.cfamily.build-wrapper-output.bypass=true 
-            -Dsonar.coverageReportPaths=sonarqube-generic-coverage.xml
+    - name: Send Coverage to Sonarcloud
+      uses: sonarsource/sonarcloud-github-action@master
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.login="${{ secrets.SONAR_TOKEN }}" 
+          -Dsonar.projectKey="mccaffers_SearchOps" 
+          -Dsonar.organization="mccaffers" 
+          -Dsonar.host.url="https://sonarcloud.io" 
+          -Dsonar.coverageReportPaths=sonarqube-generic-coverage.xml
