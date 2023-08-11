@@ -33,14 +33,48 @@ jobs:
     - name: Convert coverage report to sonarqube format
       run: >
           bash ./.github/workflows/xccov-to-sonarqube-generic.sh *.xcresult/ > sonarqube-generic-coverage.xml
-    - name: Send Coverage to Sonarcloud
-      uses: sonarsource/sonarcloud-github-action@master
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v2
       with:
-        args: >
-          -Dsonar.login="${{ secrets.SONAR_TOKEN }}" 
-          -Dsonar.projectKey="mccaffers_SearchOps" 
-          -Dsonar.organization="mccaffers" 
-          -Dsonar.host.url="https://sonarcloud.io" 
-          -Dsonar.coverageReportPaths=sonarqube-generic-coverage.xml
+        path: sonarqube-generic-coverage.xml
+        retention-days: 1 # Artifact will be available only for 5 days.
+  sonar-scan:    
+    name: Sonar scan
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      # - name: Checkout repository on branch
+      #   uses: actions/checkout@v2
+      #   with:
+      #     ref: ${{ github.HEAD_REF }}
+      #     fetch-depth: 0          
+      - name: Download all workflow run artifacts
+        uses: actions/download-artifact@v3
+      - name: Run sonar-scanner
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} 
+        with: 
+          args: >
+            -Dsonar.projectKey="mccaffers_SearchOps" 
+            -Dsonar.organization="mccaffers" 
+            -Dsonar.host.url="https://sonarcloud.io" 
+            
+    # - name: Setup sonarqube
+    #   uses: warchant/setup-sonar-scanner@v3
+    # - name: Generate and upload code analysis report
+    #   run: >
+    #       export PATH=$PATH:$CM_BUILD_DIR/sonar-scanner/bin
+    #       sonar-scanner 
+    #         -Dsonar.projectKey="mccaffers_SearchOps" 
+    #         -Dsonar.organization="mccaffers" 
+    #         -Dsonar.host.url="https://sonarcloud.io" 
+    #         -Dsonar.login="${{ secrets.SONAR_TOKEN }}" 
+    #         -Dsonar.c.file.suffixes=- 
+    #         -Dsonar.cpp.file.suffixes=- 
+    #         -Dsonar.objc.file.suffixes=- 
+    #         -Dsonar.projectVersion=1.0.0 
+    #         -Dsonar.sources=. 
+    #         -Dsonar.cfamily.build-wrapper-output.bypass=true 
+    #         -Dsonar.coverageReportPaths=sonarqube-generic-coverage.xml
