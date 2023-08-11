@@ -17,8 +17,8 @@ The full application with the presentation layer (SwiftUI) is available on the A
 - ElasticSearch version 6.0 and above
 - Opensearch version 1.0 and above
 
-<img align="left" width=200 src="./Screenshots/listview.png" style="padding:10px">
-<img align="left" width=200 src="./Screenshots/tableview.png" style="padding:10px">
+<img align="left" width=45% src="./Screenshots/listview.png" style="padding:10px">
+<img align="left" width=45% src="./Screenshots/tableview.png" style="padding:10px">
 
 <br clear="left"/>
 
