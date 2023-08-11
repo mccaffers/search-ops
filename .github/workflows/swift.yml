@@ -59,6 +59,7 @@ jobs:
           args: >
             -Dsonar.projectKey=mccaffers_SearchOps
             -Dsonar.organization=mccaffers
+            -Dsonar.coverageReportPaths=sonarqube-generic-coverage.xml
             
     # - name: Setup sonarqube
     #   uses: warchant/setup-sonar-scanner@v3
