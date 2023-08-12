@@ -13,7 +13,9 @@ function xccov_to_generic {
   local xcresult="$1"
 
   echo '<coverage version="1">'
-  xcrun xccov view --archive "$xcresult" | convert_xccov_to_xml
+  # https://github.com/SonarSource/sonar-scanning-examples/issues/146
+  # xcrun xccov view --archive "$xcresult" | convert_xccov_to_xml
+  xcrun xccov view --archive "$xcresult" | while read -r line; do echo "${line#$PWD/}"; done | convert_xccov_to_xml
   echo '</coverage>'
 }
 
