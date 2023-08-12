@@ -52,7 +52,8 @@ jobs:
         uses: actions/download-artifact@v3
       - name: Unpack Artifact  
         run: >
-          unzip -o artifact.zip  
+          ls -l ./
+          unzip -o artifact
       - name: Run sonar-scanner
         uses: SonarSource/sonarcloud-github-action@master
         env:
