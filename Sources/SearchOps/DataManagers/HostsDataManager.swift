@@ -243,8 +243,8 @@ public class HostsDataManager: ObservableObject {
 	private func ReadServer() -> [HostDetails] {
 		
 		if let realm = RealmManager.getRealm() {
-			let specificPerson = realm.objects(HostDetails.self)
-			return Array(specificPerson)
+			let realmArrayObject = realm.objects(HostDetails.self)
+			return Array(realmArrayObject)
 		} else {
 			return []
 		}

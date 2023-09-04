@@ -74,7 +74,7 @@ public class RealmManager {
   public static func getRealm() -> Realm? {
     
     // Use the getKey() function to get the stored encryption key or create a new one
-    var config = getRealmConfig()
+    let config = getRealmConfig()
     do {
       // Open the realm with the configuration
       let realm = try Realm(configuration: config)
@@ -82,6 +82,10 @@ public class RealmManager {
       // Use the realm as normal
     } catch let error as NSError {
       // If the encryption key is wrong, `error` will say that it's an invalid database
+      
+      // TODO
+      // Need to inform the user. This is unlikely to happen unless the keychain gets tampered with
+      // and then you cannot open the realm database
       fatalError("Error opening realm: \(error)")
     }
     

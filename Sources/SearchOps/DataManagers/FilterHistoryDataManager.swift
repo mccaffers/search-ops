@@ -118,8 +118,8 @@ public class FilterHistoryDataManager: ObservableObject {
 
     private func ReadServer() -> [RealmFilterObject] {
         if let realm = RealmManager.getRealm() {
-            let specificPerson = realm.objects(RealmFilterObject.self)
-            return Array(specificPerson)
+            let realmArrayObject = realm.objects(RealmFilterObject.self)
+            return Array(realmArrayObject)
         } else {
             return []
         }

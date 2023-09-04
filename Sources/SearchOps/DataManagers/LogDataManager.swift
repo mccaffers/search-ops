@@ -25,19 +25,19 @@ public class LogDataManager: ObservableObject {
   private func ReadServer() -> [LogEvent] {
     
     if let realm = RealmManager.getRealm() {
-      let specificPerson = realm.objects(LogEvent.self)
-      return Array(specificPerson)
+      let realmArrayObject = realm.objects(LogEvent.self)
+      return Array(realmArrayObject)
     } else {
       return []
     }
   }
   
   public func addNew(item: LogEvent) {
-    UpdateServerList(item: item);
+    AddNewLogEntry(item: item);
     RotateLogs()
   }
   
-  private func UpdateServerList(item: LogEvent) {
+  private func AddNewLogEntry(item: LogEvent) {
     if let realm = RealmManager.getRealm() {
       try! realm.write {
         realm.add(item, update: Realm.UpdatePolicy.modified)
@@ -50,8 +50,8 @@ public class LogDataManager: ObservableObject {
     if let realm = RealmManager.getRealm() {
       try! realm.write {
         
-        let specificPerson = realm.objects(LogEvent.self)
-        let myArray = Array(specificPerson)
+        let realmArrayObject = realm.objects(LogEvent.self)
+        let myArray = Array(realmArrayObject)
         let limit = (myArray.count - 20)
         if limit > 1 {
           if let oldest = myArray.sorted(by: { $0.date < $1.date }).first {

@@ -49,7 +49,7 @@ public class SettingsDatatManager: ObservableObject {
   private func ReadServer() -> ApplicationSettings? {
     
     if let realm = RealmManager.getRealm() {
-      var settingsObj = realm.objects(ApplicationSettings.self)
+      let settingsObj = realm.objects(ApplicationSettings.self)
       if settingsObj.count == 1 {
         return settingsObj.first
       } else {
