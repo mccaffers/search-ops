@@ -133,7 +133,6 @@ final class RequestTests: XCTestCase {
 			.invoke(serverDetails: esDetails, endpoint: "/")
 		
 		XCTAssertNil(output.data)
-		//        XCTAssertEqual(output, nil)
 		
 	}
 	

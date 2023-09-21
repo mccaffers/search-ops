@@ -13,6 +13,20 @@ import SwiftyJSON
 @available(iOS 16.0.0, *)
 final class ElasticSearch_v8_ResponseTests: XCTestCase {
   
+
+  func testObjects() async throws {
+    
+    let response = try! SearchOpsTests().OpenFile(filename: "response.1")
+    let output = Search.getObjects(input: response)
+    
+    let objectCount = output.data.count
+    XCTAssertEqual(objectCount, 1)
+    
+    let hitsCount = Fields.getHits(input: response)
+    XCTAssertEqual(hitsCount, 1)
+    
+  }
+
   func testFields() async throws {
     
     let response = try! SearchOpsTests().OpenFile(filename: "response.1")
@@ -144,5 +158,26 @@ final class ElasticSearch_v8_ResponseTests: XCTestCase {
                                     item:renderedObjects!.results[0])
     
     XCTAssertEqual(output, "[test, test2]")
+  }
+  
+  func testLargeObject() async throws {
+    
+    // JSON Response
+    let response = try! SearchOpsTests().OpenFile(filename: "response.5")
+    
+    // Serialise and extracts the JSON array from the response
+    let objects = Search.getObjects(input: response)
+    
+    // Serialise and extracts the fields from the JSON response
+    let fields = Fields.getFields(input: response)
+    
+    // Extract the headers and sort them
+    let sortedFields = Results.SortedFieldsWithDate(input: fields)
+    var viewableFields: RenderedFields = RenderedFields(fields: sortedFields)
+    
+    var renderedResults = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
+    
+    XCTAssertEqual(renderedResults?.headers.count, 34)
+    
   }
 }

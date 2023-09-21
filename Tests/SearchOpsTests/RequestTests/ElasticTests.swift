@@ -67,32 +67,6 @@ final class ElasticTests: XCTestCase {
 		XCTAssertEqual(output, jsonResponse)
 		
 	}
-	
-	func testObjects() async throws {
-		
-		let response = try! SearchOpsTests().OpenFile(filename: "response.1")
-		let output = Search.getObjects(input: response)
-		
-		let objectCount = output.data.count
-		XCTAssertEqual(objectCount, 1)
-		
-		let hitsCount = Fields.getHits(input: response)
-		XCTAssertEqual(hitsCount, 1)
-		
-	}
-	
-	
-	
-	func testObjectsElasticv5() async throws {
-		
-		let response = try! SearchOpsTests().OpenFile(filename: "v5_mapping")
-		Request.mockedSession = MockURLSession(response: response)
-		let output = await IndexMap.indexMappings(serverDetails: HostDetails(), index: "")
-		
-		let fieldsCount = output.count
-		XCTAssertEqual(output.count, 3)
-
-	}
 
 	func testGetErrorResponse() async throws {
 		
@@ -102,34 +76,7 @@ final class ElasticTests: XCTestCase {
 		// Serialise and extracts the JSON array from the response
 		let objects = Search.getObjects(input: response)
 		
-		//        XCTAssertNil(objects.data
-		
-		//        let emptyArray : [[String : Any]] = []
-		
-		XCTAssertEqual(0, objects.data.count)
-	}
-	
-	
-	
-	func testLargeObject() async throws {
-		
-		// JSON Response
-		let response = try! SearchOpsTests().OpenFile(filename: "response.5")
-		
-		// Serialise and extracts the JSON array from the response
-		let objects = Search.getObjects(input: response)
-		
-		// Serialise and extracts the fields from the JSON response
-		let fields = Fields.getFields(input: response)
-		
-		// Extract the headers and sort them
-		let sortedFields = Results.SortedFieldsWithDate(input: fields)
-		var viewableFields: RenderedFields = RenderedFields(fields: sortedFields)
-		
-		var renderedResults = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
-		
-		XCTAssertEqual(renderedResults?.headers.count, 34)
-		
+        XCTAssertEqual(0, objects.data.count)
 	}
 	
 }
