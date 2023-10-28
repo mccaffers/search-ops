@@ -8,6 +8,7 @@
 import Foundation
 import SwiftyJSON
 
+@available(macOS 13, *)
 @available(iOS 16, *)
 public class SearchRender {
   

@@ -8,6 +8,7 @@
 import Foundation
 import SwiftyJSON
 
+@available(macOS 13.0, *)
 @available(iOS 16.0, *)
 public class Logger {
 	

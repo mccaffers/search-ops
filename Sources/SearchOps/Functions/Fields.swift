@@ -8,6 +8,7 @@
 import Foundation
 import SwiftyJSON
 
+@available(macOS 10.15, *)
 @available(iOS 15.0.0, *)
 
 // Fields contains a number of static methods
@@ -69,6 +70,7 @@ public class Fields {
   
   
   
+  @available(macOS 13.0, *)
   @available(iOS 16.0.0, *)
   @MainActor
   public static func QueryElastic(filterObject: FilterObject,

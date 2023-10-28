@@ -7,6 +7,7 @@
 
 import Foundation
 
+@available(macOS 13.0, *)
 @available(iOS 15.0, *)
 public class HostDetailsWrap: ObservableObject {
     

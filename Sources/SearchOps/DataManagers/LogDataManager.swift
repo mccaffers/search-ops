@@ -8,6 +8,7 @@
 import Foundation
 import RealmSwift
 
+@available(macOS 13.0, *)
 @available(iOS 15.0, *)
 public class LogDataManager: ObservableObject {
   
@@ -75,6 +76,7 @@ public class LogDataManager: ObservableObject {
   }
 }
 
+@available(macOS 13.0, *)
 @available(iOS 15, *)
 public class LogEvent : Object {
   
@@ -101,6 +103,7 @@ public class LogEvent : Object {
   @Persisted public var hitCount : Int = 0
 }
 
+@available(macOS 13.0, *)
 @available(iOS 15, *)
 public class RealmResponseError : EmbeddedObject {
   @Persisted public var title: String
@@ -109,6 +112,7 @@ public class RealmResponseError : EmbeddedObject {
 }
 
 
+@available(macOS 13.0, *)
 @available(iOS 15, *)
 public class LogFilter : EmbeddedObject {
   @Persisted public var query: QueryObject? = nil

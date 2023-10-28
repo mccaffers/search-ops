@@ -7,7 +7,7 @@
 import Foundation
 import OrderedCollections
 
-
+@available(macOS 13.0, *)
 @available(iOS 15.0, *)
 public class Results {
     

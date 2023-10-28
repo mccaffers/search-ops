@@ -23,6 +23,7 @@ public enum SortOrderEnum: String, PersistableEnum {
 	case Descending = "desc"
 }
 
+@available(macOS 10.15, *)
 @available(iOS 15.0, *)
 public class SortObject : ObservableObject {
 	
@@ -35,6 +36,7 @@ public class SortObject : ObservableObject {
 	@Published public var field: SquasedFieldsArray
 }
 
+@available(macOS 13.0, *)
 @available(iOS 15.0, *)
 public class FilterObject: ObservableObject {
 	
@@ -84,6 +86,7 @@ public class FilterObject: ObservableObject {
 	
 }
 
+@available(macOS 13.0, *)
 @available(iOS 15, *)
 public class RealmFilterObject: Object {
     
@@ -97,6 +100,7 @@ public class RealmFilterObject: Object {
     
 }
 
+@available(macOS 10.15, *)
 @available(iOS 15, *)
 public class RealmSquasedFieldsArray : EmbeddedObject {
     
@@ -122,6 +126,7 @@ public class RealmSquasedFieldsArray : EmbeddedObject {
     
 }
 
+@available(macOS 13.0, *)
 @available(iOS 15.0, *)
 public class RelativeRangeFilter : ObservableObject {
     
@@ -155,6 +160,7 @@ public class RealmRelativeRangeFilter : EmbeddedObject {
     
 }
 
+@available(macOS 13.0, *)
 @available(iOS 15.0, *)
 public class AbsoluteDateRangeObject : ObservableObject {
     public init(from: Date = Date.now, to: Date = Date.now) {
@@ -175,6 +181,7 @@ public class AbsoluteDateRangeObject : ObservableObject {
 
 }
 
+@available(macOS 13.0, *)
 @available(iOS 15, *)
 public class RealmAbsoluteDateRangeObject : EmbeddedObject {
     

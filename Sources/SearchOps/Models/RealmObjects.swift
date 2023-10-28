@@ -40,6 +40,7 @@ public class RequestLogs : Object  {
     @Persisted public var headers: List<Headers>
 }
 
+@available(macOS 13.0, *)
 @available(iOS 13.0, *)
 public class LocalHeaders : ObservableObject, Identifiable, Equatable  {
     
@@ -86,6 +87,7 @@ public class LogHostDetails : Object  {
     @Persisted public var env: String = ""
 }
 
+@available(macOS 13.0, *)
 @available(iOS 15, *)
 public class HostDetails : Object  {
 	

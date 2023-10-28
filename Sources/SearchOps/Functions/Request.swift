@@ -7,15 +7,18 @@
 
 import Foundation
 
+@available(macOS 13.0, *)
 @available(iOS 13.0.0, *)
 protocol URLSessionProtocol {
     func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 
+@available(macOS 13.0, *)
 extension URLSession: URLSessionProtocol {}
 
 // Request Class
 // Builds URLSessions, with Search Credentials
+@available(macOS 13.0, *)
 @available(iOS 16.0.0, *)
 class Request {
 	

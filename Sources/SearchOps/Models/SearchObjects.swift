@@ -20,6 +20,8 @@ public struct FieldsArray : Hashable {
     }
 }
 
+@available(macOS 10.15, *)
+@available(macOS 10.15, *)
 @available(iOS 15.0, *)
 public class SquasedFieldsArray : Identifiable, Hashable, ObservableObject {
     
@@ -46,6 +48,7 @@ public class SquasedFieldsArray : Identifiable, Hashable, ObservableObject {
    }
 }
 
+@available(macOS 13.0, *)
 @available(iOS 13.0, *)
 public class SearchResult : ObservableObject {
     
@@ -58,6 +61,7 @@ public class SearchResult : ObservableObject {
     public var error : String?
 }
 
+@available(macOS 13.0, *)
 @available(iOS 13.0, *)
 public class IndexResult : ObservableObject {
 		public var data : [String] = []
@@ -65,6 +69,7 @@ public class IndexResult : ObservableObject {
 }
 
 
+@available(macOS 13.0, *)
 @available(iOS 15.0, *)
 public class RenderResult : ObservableObject {
     public var results : [[String : Any]] = []

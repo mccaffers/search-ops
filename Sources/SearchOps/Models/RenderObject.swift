@@ -8,6 +8,7 @@
 import Foundation
 import OrderedCollections
 
+@available(macOS 10.15, *)
 @available(iOS 15.0, *)
 public struct RenderObject {
     public var headers : [SquasedFieldsArray]

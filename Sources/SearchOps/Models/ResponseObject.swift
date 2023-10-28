@@ -12,6 +12,7 @@ public enum ErrorResponseType : String, PersistableEnum {
     case critical, warn, information
 }
 
+@available(macOS 13.0, *)
 @available(iOS 16.0, *)
 public class ServerResponse {
 	
@@ -34,6 +35,7 @@ public class ServerResponse {
 	public var method : String? = nil
 }
 
+@available(macOS 13.0, *)
 @available(iOS 15, *)
 public class ResponseError {
 	public let title: String

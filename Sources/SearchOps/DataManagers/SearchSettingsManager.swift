@@ -20,6 +20,7 @@ public class ApplicationSettings : Object {
 
 }
 
+@available(macOS 13.0, *)
 @available(iOS 15.0, *)
 public class SettingsDatatManager: ObservableObject {
   

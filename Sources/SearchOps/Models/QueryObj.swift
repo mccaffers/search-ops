@@ -7,6 +7,7 @@
 
 import Foundation
 
+@available(macOS 13.0, *)
 @available(iOS 13.0, *)
 class QueryObj: ObservableObject {
     @Published var queryString: String = "*"

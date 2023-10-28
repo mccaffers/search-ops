@@ -12,6 +12,7 @@ import Foundation
 // FilterHistoryDataManager
 // Saves Search Filters to Realm
 //
+@available(macOS 13.0, *)
 @available(iOS 15, *)
 public class FilterHistoryDataManager: ObservableObject {
 

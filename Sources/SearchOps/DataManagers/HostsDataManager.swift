@@ -12,6 +12,7 @@ import Foundation
 // HostsDataManager
 // Stores host information and utilises Realm DB behind the scenes
 
+@available(macOS 13.0, *)
 @available(iOS 15.0, *)
 public class HostsDataManager: ObservableObject {
 	
