@@ -82,7 +82,6 @@ public class HostURL : Object  {
 @available(iOS 15, *)
 public class LogHostDetails : Object  {
     @Persisted public var name: String = ""
-//    @Persisted public var cloudid: String = ""
     @Persisted public var host: HostURL? = HostURL()
     @Persisted public var env: String = ""
 }
@@ -162,8 +161,6 @@ public class HostDetails : Object  {
 			realmHeader.focusedIndexHeader = item.focusedIndexHeader
 			customHeaders.append(realmHeader)
 		}
-		
-		print("ERRORRRRR")
 	}
 	
 	public func generateCopy() -> HostDetails {
