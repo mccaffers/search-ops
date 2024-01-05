@@ -254,7 +254,6 @@ public class HostsDataManager: ObservableObject {
 	public func DeleteItem(item: HostDetails) {
 		if let realm = RealmManager.getRealm() {
 			try! realm.write {
-				print("Deleting " + item.id.uuidString + " from realm")
 				realm.delete(item)
 				refresh()
 			}

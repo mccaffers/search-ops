@@ -54,6 +54,15 @@ final class ElasticSearch_v8_ResponseTests: XCTestCase {
     XCTAssertEqual(fieldsCount, 17)
   }
   
+  func testFieldsWithLargeNestedObject() async throws {
+    
+    let response = try! SearchOpsTests().OpenFile(filename: "response.6")
+    let output = Fields.getFields(input: response)
+    
+    let fieldsCount = output.count
+    XCTAssertEqual(fieldsCount, 26)
+  }
+  
   func testRenderingObjects() async throws {
     
     let response = try! SearchOpsTests().OpenFile(filename: "response.3")

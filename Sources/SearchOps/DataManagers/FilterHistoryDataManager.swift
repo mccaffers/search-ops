@@ -32,7 +32,6 @@ public class FilterHistoryDataManager: ObservableObject {
     }
     
     public func addNew(item: RealmFilterObject) {
-        print("adding " + item.id.uuidString)
         UpdateServerList(item: item);
         refresh()
     }
@@ -142,7 +141,6 @@ public class FilterHistoryDataManager: ObservableObject {
         if let realm = RealmManager.getRealm() {
             if let oldest = items.sorted(by: {$0.date < $1.date}).first {
                 try! realm.write {
-                    print("Deleting " + oldest.id.uuidString + " from realm")
                     realm.delete(oldest)
                 }
             }
@@ -152,7 +150,6 @@ public class FilterHistoryDataManager: ObservableObject {
     func DeleteItem(item: RealmFilterObject) {
         if let realm = RealmManager.getRealm() {
             try! realm.write {
-                print("Deleting " + item.id.uuidString + " from realm")
                 realm.delete(item)
             }
         }

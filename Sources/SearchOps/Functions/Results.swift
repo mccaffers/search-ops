@@ -124,18 +124,20 @@ public class Results {
   
   public static func checkInnerObjects(fieldParts: [String], level: Int, obj: [String: Any]) -> String {
     
-    let key = fieldParts[level]
-    
-    if let innerObj = obj[key] as? [String: Any] {
-      return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
-    } else if let value = obj[key] as? String {
-      return value
-    } else if let value = obj[key] as? Double {
-      return value.string
-    } else if let value = obj[key] as? Array<String> {
-      return "[" + value.joined(separator: ", ") + "]"
-    } else if let value = obj[key] as? Array<Double> {
-      return "[" +  value.compactMap { $0.string }.joined(separator: ",") + "]"
+    if fieldParts.count <= level {
+      let key = fieldParts[level]
+      
+      if let innerObj = obj[key] as? [String: Any] {
+        return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
+      } else if let value = obj[key] as? String {
+        return value
+      } else if let value = obj[key] as? Double {
+        return value.string
+      } else if let value = obj[key] as? Array<String> {
+        return "[" + value.joined(separator: ", ") + "]"
+      } else if let value = obj[key] as? Array<Double> {
+        return "[" +  value.compactMap { $0.string }.joined(separator: ",") + "]"
+      }
     }
     
     return " "

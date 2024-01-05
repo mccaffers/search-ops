@@ -1,0 +1,73 @@
+{
+  "took": 0,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 1,
+      "relation": "eq"
+    },
+    "max_score": 1,
+    "hits": [
+      {
+        "_index": "exception",
+        "_id": "yhsv2YwBdjKImXbSayuL",
+        "_score": 1,
+        "_ignored": [
+          "innerException.innerException.innerExceptions.stackTrace.keyword",
+          "innerException.innerException.innerException.stackTrace.keyword",
+          "innerException.stackTrace.keyword"
+        ],
+        "_source": {
+          "className": "trading_exception.TradingException",
+          "date": "2024-01-05T10:33:32.5707960+00:00",
+          "hostname": ".local",
+          "symbols": "[\"USDCHF\"]",
+          "runID": "F857CF7FB2D54EBE817A656571C86559",
+          "runIteration": "0",
+          "stacktrace": "",
+          "message": "One or more errors occurred. (Year, Month, and Day parameters describe an un-representable DateTime.)",
+          "data": {},
+          "hResult": -2146233088,
+          "innerException": {
+            "className": "System.Exception",
+            "message": "One or more errors occurred. (Year, Month, and Day parameters describe an un-representable DateTime.)",
+            "data": {},
+            "source": "backtesting-engine",
+            "hResult": -2146233088,
+            "stackTrace": "   at backtesting_engine.TaskManager.<IngestAndConsume>b__8_1(Task task) in /Users/ryan/dev/projects/backtesting-engine/src/backtesting/TaskManager.cs:line 35\n   at System.Threading.Tasks.ContinuationTaskFromTask.InnerInvoke()",
+            "innerException": {
+              "className": "System.AggregateException",
+              "innerExceptions": [
+                {
+                  "className": "System.ArgumentOutOfRangeException",
+                  "message": "Year, Month, and Day parameters describe an un-representable DateTime.",
+                  "data": {},
+                  "source": "System.Private.CoreLib",
+                  "hResult": -2146233086,
+                  "stackTrace": "   at System.DateTime..ctor(Int32 year, Int32 month, Int32 day)\n"
+                }
+              ],
+              "message": "One or more errors occurred. (Year, Month, and Day parameters describe an un-representable DateTime.)",
+              "data": {},
+              "hResult": -2146233088,
+              "innerException": {
+                "className": "System.ArgumentOutOfRangeException",
+                "message": "Year, Month, and Day parameters describe an un-representable DateTime.",
+                "data": {},
+                "source": "System.Private.CoreLib",
+                "hResult": -2146233086,
+                "stackTrace": "   at System.DateTime..ctor(Int32 year, Int32 month, Int32 day)\n   at"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}
