@@ -15,7 +15,7 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/realm/realm-swift.git", .upToNextMajor(from: "10.45.2")),
+        .package(url: "https://github.com/realm/realm-swift.git", .upToNextMajor(from: "10.45.3")),
         .package(url: "https://github.com/apple/swift-collections.git", .upToNextMajor(from: "1.0.6")),
         .package(url: "https://github.com/SwiftyJSON/SwiftyJSON.git", .upToNextMajor(from: "5.0.1"))
     ],

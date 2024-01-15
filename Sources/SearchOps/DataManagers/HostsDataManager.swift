@@ -206,28 +206,33 @@ public class HostsDataManager: ObservableObject {
 	}
 	
 	@MainActor
-	public func deleteItems(itemsForDeletion: [HostDetails]) async {
-		//        print("Delete Request for " + itemsForDeletion.count.string + " items")
-		
-		var localArray : [HostDetails] = [HostDetails]()
-		for item in itemsForDeletion {
-			
-			// need to populate an array with the correct id
-			// just incase any of them are edits
-			let itemFromWhereSearch = items.first(where: {$0.id == item.id})
-			if let itemFromWhereSearch = itemFromWhereSearch {
-				localArray.append(itemFromWhereSearch)
-			}
-			
-			items.removeAll(where: {$0.id == item.id})
-			
-		}
-		
-		// localarray has been nil checked above with the 'if let itemFromWhereSearch'
-		for item in localArray {
-			DeleteItem(item: item);
-		}
-	}
+  public func deleteItems(itemsForDeletion: [HostDetails]) async {
+    //        print("Delete Request for " + itemsForDeletion.count.string + " items")
+    
+    if itemsForDeletion.count == 0 {
+      return
+    }
+    var localArray : [HostDetails] = [HostDetails]()
+    for item in itemsForDeletion {
+      
+      // need to populate an array with the correct id
+      // just incase any of them are edits
+      let itemFromWhereSearch = items.first(where: {$0.id == item.id})
+      if let itemFromWhereSearch = itemFromWhereSearch {
+        localArray.append(itemFromWhereSearch)
+      }
+      
+      items.removeAll(where: {$0.id == item.id})
+      
+    }
+    
+    // localarray has been nil checked above with the 'if let itemFromWhereSearch'
+    for item in localArray {
+      DeleteItem(item: item);
+    }
+    
+    refresh()
+  }
 	
 	private func UpdateServerList(items: [HostDetails]) {
 		
