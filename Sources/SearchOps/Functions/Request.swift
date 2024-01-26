@@ -60,7 +60,14 @@ class Request {
       } else {
         urlBuilder = "http://"
       }
-      urlBuilder = urlBuilder + host.url + host.port + endpoint;
+      
+      let port = host.port.trimmingCharacters(in: .whitespacesAndNewlines)
+      if port.count > 0 {
+        urlBuilder = urlBuilder + host.url + ":" + port + endpoint;
+      } else {
+        urlBuilder = urlBuilder + host.url + endpoint;
+      }
+      
     }
     
     return urlBuilder
