@@ -74,9 +74,9 @@ class Request {
   }
   
   private func buildRequest(url: URL,
-                            method: String,
-                            authorisationString: String,
-                            additionalHeader: [String:String] ) -> URLRequest {
+                    method: String,
+                    authorisationString: String,
+                    additionalHeader: [String:String] ) -> URLRequest {
     
     var request = URLRequest(
       url: url,
