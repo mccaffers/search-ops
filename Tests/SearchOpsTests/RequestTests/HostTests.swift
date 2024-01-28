@@ -20,13 +20,13 @@ final class HostTests: XCTestCase {
     let esDetails = HostDetails()
     esDetails.host = HostURL()
     esDetails.host?.url = "example.com"
-    esDetails.host?.port = "443"
+    esDetails.host?.port = "9201"
     esDetails.host?.scheme = HostScheme.HTTPS
     
     // Check the Build URL function
     let formattedUrl = Request().buildUrl(esDetails, "")
     
-    XCTAssertEqual(formattedUrl, "https://example.com:443")
+    XCTAssertEqual(formattedUrl, "https://example.com:9201")
   }
   
   @MainActor
@@ -37,6 +37,22 @@ final class HostTests: XCTestCase {
     esDetails.host = HostURL()
     esDetails.host?.url = "example.com"
     esDetails.host?.port = ""
+    esDetails.host?.scheme = HostScheme.HTTP
+    
+    // Check the Build URL function
+    let formattedUrl = Request().buildUrl(esDetails, "")
+    
+    XCTAssertEqual(formattedUrl, "http://example.com")
+  }
+  
+  @MainActor
+  func testNonSecureInvalidHTTPHost() throws {
+    
+    // Test Host
+    let esDetails = HostDetails()
+    esDetails.host = HostURL()
+    esDetails.host?.url = "example.com"
+    esDetails.host?.port = "-100"
     esDetails.host?.scheme = HostScheme.HTTP
     
     // Check the Build URL function

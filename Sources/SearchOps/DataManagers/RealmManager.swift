@@ -62,9 +62,9 @@ public class RealmManager {
   }
   
   private static func getRealmConfig() -> Realm.Configuration {
-    var config = Realm.Configuration()
+    var config = Realm.Configuration(schemaVersion: 2)
     do {
-      config = try Realm.Configuration(encryptionKey: getKey())
+      config = try Realm.Configuration(encryptionKey: getKey(), schemaVersion: 2)
     } catch let error {
       print(error)
     }

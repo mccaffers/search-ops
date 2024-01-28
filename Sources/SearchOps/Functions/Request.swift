@@ -33,13 +33,10 @@ class Request {
       self.localSession = mock
     } else {
       let sessionConfig = URLSessionConfiguration.default
-      // todo
-      // check what these mean again
-      
-      var settingsManager = SettingsDatatManager()
+      let settingsManager = SettingsDatatManager()
       sessionConfig.timeoutIntervalForRequest =  TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.DEFAULT_REQUEST_TIMEOUT))
       sessionConfig.timeoutIntervalForResource =  TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.DEFAULT_REQUEST_TIMEOUT))
-      self.localSession = URLSession(configuration: sessionConfig)
+      self.localSession = URLSession(configuration: .default)
     }
     
   }
@@ -48,22 +45,27 @@ class Request {
   func buildUrl(_ serverDetails: HostDetails, _ endpoint: String) -> String {
     var urlBuilder = "";
     
-    // If cloud id has been defined, lets use that
+    // If Cloud ID has been defined try to unwrap to get host, port and any endpoints
     if serverDetails.cloudid.count > 0 {
+      
       let LogHostDetails = AuthBuilder.ConvertCloudIDIntoHost(cloudID: serverDetails.cloudid)
       urlBuilder = LogHostDetails.0 + ":" + LogHostDetails.1 + endpoint;
-    } else if let host = serverDetails.host {
-      // else we'll take the url and port fields directly
       
+    } else if let host = serverDetails.host {
+     
       if host.scheme == .HTTPS {
         urlBuilder = "https://"
       } else {
         urlBuilder = "http://"
       }
       
-      let port = host.port.trimmingCharacters(in: .whitespacesAndNewlines)
-      if port.count > 0 {
-        urlBuilder = urlBuilder + host.url + ":" + port + endpoint;
+      // Remove any whitespace from the string
+      // Check the port is an integer
+      let port = Int(host.port.trimmingCharacters(in: .whitespacesAndNewlines))
+      
+      // Check the port is valid and more than 0
+      if let port = port, port > 0 {
+        urlBuilder = urlBuilder + host.url + ":" + String(port) + endpoint;
       } else {
         urlBuilder = urlBuilder + host.url + endpoint;
       }
@@ -90,11 +92,10 @@ class Request {
       request.addValue(authorisationString, forHTTPHeaderField: "Authorization")
     }
     
-    //		if let additionalHeader = additionalHeader {
     for headers in additionalHeader {
       request.addValue(headers.key, forHTTPHeaderField: headers.value)
     }
-    //		}
+    
     return request
   }
   
@@ -106,8 +107,11 @@ class Request {
     
     var request: URLRequest;
     
+    if let host = serverDetails.host, host.selfSignedCertificate {
+      self.localSession = InsecureConnection.session()
+    }
     
-    var settingsManager = SettingsDatatManager()
+    let settingsManager = SettingsDatatManager()
     
     let resObject = ServerResponse()
     
