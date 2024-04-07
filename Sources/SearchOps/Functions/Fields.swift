@@ -103,6 +103,8 @@ public class Fields {
       }
     }
     
+    print(range)
+    
     var queryArray : [String] = ["*"]
     if let queryList = filterObject.query?.values.compactMap({$0.string}) {
       queryArray = Array(queryList)

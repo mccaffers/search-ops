@@ -140,8 +140,8 @@ public class RelativeRangeFilter : ObservableObject {
     @Published public var value: Double = 0.0
     
     public func GetFromTime() -> Date {
-        let seconds = DateTools.calculateSecondsByPeriod(value: self.value, period: self.period)
-        return  Date.now - seconds
+      let seconds = DateTools.calculateSecondsByPeriod(value: self.value, period: self.period)
+      return Date.now - seconds
     }
     
     public func ejectRealmObject() -> RealmRelativeRangeFilter {

@@ -55,6 +55,7 @@ public class Search {
       }
       
       request = await Request().invoke(serverDetails: serverDetails, endpoint: endpoint, json:json)
+      print(json)
       
       if let data = request.data  {
         request.parsed = String(bytes: data, encoding: String.Encoding.utf8) ?? "";
