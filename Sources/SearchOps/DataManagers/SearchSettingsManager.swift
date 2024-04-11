@@ -1,7 +1,7 @@
 // SearchOps Swift Package
 // Business logic for SearchOps iOS Application
 //
-// (c) 2023 Ryan McCaffery
+// (c) 2024 Ryan McCaffery
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
@@ -27,10 +27,12 @@ public class SettingsDatatManager: ObservableObject {
   @Published
   public var settings: ApplicationSettings? = nil
   
+  @MainActor
   public init() {
     self.settings = ReadServer()
   }
   
+  @MainActor 
   public func setDocumentsPerPage(input: Int) {
     if let realm = RealmManager.getRealm() {
       try! realm.write {
@@ -39,6 +41,7 @@ public class SettingsDatatManager: ObservableObject {
     }
   }
   
+  @MainActor
   public func setTimeoiut(input: Int) {
     if let realm = RealmManager.getRealm() {
       try! realm.write {
@@ -47,6 +50,7 @@ public class SettingsDatatManager: ObservableObject {
     }
   }
   
+  @MainActor
   private func ReadServer() -> ApplicationSettings? {
     
     if let realm = RealmManager.getRealm() {
@@ -63,6 +67,7 @@ public class SettingsDatatManager: ObservableObject {
     }
   }
   
+  @MainActor
   private func Update(item: ApplicationSettings) {
     if let realm = RealmManager.getRealm() {
       try! realm.write {

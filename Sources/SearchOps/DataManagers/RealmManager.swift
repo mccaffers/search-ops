@@ -1,7 +1,7 @@
 // SearchOps Swift Package
 // Business logic for SearchOps iOS Application
 //
-// (c) 2023 Ryan McCaffery
+// (c) 2024 Ryan McCaffery
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
@@ -9,84 +9,111 @@ import Foundation
 import RealmSwift
 
 enum MyError: Error {
-		case runtimeError(String)
+    case runtimeError(String)
 }
 
 public class RealmManager {
   
-  // Retrieve the existing encryption key for the app if it exists or create a new one
-  private static func getKey() throws -> Data {
-    // Identifier for our keychain entry - should be unique for your application
-    let keychainIdentifier = "io.Realm.EncryptionExampleKey"
-    let keychainIdentifierData = keychainIdentifier.data(using: String.Encoding.utf8, allowLossyConversion: false)!
-    // First check in the keychain for an existing key
-    var query: [NSString: AnyObject] = [
-      kSecClass: kSecClassKey,
-      kSecAttrApplicationTag: keychainIdentifierData as AnyObject,
-      kSecAttrKeySizeInBits: 512 as AnyObject,
-      kSecReturnData: true as AnyObject
-    ]
-    
-    // To avoid Swift optimization bug, should use withUnsafeMutablePointer() function to retrieve the keychain item
-    // See also: http://stackoverflow.com/questions/24145838/querying-ios-keychain-using-swift/27721328#27721328
-    var dataTypeRef: AnyObject?
-    var status = withUnsafeMutablePointer(to: &dataTypeRef) { SecItemCopyMatching(query as CFDictionary, UnsafeMutablePointer($0)) }
-    if status == errSecSuccess {
-      // swiftlint:disable:next force_cast
-      return dataTypeRef as! Data
-    }
-    // No pre-existing key from this application, so generate a new one
-    // Generate a random encryption key
-    var key = Data(count: 64)
-    try key.withUnsafeMutableBytes({ (pointer: UnsafeMutableRawBufferPointer) in
-      let result = SecRandomCopyBytes(kSecRandomDefault, 64, pointer.baseAddress!)
-      if result != 0 {
-        throw MyError.runtimeError("Failed to get random bytes")
+  public static func IsMigrationNecessary() -> Bool {
+    // Check if key in kSecClassKey, save as kSecClassGenericPassword instead
+    // for compatability between iOS and macOS
+    let legacyKey = LegacyKeychainManager.RetrieveLegacyKeychain()
+    return legacyKey != nil
+  }
+  
+  public static func PerformMigrationIfNecessary() -> (success:Bool, error:Error?) {
+    // Check if key in kSecClassKey, save as kSecClassGenericPassword instead
+    // for compatability between iOS and macOS
+    let legacyKey = LegacyKeychainManager.RetrieveLegacyKeychain()
+
+    // If the key exists in the legacy keychain, delete it, add it again
+    if(legacyKey != nil){
+      // migrate
+      LegacyKeychainManager.DeleteLegacyKeychain()
+      do {
+        try KeychainManager.AddToKeychain(input:legacyKey)
+      } catch let error {
+        return (false, error)
       }
-      assert(result == 0, "Failed to get random bytes")
-    })
-    // Store the key in the keychain
-    query = [
-      kSecClass: kSecClassKey,
-      kSecAttrApplicationTag: keychainIdentifierData as AnyObject,
-      kSecAttrKeySizeInBits: 512 as AnyObject,
-      kSecValueData: key as AnyObject
-    ]
-    status = SecItemAdd(query as CFDictionary, nil)
-    
-    if status != errSecSuccess {
-      throw MyError.runtimeError("Failed to insert the new key in the keychain")
     }
     
-    return key
+    return (true, nil)
+  }
+  
+
+  // Retrieve the existing encryption key for the app if it exists or create a new one
+  private static func GenerateOrGetKey() throws -> Data {
+    
+    var key : Data?
+    
+    // Double check it exists
+    let outcome = KeychainManager.QueryKeychainMacOS()
+    
+    // Success! Key exists in the keychain, lets return the key
+    if outcome != nil{
+      return outcome!
+    } else {
+      // If not, lets generate a key and add it to the keychain
+      do {
+        key = try KeychainManager.AddToKeychain()
+      } catch let error {
+        print(error)
+      }
+    }
+    
+    // If we get this far, there has been a problem
+    // but realm will continue with encyrption turned off
+    // Need to notify the user
+    return key!
+  }
+  
+  private static func getKeyMacOS() throws -> Data {
+    return Data()
   }
   
   private static func getRealmConfig() -> Realm.Configuration {
     var config = Realm.Configuration(schemaVersion: 2)
     do {
-      config = try Realm.Configuration(encryptionKey: getKey(), schemaVersion: 2)
+      config = try Realm.Configuration(encryptionKey: GenerateOrGetKey(), schemaVersion: 2)
     } catch let error {
       print(error)
     }
     return config
   }
   
+  public static func DeleteRealmDatabase() throws {
+    // Not avaliable to users yet
+    try? FileManager.default.removeItem(at: Realm.Configuration.defaultConfiguration.fileURL!)
+  }
+  
+  @MainActor
+  public static var realmInstance: Realm?
+  
+  @MainActor
   public static func getRealm() -> Realm? {
     
-    // Use the getKey() function to get the stored encryption key or create a new one
-    let config = getRealmConfig()
-    do {
-      // Open the realm with the configuration
-      let realm = try Realm(configuration: config)
-      return realm
-      // Use the realm as normal
-    } catch let error as NSError {
-      // If the encryption key is wrong, `error` will say that it's an invalid database
-      
-      // TODO
-      // Need to inform the user. This is unlikely to happen unless the keychain gets tampered with
-      // and then you cannot open the realm database
-      fatalError("Error opening realm: \(error)")
+    if realmInstance == nil {
+      // Use the getKey() function to get the stored encryption key or create a new one
+      let config = getRealmConfig()
+      do {
+        // Open the realm with the configuration
+        realmInstance = try Realm(configuration: config)
+        return realmInstance
+        // Use the realm as normal
+      } catch let error as NSError {
+        // If the encryption key is wrong, `error` will say that it's an invalid database
+        
+        // TODO
+        // Need to inform the user. This is unlikely to happen unless the keychain gets tampered with
+        // and then you cannot open the realm database
+        print("Deleting database")
+        try! DeleteRealmDatabase()
+        
+        fatalError("Error opening realm: \(error)")
+        
+      }
+    } else {
+      return realmInstance
     }
     
   }

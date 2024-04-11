@@ -1,7 +1,7 @@
 // SearchOps Swift Package
 // Business logic for SearchOps iOS Application
 //
-// (c) 2023 Ryan McCaffery
+// (c) 2024 Ryan McCaffery
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
@@ -55,7 +55,6 @@ public class Search {
       }
       
       request = await Request().invoke(serverDetails: serverDetails, endpoint: endpoint, json:json)
-      print(json)
       
       if let data = request.data  {
         request.parsed = String(bytes: data, encoding: String.Encoding.utf8) ?? "";
@@ -66,7 +65,6 @@ public class Search {
     request.duration = timeTaken
     
     return request
-    
     
   }
   
@@ -101,7 +99,6 @@ public class Search {
           
           for error in errorItems {
             if let reasonString = error["reason"] as? String {
-              //                        print(reasonString)
               parsedObject = SearchResult(error:reasonString)
             }
           }

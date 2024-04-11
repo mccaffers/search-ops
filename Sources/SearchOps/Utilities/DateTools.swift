@@ -1,7 +1,7 @@
 // SearchOps Swift Package
 // Business logic for SearchOps iOS Application
 //
-// (c) 2023 Ryan McCaffery
+// (c) 2024 Ryan McCaffery
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
@@ -85,6 +85,8 @@ public class DateTools {
   public static func dateString(_ dateInput: Date) -> String {
     let dateFormatter = DateFormatter()
     dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZ" // Full day, Monday
+    dateFormatter.timeZone = TimeZone.current
+    dateFormatter.locale = Locale.current
     return dateFormatter.string(from: dateInput)
   }
   

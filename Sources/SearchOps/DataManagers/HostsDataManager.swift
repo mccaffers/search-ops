@@ -1,7 +1,7 @@
 // SearchOps Swift Package
 // Business logic for SearchOps iOS Application
 //
-// (c) 2023 Ryan McCaffery
+// (c) 2024 Ryan McCaffery
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
@@ -14,6 +14,7 @@ import Foundation
 
 @available(macOS 13.0, *)
 @available(iOS 15.0, *)
+@MainActor
 public class HostsDataManager: ObservableObject {
 	
 	@Published
@@ -207,7 +208,9 @@ public class HostsDataManager: ObservableObject {
 	
 	@MainActor
   public func deleteItems(itemsForDeletion: [HostDetails]) async {
-    //        print("Delete Request for " + itemsForDeletion.count.string + " items")
+    
+    // Notes
+    // "Delete Request for " + itemsForDeletion.count.string + " items"
     
     if itemsForDeletion.count == 0 {
       return
@@ -215,7 +218,7 @@ public class HostsDataManager: ObservableObject {
     var localArray : [HostDetails] = [HostDetails]()
     for item in itemsForDeletion {
       
-      // need to populate an array with the correct id
+      // Need to populate an array with the correct identifer
       // just incase any of them are edits
       let itemFromWhereSearch = items.first(where: {$0.id == item.id})
       if let itemFromWhereSearch = itemFromWhereSearch {

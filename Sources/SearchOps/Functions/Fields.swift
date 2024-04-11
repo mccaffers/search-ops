@@ -1,7 +1,7 @@
 // SearchOps Swift Package
 // Business logic for SearchOps iOS Application
 //
-// (c) 2023 Ryan McCaffery
+// (c) 2024 Ryan McCaffery
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
@@ -102,8 +102,6 @@ public class Fields {
         }
       }
     }
-    
-    print(range)
     
     var queryArray : [String] = ["*"]
     if let queryList = filterObject.query?.values.compactMap({$0.string}) {

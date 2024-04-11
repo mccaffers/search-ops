@@ -1,7 +1,7 @@
 // SearchOps Swift Package
 // Business logic for SearchOps iOS Application
 //
-// (c) 2023 Ryan McCaffery
+// (c) 2024 Ryan McCaffery
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
@@ -20,6 +20,7 @@ extension URLSession: URLSessionProtocol {}
 // Builds URLSessions, with Search Credentials
 @available(macOS 13.0, *)
 @available(iOS 16.0.0, *)
+@MainActor
 class Request {
   
   // Entry Point for a Mock Session

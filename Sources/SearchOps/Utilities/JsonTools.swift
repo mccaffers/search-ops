@@ -1,7 +1,7 @@
 // SearchOps Swift Package
 // Business logic for SearchOps iOS Application
 //
-// (c) 2023 Ryan McCaffery
+// (c) 2024 Ryan McCaffery
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
@@ -23,8 +23,8 @@ public class JsonTools {
         return json
       }
     } catch let error as NSError {
-      print(input)
       print("Failed to load: \(error.localizedDescription)")
+      print(input)
     }
     return nil
   }

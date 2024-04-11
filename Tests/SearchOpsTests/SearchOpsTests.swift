@@ -49,19 +49,7 @@ final class SearchOpsTests: XCTestCase {
     }
 
     
-    func testExample() async throws {
-        var currentDate = Date()
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss" // Full day, Monday
-        var stringInput = dateFormatter.string(from: currentDate)
-        
-        var stringOutput = DateTools.dateString(Date())
-        
-//        XCTAssert(stringInput == stringOutput, "Date function")
-        
-    }
-    
+
     
     func OpenFile(filename:String) throws -> String {
 

@@ -1,7 +1,7 @@
 // SearchOps Swift Package
 // Business logic for SearchOps iOS Application
 //
-// (c) 2023 Ryan McCaffery
+// (c) 2024 Ryan McCaffery
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
@@ -10,6 +10,7 @@ import RealmSwift
 
 @available(macOS 13.0, *)
 @available(iOS 15.0, *)
+@MainActor
 public class LogDataManager: ObservableObject {
   
   @Published
@@ -22,6 +23,7 @@ public class LogDataManager: ObservableObject {
   public func refresh() {
     self.items = ReadServer()
   }
+  
   
   private func ReadServer() -> [LogEvent] {
     
