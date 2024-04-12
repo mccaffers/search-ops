@@ -20,7 +20,6 @@ extension URLSession: URLSessionProtocol {}
 // Builds URLSessions, with Search Credentials
 @available(macOS 13.0, *)
 @available(iOS 16.0.0, *)
-@MainActor
 class Request {
   
   // Entry Point for a Mock Session
@@ -29,6 +28,7 @@ class Request {
   
   private var localSession : URLSessionProtocol
   
+  @MainActor
   public init() {
     if let mock = Request.mockedSession {
       self.localSession = mock

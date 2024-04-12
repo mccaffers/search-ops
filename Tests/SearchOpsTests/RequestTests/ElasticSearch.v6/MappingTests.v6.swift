@@ -13,6 +13,7 @@ import SwiftyJSON
 @available(iOS 16.0.0, *)
 final class ElasticSearch_v6_MappingTests: XCTestCase {
   
+  @MainActor
   func testObjectsElasticv6() async throws {
     
     let response = try! SearchOpsTests().OpenFile(filename: "v6_mapping")

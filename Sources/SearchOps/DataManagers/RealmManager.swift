@@ -42,7 +42,7 @@ public class RealmManager {
   
 
   // Retrieve the existing encryption key for the app if it exists or create a new one
-  private static func GenerateOrGetKey() throws -> Data {
+  private static func GenerateOrGetKey() throws -> Data? {
     
     var key : Data?
     
@@ -63,8 +63,8 @@ public class RealmManager {
     
     // If we get this far, there has been a problem
     // but realm will continue with encyrption turned off
-    // Need to notify the user
-    return key!
+    // Need to notify the usere
+    return key
   }
   
   private static func getKeyMacOS() throws -> Data {
@@ -72,13 +72,17 @@ public class RealmManager {
   }
   
   private static func getRealmConfig() -> Realm.Configuration {
+    
     var config = Realm.Configuration(schemaVersion: 2)
+    
     do {
       config = try Realm.Configuration(encryptionKey: GenerateOrGetKey(), schemaVersion: 2)
     } catch let error {
       print(error)
     }
+   
     return config
+    
   }
   
   public static func DeleteRealmDatabase() throws {

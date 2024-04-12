@@ -11,15 +11,16 @@ import SwiftyJSON
 @testable import SearchOps
 
 @available(iOS 16.0.0, *)
+
 final class ElasticSearch_v5_MappingTests: XCTestCase {
-  
+
+  @MainActor
   func testObjectsElasticv5() async throws {
     
     let response = try! SearchOpsTests().OpenFile(filename: "v5_mapping")
     Request.mockedSession = MockURLSession(response: response)
     let output = await IndexMap.indexMappings(serverDetails: HostDetails(), index: "")
     
-    let fieldsCount = output.count
     XCTAssertEqual(output.count, 3)
 
   }
