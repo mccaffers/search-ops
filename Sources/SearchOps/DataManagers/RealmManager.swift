@@ -17,21 +17,21 @@ public class RealmManager {
   public static func IsMigrationNecessary() -> Bool {
     // Check if key in kSecClassKey, save as kSecClassGenericPassword instead
     // for compatability between iOS and macOS
-    let legacyKey = LegacyKeychainManager.RetrieveLegacyKeychain()
+    let legacyKey = LegacyKeychainManager().RetrieveLegacyKeychain()
     return legacyKey != nil
   }
   
   public static func PerformMigrationIfNecessary() -> (success:Bool, error:Error?) {
     // Check if key in kSecClassKey, save as kSecClassGenericPassword instead
     // for compatability between iOS and macOS
-    let legacyKey = LegacyKeychainManager.RetrieveLegacyKeychain()
+    let legacyKey = LegacyKeychainManager().RetrieveLegacyKeychain()
 
     // If the key exists in the legacy keychain, delete it, add it again
     if(legacyKey != nil){
       // migrate
-      LegacyKeychainManager.DeleteLegacyKeychain()
+      LegacyKeychainManager().DeleteLegacyKeychain()
       do {
-        try KeychainManager.AddToKeychain(input:legacyKey)
+        try KeychainManager().AddToKeychain(input:legacyKey)
       } catch let error {
         return (false, error)
       }
@@ -47,7 +47,7 @@ public class RealmManager {
     var key : Data?
     
     // Double check it exists
-    let outcome = KeychainManager.QueryKeychainMacOS()
+    let outcome = KeychainManager().QueryKeychainMacOS()
     
     // Success! Key exists in the keychain, lets return the key
     if outcome != nil{
@@ -55,7 +55,7 @@ public class RealmManager {
     } else {
       // If not, lets generate a key and add it to the keychain
       do {
-        key = try KeychainManager.AddToKeychain()
+        key = try KeychainManager().AddToKeychain()
       } catch let error {
         print(error)
       }
