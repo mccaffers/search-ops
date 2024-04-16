@@ -13,6 +13,10 @@ import SwiftyJSON
 @available(iOS 16.0.0, *)
 final class ElasticSearch_v8_MappingTests: XCTestCase {
   
+  override func setUpWithError() throws {
+      try? RealmManager.DeleteRealmDatabase()
+  }
+  
   @MainActor
   func testMappingElasticv8() async throws {
     

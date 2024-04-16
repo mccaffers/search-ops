@@ -14,6 +14,10 @@ import SwiftyJSON
 
 final class ElasticSearch_v5_MappingTests: XCTestCase {
 
+  override func setUpWithError() throws {
+      try? RealmManager.DeleteRealmDatabase()
+  }
+  
   @MainActor
   func testObjectsElasticv5() async throws {
     

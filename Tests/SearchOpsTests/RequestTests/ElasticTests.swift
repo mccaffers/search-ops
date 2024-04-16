@@ -13,6 +13,10 @@ import SwiftyJSON
 @available(iOS 16.0.0, *)
 final class ElasticTests: XCTestCase {
   
+  override func setUpWithError() throws {
+      try? RealmManager.DeleteRealmDatabase()
+  }
+  
   func testQueryShardException() async throws {
     
     let response = try! SearchOpsTests().OpenFile(filename: "query_shard_exception")

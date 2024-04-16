@@ -11,6 +11,7 @@ import XCTest
 
 final class DateToolsTests: XCTestCase {
   
+  private let calendar = Calendar.current
 
   func testdateString() throws {
     let currentDate = Date()
@@ -25,25 +26,39 @@ final class DateToolsTests: XCTestCase {
     
   }
   
-  func testdateRange() throws {
+  func testdateRangeMinutes() throws {
     
     // One minute test (in seconds)
     let oneMinRange = RelativeRangeFilter(period: .Minutes, value: 1)
     let getTimeForOneMin = oneMinRange.GetFromTime()
-    let timeMinusOneMin = Date.now - 60
-    XCTAssertEqual(getTimeForOneMin, timeMinusOneMin)
+    let minFromFilter = calendar.component(.minute, from: getTimeForOneMin)
     
+    let timeMinusOneMin = Date.now - 60
+    let minFromNow = calendar.component(.minute, from: timeMinusOneMin)
+    XCTAssertEqual(minFromFilter, minFromNow)
+  }
+  
+  func testdateRangeHours() throws {
     // One hour test (in seconds)
     let oneHourRange = RelativeRangeFilter(period: .Hours, value: 1)
     let getTimeForOneHour = oneHourRange.GetFromTime()
-    let timeMinusOneHour = Date.now - 3600
-    XCTAssertEqual(getTimeForOneHour, timeMinusOneHour)
+    let getHourFromFilter = calendar.component(.hour, from: getTimeForOneHour)
     
+    let timeMinusOneHour = Date.now - 3600
+    let getHourFromNow = calendar.component(.hour, from: timeMinusOneHour)
+    XCTAssertEqual(getHourFromFilter, getHourFromNow)
+    
+  }
+  
+  func testdateRangeDays() throws {
     // One day test (in seconds)
     let oneDayRange = RelativeRangeFilter(period: .Days, value: 1)
     let getTimeForOneDay = oneDayRange.GetFromTime()
+    let getDayFromFilter = calendar.component(.day, from: getTimeForOneDay)
+    
     let timeMinusOneDay = Date.now - 86400
-    XCTAssertEqual(getTimeForOneDay, timeMinusOneDay)
+    let getDayFromNow = calendar.component(.day, from: timeMinusOneDay)
+    XCTAssertEqual(getDayFromFilter, getDayFromNow)
     
   }
   

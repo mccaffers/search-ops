@@ -13,7 +13,10 @@ import SwiftyJSON
 @available(iOS 16.0.0, *)
 final class ElasticSearch_v8_ResponseTests: XCTestCase {
   
-
+  override func setUpWithError() throws {
+      try? RealmManager.DeleteRealmDatabase()
+  }
+  
   func testObjects() async throws {
     
     let response = try! SearchOpsTests().OpenFile(filename: "response.1")

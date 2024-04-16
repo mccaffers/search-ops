@@ -10,22 +10,21 @@ import Foundation
 public class KeyGenerator : KeyGeneratorProtocol {
   
   public init(){}
-    
+  
   public func Generate() throws -> Data {
     
-    var key = Data(count: 64)
+    var keyData = Data(count: 64)
+    let result = keyData.withUnsafeMutableBytes {
+      SecRandomCopyBytes(kSecRandomDefault, 64, $0.baseAddress!)
+    }
     
-    try key.withUnsafeMutableBytes({ (pointer: UnsafeMutableRawBufferPointer) in
-      
-      guard SecRandomCopyBytes(kSecRandomDefault, 64, pointer.baseAddress!) != 0 else {
-        throw MyError.runtimeError("Failed to get random bytes")
-      }
-      
-    })
-
-    print(key.map { String(format: "%02x", $0) }.joined())
-
-    return key
-    
+    if result == errSecSuccess {
+      return keyData
+    } else {
+      print("Problem generating random bytes")
+      throw KeyGeneratorError.failedToGenerate
+    }
   }
+  
 }
+

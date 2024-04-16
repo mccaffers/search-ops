@@ -8,7 +8,6 @@
 import Foundation
 import RealmSwift
 
-
 public class RealmManager {
   
   public static func IsMigrationNecessary() -> Bool {
