@@ -35,7 +35,6 @@ public class RealmManager {
     
     return (true, nil)
   }
-  
 
   // Retrieve the existing encryption key for the app if it exists or create a new one
   private static func GenerateOrGetKey() throws -> Data? {
@@ -45,21 +44,23 @@ public class RealmManager {
     // Double check it exists
     let outcome = KeychainManager().Query()
     
-    // Success! Key exists in the keychain, lets return the key
+    // Success! Realm key exists in the keychain, lets return the key
     if outcome != nil{
       return outcome!
-    } else {
-      // If not, lets generate a key and add it to the keychain
-      do {
-        key = try KeychainManager().Add()
-      } catch let error {
-        print(error)
-      }
+    }
+    
+    // If not, lets generate a key and add it to the keychain
+    do {
+      // KeyGenerator can throw
+      // SecAddItem can throw
+      key = try KeychainManager().Add()
+    } catch let error {
+      print(error)
     }
     
     // If we get this far, there has been a problem
     // but realm will continue with encyrption turned off
-    // Need to notify the usere
+    // but we need to notify the users, maybe with the option of retry?
     return key
   }
   
@@ -83,20 +84,21 @@ public class RealmManager {
   
   public static func DeleteRealmDatabase() throws {
     // Not avaliable to users yet
-    try? FileManager.default.removeItem(at: Realm.Configuration.defaultConfiguration.fileURL!)
+//    try? FileManager.default.removeItem(at: Realm.Configuration.defaultConfiguration.fileURL!)
   }
   
   @MainActor
   public static var realmInstance: Realm?
   
   @MainActor
-  public static func getRealm() -> Realm? {
+  public static func getRealm(retry: Bool = false) -> Realm? {
     
     if realmInstance == nil {
       // Use the getKey() function to get the stored encryption key or create a new one
       let config = getRealmConfig()
       do {
         // Open the realm with the configuration
+        print("Opening realm")
         realmInstance = try Realm(configuration: config)
         return realmInstance
         // Use the realm as normal
@@ -109,6 +111,10 @@ public class RealmManager {
         print("Deleting database")
         try! DeleteRealmDatabase()
         
+        if !retry {
+          sleep(1)
+          return getRealm(retry: true)
+        }
         fatalError("Error opening realm: \(error)")
         
       }

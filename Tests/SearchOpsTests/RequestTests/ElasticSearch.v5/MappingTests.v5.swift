@@ -18,6 +18,7 @@ final class ElasticSearch_v5_MappingTests: XCTestCase {
       try? RealmManager.DeleteRealmDatabase()
   }
   
+  
   @MainActor
   func testObjectsElasticv5() async throws {
     

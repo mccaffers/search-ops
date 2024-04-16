@@ -101,7 +101,7 @@ public class FilterHistoryDataManager: ObservableObject {
     public func updateDateForFilterHistory(id: UUID)  {
         if let realm = RealmManager.getRealm() {
             try! realm.write {
-                var item = items.first(where: {$0.id == id})
+                let item = items.first(where: {$0.id == id})
                 item?.date = Date.now
                 item?.count = (item?.count ?? 0) + 1
             }

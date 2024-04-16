@@ -20,6 +20,9 @@ jobs:
       run: sudo xcode-select -switch /Applications/Xcode_15.2.app && /usr/bin/xcodebuild -version
     # - name: Build
     #   run: xcodebuild build  -scheme SearchOpsTests  -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' 
+    - name: Boot iOS Simulator
+      run: >
+          xcrun simctl boot "iPhone 15"
     - name: Run tests
       run: >
           xcodebuild 
