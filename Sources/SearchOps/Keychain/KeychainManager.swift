@@ -15,13 +15,16 @@ public class KeychainManager {
   private static let keychainIdentifer = "realm.key"
   
   private let keychainOps: KeychainOperationsProtocol
+  private let keyGenerator: KeyGeneratorProtocol
    
-  public init(keychainOps: KeychainOperationsProtocol = KeychainOperations()) {
-     self.keychainOps = keychainOps
+  public init(keychainOps: KeychainOperationsProtocol = KeychainOperations(),
+              keyGenerator: KeyGeneratorProtocol = KeyGenerator()) {
+      self.keychainOps = keychainOps
+      self.keyGenerator = keyGenerator
   }
   
   // Builds the query for the Keychain operations
-  public func QueryKeychainMacOS() -> Data? {
+  public func Query() -> Data? {
     
     let query = [kSecClass as String            : kSecClassGenericPassword as String,
                  kSecAttrService as String      : "searchops",
@@ -32,19 +35,18 @@ public class KeychainManager {
     
     do {
       return try keychainOps.SecItemCopyMatching(query: query)
-    } catch let error {
-      print(error)
+    } catch _ {
       return nil
     }
   }
       
   // Builds the query for the Keychain operations
-  public func AddToKeychain(input:Data? = nil) throws -> Data? {
+  public func Add(input:Data? = nil) throws -> Data? {
     
     var key = input
     if (key == nil){
       print("key is empty, generating")
-      key = try KeyGenerator.New()
+      key = try keyGenerator.Generate()
     }
     
     let query : [String : Any] = [
@@ -68,9 +70,8 @@ public class KeychainManager {
   }
   
   
-  public func DeleteKeychainMacos() throws {
+  public func Delete() throws {
     
-  
     // Add the private key to the keychain
     do {
 

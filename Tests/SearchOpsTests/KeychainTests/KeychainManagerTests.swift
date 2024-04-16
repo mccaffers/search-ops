@@ -1,26 +1,44 @@
+// SearchOps Swift Package
+// Business logic for SearchOps iOS Application
 //
-//  KeychainManagerTests.swift
-//  
-//
-//  Created by Ryan McCaffery on 15/04/2024.
-//
+// (c) 2024 Ryan McCaffery
+// This code is licensed under MIT license (see LICENSE.txt for details)
+// ---------------------------------------
 
 import XCTest
 
 @testable import SearchOps
 
 final class KeychainManagerTests: XCTestCase {
-
-
-    func testExample() throws {
-        let keychainOps = MockKeychainOperations()
-      
-      let query = [kSecClass as String: kSecClassGenericPassword as String]
-                                                          as [String : Any]
-      
-      XCTAssertThrowsError(try keychainOps.SecItemCopyMatching(query: query)) { error in
-            XCTAssertEqual(error as! KeychainManagerError,  KeychainManagerError.noItemFound)
-        }
-    }
-
+  
+  func testKeychainManagerQueryNotFound() throws {
+    let manager = KeychainManager(keychainOps: MockKeychainOperationsNotFound())
+    let response = manager.Query()
+    XCTAssertNil(response)
+  }
+  
+  func testKeychainManagerQueryUnexpected() throws {
+    let manager = KeychainManager(keychainOps: MockKeychainOperationsUnexpected())
+    let response = manager.Query()
+    XCTAssertNil(response)
+  }
+  
+  func testKeychainManagerQueryUnhandledError() throws {
+    let manager = KeychainManager(keychainOps: MockKeychainOperationsUnhandledError())
+    let response = manager.Query()
+    XCTAssertNil(response)
+  }
+  
+  func testKeychainManagerQueryValidResponse() throws {
+    let manager = KeychainManager(keychainOps: MockKeychainOperationsValidResponse())
+    let response = manager.Query()
+    XCTAssertEqual(response?.count, 64)
+  }
+  
+  func testKeychainManagerQueryKeyThrows() throws {
+    let manager = KeychainManager(keychainOps: MockKeychainOperationsValidResponse())
+    let response = manager.Query()
+    XCTAssertEqual(response?.count, 64)
+  }
+  
 }

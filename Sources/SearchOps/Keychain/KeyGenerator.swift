@@ -1,15 +1,17 @@
+// SearchOps Swift Package
+// Business logic for SearchOps iOS Application
 //
-//  File.swift
-//  
-//
-//  Created by Ryan McCaffery on 14/04/2024.
-//
+// (c) 2024 Ryan McCaffery
+// This code is licensed under MIT license (see LICENSE.txt for details)
+// ---------------------------------------
 
 import Foundation
 
-public class KeyGenerator {
+public class KeyGenerator : KeyGeneratorProtocol {
   
-  public static func New() throws -> Data {
+  public init(){}
+    
+  public func Generate() throws -> Data {
     
     var key = Data(count: 64)
     

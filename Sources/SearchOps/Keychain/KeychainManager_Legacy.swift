@@ -21,10 +21,14 @@ public class LegacyKeychainManager {
   private static let keychainIdentifierData = "io.Realm.EncryptionExampleKey".data(using: String.Encoding.utf8, 
                                                                                    allowLossyConversion: false)
 
+  
   private let keychainOps: KeychainOperationsProtocol
+  private let keyGenerator: KeyGeneratorProtocol
    
-  public init(keychainOps: KeychainOperationsProtocol = KeychainOperations()) {
-     self.keychainOps = keychainOps
+  public init(keychainOps: KeychainOperationsProtocol = KeychainOperations(),
+              keyGenerator: KeyGeneratorProtocol = KeyGenerator()) {
+      self.keychainOps = keychainOps
+      self.keyGenerator = keyGenerator
   }
   
   public func RetrieveLegacyKeychain() -> Data? {
@@ -59,7 +63,7 @@ public class LegacyKeychainManager {
   }
   
   public func AddLegacyKeychain() throws -> Data? {
-    let key = try KeyGenerator.New()
+    let key = try keyGenerator.Generate()
     
     let query = [kSecClass as String              : kSecClassKey as String,
                  kSecAttrApplicationTag as String : LegacyKeychainManager.keychainIdentifierData as AnyObject,

@@ -8,9 +8,6 @@
 import Foundation
 import RealmSwift
 
-enum MyError: Error {
-    case runtimeError(String)
-}
 
 public class RealmManager {
   
@@ -31,7 +28,7 @@ public class RealmManager {
       // migrate
       LegacyKeychainManager().DeleteLegacyKeychain()
       do {
-        try KeychainManager().AddToKeychain(input:legacyKey)
+        try KeychainManager().Add(input:legacyKey)
       } catch let error {
         return (false, error)
       }
@@ -47,7 +44,7 @@ public class RealmManager {
     var key : Data?
     
     // Double check it exists
-    let outcome = KeychainManager().QueryKeychainMacOS()
+    let outcome = KeychainManager().Query()
     
     // Success! Key exists in the keychain, lets return the key
     if outcome != nil{
@@ -55,7 +52,7 @@ public class RealmManager {
     } else {
       // If not, lets generate a key and add it to the keychain
       do {
-        key = try KeychainManager().AddToKeychain()
+        key = try KeychainManager().Add()
       } catch let error {
         print(error)
       }

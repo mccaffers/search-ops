@@ -1,40 +1,15 @@
+// SearchOps Swift Package
+// Business logic for SearchOps iOS Application
 //
-//  File.swift
-//  
-//
-//  Created by Ryan McCaffery on 15/04/2024.
-//
+// (c) 2024 Ryan McCaffery
+// This code is licensed under MIT license (see LICENSE.txt for details)
+// ---------------------------------------
 
 import Foundation
 
-public enum KeychainManagerError: Error, Equatable {
-    case noItemFound
-    case unexpectedData
-    case unhandledError(status: OSStatus)
-}
-
-public protocol KeychainOperationsProtocol {
-  func SecItemCopyMatching(query:[String : Any]) throws -> Data
-  func SecItemAdd(query:[String:Any]) throws -> Bool
-}
-
-
-public class MockKeychainOperations : KeychainOperationsProtocol {
-  public func SecItemCopyMatching(query: [String : Any]) throws -> Data {
-    throw KeychainManagerError.noItemFound
-  }
-  
-  public func SecItemAdd(query: [String : Any]) throws -> Bool {
-    throw KeychainManagerError.noItemFound
-  }
-  
-}
-  
 public class KeychainOperations : KeychainOperationsProtocol {
   
-  public init(){
-    
-  }
+  public init(){}
   
   public func SecItemCopyMatching(query:[String : Any]) throws -> Data {
     var item: AnyObject? = nil
