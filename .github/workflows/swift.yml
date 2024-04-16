@@ -4,26 +4,27 @@
 name: Nightly Test
 
 on:
-  schedule:
-    - cron: '30 5 * * *'
+  push:
+    branches:    
+      - main
   workflow_dispatch:
 
 jobs:
   build:
 
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Select Xcode  
-      run: sudo xcode-select -switch /Applications/Xcode_14.1.app && /usr/bin/xcodebuild -version
+      run: sudo xcode-select -switch /Applications/Xcode_15.2.app && /usr/bin/xcodebuild -version
     # - name: Build
     #   run: xcodebuild build  -scheme SearchOpsTests  -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' 
     - name: Run tests
       run: >
           xcodebuild 
           -scheme SearchOpsTests 
-          -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' 
+          -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' 
           -resultBundlePath TestResult/ 
           -enableCodeCoverage YES 
           -derivedDataPath "${RUNNER_TEMP}/Build/DerivedData"
@@ -34,7 +35,7 @@ jobs:
       run: >
           bash ./.github/workflows/xccov-to-sonarqube-generic.sh *.xcresult/ > sonarqube-generic-coverage.xml
     - name: Upload coverage report
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         path: sonarqube-generic-coverage.xml
         retention-days: 1 # Artifact will be available only for 5 days.
@@ -44,12 +45,12 @@ jobs:
     needs: build
     steps:
       - name: Checkout repository on branch
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.HEAD_REF }}
           fetch-depth: 0          
       - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
       - name: Unpack Artifact  
         run: >
           ls -l ./
@@ -63,21 +64,3 @@ jobs:
             -Dsonar.projectKey=mccaffers_SearchOps
             -Dsonar.organization=mccaffers
             -Dsonar.coverageReportPaths=artifact/sonarqube-generic-coverage.xml
-            
-    # - name: Setup sonarqube
-    #   uses: warchant/setup-sonar-scanner@v3
-    # - name: Generate and upload code analysis report
-    #   run: >
-    #       export PATH=$PATH:$CM_BUILD_DIR/sonar-scanner/bin
-    #       sonar-scanner 
-    #         -Dsonar.projectKey="mccaffers_SearchOps" 
-    #         -Dsonar.organization="mccaffers" 
-    #         -Dsonar.host.url="https://sonarcloud.io" 
-    #         -Dsonar.login="${{ secrets.SONAR_TOKEN }}" 
-    #         -Dsonar.c.file.suffixes=- 
-    #         -Dsonar.cpp.file.suffixes=- 
-    #         -Dsonar.objc.file.suffixes=- 
-    #         -Dsonar.projectVersion=1.0.0 
-    #         -Dsonar.sources=. 
-    #         -Dsonar.cfamily.build-wrapper-output.bypass=true 
-    #         -Dsonar.coverageReportPaths=sonarqube-generic-coverage.xml
