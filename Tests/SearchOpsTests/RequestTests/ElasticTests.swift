@@ -13,8 +13,11 @@ import SwiftyJSON
 @available(iOS 16.0.0, *)
 final class ElasticTests: XCTestCase {
   
-  override func setUpWithError() throws {
-      try? RealmManager.DeleteRealmDatabase()
+  override func setUp() {
+    super.setUp()
+    // TODO
+    // Use in memory realm
+    // https://www.mongodb.com/docs/atlas/device-sdks/sdk/swift/test-and-debug/
   }
   
   func testQueryShardException() async throws {

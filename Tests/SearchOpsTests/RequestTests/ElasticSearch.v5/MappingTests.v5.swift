@@ -13,11 +13,12 @@ import SwiftyJSON
 @available(iOS 16.0.0, *)
 
 final class ElasticSearch_v5_MappingTests: XCTestCase {
-
-  override func setUpWithError() throws {
-      try? RealmManager.DeleteRealmDatabase()
-  }
   
+  override func setUp() {
+    // TODO
+    // Use in memory realm
+    // https://www.mongodb.com/docs/atlas/device-sdks/sdk/swift/test-and-debug/
+  }
   
   @MainActor
   func testObjectsElasticv5() async throws {
@@ -27,9 +28,6 @@ final class ElasticSearch_v5_MappingTests: XCTestCase {
     let output = await IndexMap.indexMappings(serverDetails: HostDetails(), index: "")
     
     XCTAssertEqual(output.count, 3)
-
+    
   }
 }
-
-
-

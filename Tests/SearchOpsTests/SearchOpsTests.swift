@@ -23,8 +23,7 @@ final class SearchOpsTests: XCTestCase {
     }
 
     
-
-    
+  
     func OpenFile(filename:String) throws -> String {
 
 //        let mypath = Bundle.module.url(forResource: filename, withExtension: "json")
