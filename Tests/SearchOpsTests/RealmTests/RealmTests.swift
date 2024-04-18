@@ -35,11 +35,19 @@ final class RealmTests: XCTestCase {
     XCTAssert(realm?.configuration.inMemoryIdentifier != nil)
   }
   
+  @MainActor func testCreatingRealmAlwaysFails() throws {
+    RealmManager().clearRealmInstance()
+    let mock = MockRealmClientAlwaysFails()
+    let realm = RealmManager(realmClient: mock).getRealm()
+    XCTAssertNil(realm)
+  }
+  
   @MainActor func testCreatingRealmWithDiscAccessIssues() throws {
     RealmManager().clearRealmInstance()
-    var mock = MockRealmClient()
-    
+    let mock = MockRealmClientAlwaysFailsOnFile()
     let realm = RealmManager(realmClient: mock).getRealm()
+    XCTAssert(realm != nil)
 
   }
+  
 }

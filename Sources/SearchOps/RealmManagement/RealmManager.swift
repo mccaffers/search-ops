@@ -41,10 +41,11 @@ public class RealmManager : RealmManagerProtocol {
   @MainActor
   public func clearRealmInstance() {
     RealmManager.realmInstance = nil
+    try? RealmUtilities.deleteRealmDatabase()
   }
   
   @MainActor
-  public func getRealm(retry: Bool = false,
+  public func getRealm(retry: Int = 0,
                        inMemory: Bool = false) -> Realm? {
     
     var config: Realm.Configuration
@@ -69,37 +70,30 @@ public class RealmManager : RealmManagerProtocol {
       
     } catch let error as NSError {
       
-      // Realm has failed to open, potentially due to the encryption key
-      // or maybe an issue with the filesystem
-      // re-try, then continue with in memory database
-      
-      // TODO
-      // Need to inform the user. This is unlikely to happen unless the keychain gets tampered with
-      // and then you cannot open the realm database
+      // Realm has failed to open
+      // We'll retry incase it's a temporary issue (eg. file system read)
+      // However, if it's something worse, like the Key has become corrupt or is invalid
+      // We'll need to load an in memory realm, and delete the existing realm database
       
       print(error)
       
-      if !retry {
-        
-        // We could delete the database and re-attempt
-        print("Deleting database")
-        try? RealmUtilities.deleteRealmDatabase()
-        
+      if retry == 0 {
+        print("First retry, attempting again, after 1 second sleep")
         // Give it a second incase there is a system fault
         sleep(1)
-        return getRealm(retry: true)
-     
+        return getRealm(retry: 1)
       }
       
-      // Finally return in memory realm instance
-      config = getRealmConfigInMemory()
-      RealmManager.realmInstance = try? Realm(configuration: config)
-      return RealmManager.realmInstance
+      if retry == 1 {
+        // At this point we need to inform the user
+        // and check if there is a realm database on disk
+        print("Second retry, lets load an in memory realm database")
+        return getRealm(retry: 2, inMemory:true)
+      }
       
     }
     
     return RealmManager.realmInstance
-    
     
   }
   
