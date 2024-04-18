@@ -8,3 +8,7 @@
 import Foundation
 import RealmSwift
 
+public protocol RealmClientProtocol {
+  func getRealm(config: Realm.Configuration) throws -> Realm
+}
+
