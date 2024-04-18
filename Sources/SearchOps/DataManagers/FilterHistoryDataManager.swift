@@ -99,7 +99,7 @@ public class FilterHistoryDataManager: ObservableObject {
     }
     
     public func updateDateForFilterHistory(id: UUID)  {
-        if let realm = RealmManager.getRealm() {
+        if let realm = RealmManager().getRealm() {
             try! realm.write {
                 let item = items.first(where: {$0.id == id})
                 item?.date = Date.now
@@ -109,7 +109,7 @@ public class FilterHistoryDataManager: ObservableObject {
     }
 
     private func DeleteAll(){
-        if let realm = RealmManager.getRealm() {
+      if let realm = RealmManager().getRealm() {
             try! realm.write {
                 let allUploadingObjects = realm.objects(RealmFilterObject.self)
                 realm.delete(allUploadingObjects)
@@ -118,7 +118,7 @@ public class FilterHistoryDataManager: ObservableObject {
     }
 
     private func ReadServer() -> [RealmFilterObject] {
-        if let realm = RealmManager.getRealm() {
+        if let realm = RealmManager().getRealm() {
             let realmArrayObject = realm.objects(RealmFilterObject.self)
             return Array(realmArrayObject)
         } else {
@@ -127,7 +127,7 @@ public class FilterHistoryDataManager: ObservableObject {
     }
     
     private func UpdateServerList(item: RealmFilterObject) {
-        if let realm = RealmManager.getRealm() {
+        if let realm = RealmManager().getRealm() {
             try! realm.write {
                 realm.add(item, update: Realm.UpdatePolicy.modified)
             }
@@ -139,7 +139,7 @@ public class FilterHistoryDataManager: ObservableObject {
     }
     
     private func DeleteOldest() {
-        if let realm = RealmManager.getRealm() {
+        if let realm = RealmManager().getRealm() {
             if let oldest = items.sorted(by: {$0.date < $1.date}).first {
                 try! realm.write {
                     realm.delete(oldest)
@@ -149,7 +149,7 @@ public class FilterHistoryDataManager: ObservableObject {
     }
     
     func DeleteItem(item: RealmFilterObject) {
-        if let realm = RealmManager.getRealm() {
+        if let realm = RealmManager().getRealm() {
             try! realm.write {
                 realm.delete(item)
             }

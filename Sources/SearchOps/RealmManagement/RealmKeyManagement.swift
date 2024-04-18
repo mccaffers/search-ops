@@ -10,7 +10,7 @@ import RealmSwift
 
 public class RealmKeyManagement {
   // Retrieve the existing encryption key for the app if it exists or create a new one
-  public static func GenerateOrGetKey() throws -> Data? {
+  public static func generateOrGetKey() throws -> Data? {
     
     var key : Data?
     

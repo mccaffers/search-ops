@@ -199,7 +199,7 @@ public enum QueryCompoundEnum: String, PersistableEnum {
 public class QueryObject : EmbeddedObject {
 	
 	public func eject() -> QueryObject {
-		var detachedObject = QueryObject()
+		let detachedObject = QueryObject()
 		
 		// Build up the list object
 		detachedObject.values = List<QueryFilterObject>()

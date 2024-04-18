@@ -17,7 +17,7 @@ final class ElasticSearch_v8_MappingTests: XCTestCase {
   @MainActor
   override func setUp() {
     // https://www.mongodb.com/docs/atlas/device-sdks/sdk/swift/test-and-debug/
-    _ = RealmManager.getRealm(inMemory: true)
+    _ = RealmManager().getRealm(inMemory: true)
   }
   
   @MainActor

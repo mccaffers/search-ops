@@ -41,6 +41,7 @@ public class KeychainManager {
   }
       
   // Builds the query for the Keychain operations
+  @discardableResult
   public func Add(input:Data? = nil) throws -> Data? {
     
     var key = input

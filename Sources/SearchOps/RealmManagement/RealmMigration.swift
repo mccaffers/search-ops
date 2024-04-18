@@ -10,7 +10,7 @@ import RealmSwift
 
 public class RealmMigration {
   
-  public static func IsMigrationNecessary() -> Bool {
+  public static func isMigrationNecessary() -> Bool {
     // Check if key in kSecClassKey, save as kSecClassGenericPassword instead
     // for compatability between iOS and macOS
     let legacyKey = LegacyKeychainManager().RetrieveLegacyKeychain()

@@ -6,12 +6,7 @@
 // ---------------------------------------
 
 import Foundation
-import RealmSwift
 
-public class RealmUtilities {
-  
-  public static func deleteRealmDatabase() throws {
-    try? FileManager.default.removeItem(at: Realm.Configuration.defaultConfiguration.fileURL!)
-  }
+public protocol RealmManagerProtocol {
   
 }

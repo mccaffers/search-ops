@@ -27,7 +27,7 @@ public class LogDataManager: ObservableObject {
   
   private func ReadServer() -> [LogEvent] {
     
-    if let realm = RealmManager.getRealm() {
+    if let realm = RealmManager().getRealm() {
       let realmArrayObject = realm.objects(LogEvent.self)
       return Array(realmArrayObject)
     } else {
@@ -41,7 +41,7 @@ public class LogDataManager: ObservableObject {
   }
   
   private func AddNewLogEntry(item: LogEvent) {
-    if let realm = RealmManager.getRealm() {
+    if let realm = RealmManager().getRealm() {
       try! realm.write {
         realm.add(item, update: Realm.UpdatePolicy.modified)
       }
@@ -50,7 +50,7 @@ public class LogDataManager: ObservableObject {
   
   
   private func RotateLogs() {
-    if let realm = RealmManager.getRealm() {
+    if let realm = RealmManager().getRealm() {
       try! realm.write {
         
         let realmArrayObject = realm.objects(LogEvent.self)
@@ -68,7 +68,7 @@ public class LogDataManager: ObservableObject {
   
   
   public func DeleteAll(){
-    if let realm = RealmManager.getRealm() {
+    if let realm = RealmManager().getRealm() {
       try! realm.write {
         let allUploadingObjects = realm.objects(LogEvent.self)
         realm.delete(allUploadingObjects)

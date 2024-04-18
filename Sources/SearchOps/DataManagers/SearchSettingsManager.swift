@@ -34,7 +34,7 @@ public class SettingsDatatManager: ObservableObject {
   
   @MainActor 
   public func setDocumentsPerPage(input: Int) {
-    if let realm = RealmManager.getRealm() {
+    if let realm = RealmManager().getRealm() {
       try! realm.write {
         self.settings?.maximumDocumentsPerPage = input
       }
@@ -43,7 +43,7 @@ public class SettingsDatatManager: ObservableObject {
   
   @MainActor
   public func setTimeoiut(input: Int) {
-    if let realm = RealmManager.getRealm() {
+    if let realm = RealmManager().getRealm() {
       try! realm.write {
         self.settings?.requestTimeout = input
       }
@@ -53,7 +53,7 @@ public class SettingsDatatManager: ObservableObject {
   @MainActor
   private func ReadServer() -> ApplicationSettings? {
     
-    if let realm = RealmManager.getRealm() {
+    if let realm = RealmManager().getRealm() {
       let settingsObj = realm.objects(ApplicationSettings.self)
       if settingsObj.count == 1 {
         return settingsObj.first
@@ -69,7 +69,7 @@ public class SettingsDatatManager: ObservableObject {
   
   @MainActor
   private func Update(item: ApplicationSettings) {
-    if let realm = RealmManager.getRealm() {
+    if let realm = RealmManager().getRealm() {
       try! realm.write {
         realm.add(item, update: Realm.UpdatePolicy.modified)
       }

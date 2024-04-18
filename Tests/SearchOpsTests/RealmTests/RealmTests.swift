@@ -12,8 +12,9 @@ import XCTest
 final class RealmTests: XCTestCase {
   
   @MainActor func testCreatingRealmOnDisk() throws {
-    RealmManager.clearRealmInstance()
-    let realm = RealmManager.getRealm()
+    RealmManager().clearRealmInstance()
+    
+    let realm = RealmManager().getRealm()
     
     // Check if the file exists on disk
     XCTAssert(realm?.configuration.fileURL != nil)
@@ -23,13 +24,22 @@ final class RealmTests: XCTestCase {
   }
   
   @MainActor func testCreatingRealmOnDiskInMemory() throws {
-    RealmManager.clearRealmInstance()
-    let realm = RealmManager.getRealm(inMemory: true)
+    RealmManager().clearRealmInstance()
+    
+    let realm = RealmManager().getRealm(inMemory: true)
     
     // Check if the file exists on disk
     XCTAssertNil(realm?.configuration.fileURL)
     
     // Check the memory identifer
     XCTAssert(realm?.configuration.inMemoryIdentifier != nil)
+  }
+  
+  @MainActor func testCreatingRealmWithDiscAccessIssues() throws {
+    RealmManager().clearRealmInstance()
+    var mock = MockRealmClient()
+    
+    let realm = RealmManager(realmClient: mock).getRealm()
+
   }
 }

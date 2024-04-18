@@ -125,7 +125,7 @@ public class Fields {
                                            dateField: dateField,
                                            range: range,
                                            sortBy: sortBy)
-    var settingsManager = SettingsDatatManager()
+    let settingsManager = SettingsDatatManager()
     searchObject.size = settingsManager.settings?.maximumDocumentsPerPage ?? 25
     searchObject.from = from
     

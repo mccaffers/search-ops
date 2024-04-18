@@ -8,42 +8,48 @@
 import Foundation
 import RealmSwift
 
-public class RealmManager {
-  
-  @MainActor
-  private static var realmInstance: Realm?
+public class RealmManager : RealmManagerProtocol {
   
   private static let schemaVersion : UInt64 = 2
   
-  private static func getRealmConfig() -> Realm.Configuration {
+  private let realmClient: RealmClientProtocol
+  
+  // Enable the injection a different realm client for testing
+  public init(realmClient: RealmClientProtocol = RealmClient()) {
+      self.realmClient = realmClient
+  }
+  
+  @MainActor
+  private static var realmInstance: Realm?
+    
+  private func getRealmConfig() -> Realm.Configuration {
     
     do {
-      return try Realm.Configuration(encryptionKey: RealmKeyManagement.GenerateOrGetKey(), schemaVersion: schemaVersion)
+      return try Realm.Configuration(encryptionKey: RealmKeyManagement.generateOrGetKey(), schemaVersion: RealmManager.schemaVersion)
     } catch let error {
       print(error)
-      return Realm.Configuration(schemaVersion: schemaVersion)
+      return Realm.Configuration(schemaVersion: RealmManager.schemaVersion)
     }
     
   }
   
-  private static func getRealmConfigInMemory() -> Realm.Configuration {
+  private func getRealmConfigInMemory() -> Realm.Configuration {
     return Realm.Configuration(inMemoryIdentifier: UUID().uuidString,
-                               schemaVersion: schemaVersion)
+                               schemaVersion: RealmManager.schemaVersion)
   }
   
   @MainActor
-  public static func clearRealmInstance() {
-    realmInstance = nil
+  public func clearRealmInstance() {
+    RealmManager.realmInstance = nil
   }
   
   @MainActor
-  public static func getRealm(retry: Bool = false, 
-                              inMemory: Bool = false) -> Realm? {
+  public func getRealm(retry: Bool = false,
+                       inMemory: Bool = false) -> Realm? {
     
     var config: Realm.Configuration
     
-    if let realmInstance = realmInstance {
-      print("realm instance exists")
+    if let realmInstance = RealmManager.realmInstance {
       return realmInstance
     }
     
@@ -54,34 +60,50 @@ public class RealmManager {
       config = getRealmConfig()
     }
     
-    print("Opening realm")
+    print("Attemping to load realm instance")
     
     do {
+      
       // Open the realm with the configuration
-      realmInstance = try Realm(configuration: config)
-      return realmInstance
-      // Use the realm as normal
+      RealmManager.realmInstance = try realmClient.getRealm(config: config)
+      
     } catch let error as NSError {
-      // If the encryption key is wrong, `error` will say that it's an invalid database
+      
+      // Realm has failed to open, potentially due to the encryption key
+      // or maybe an issue with the filesystem
+      // re-try, then continue with in memory database
       
       // TODO
       // Need to inform the user. This is unlikely to happen unless the keychain gets tampered with
       // and then you cannot open the realm database
-      print("Deleting database")
-      try! RealmUtilities.DeleteRealmDatabase()
+      
+      print(error)
       
       if !retry {
+        
+        // We could delete the database and re-attempt
+        print("Deleting database")
+        try? RealmUtilities.deleteRealmDatabase()
+        
+        // Give it a second incase there is a system fault
         sleep(1)
         return getRealm(retry: true)
+     
       }
-      fatalError("Error opening realm: \(error)")
+      
+      // Finally return in memory realm instance
+      config = getRealmConfigInMemory()
+      RealmManager.realmInstance = try? Realm(configuration: config)
+      return RealmManager.realmInstance
       
     }
+    
+    return RealmManager.realmInstance
     
     
   }
   
-  public static func checkRealmFileSize() -> Double{
+  public static func checkRealmFileSize() -> Double {
     
     if let realmPath = Realm.Configuration.defaultConfiguration.fileURL?.relativePath {
       do {
