@@ -18,7 +18,7 @@ public class Fields {
   
   public init() {}
   
-  public static func MakeSquashedArray(key: String, fields: [FieldsArray], squashedArray: [SquasedFieldsArray], keyArray: [String] = [String]()) -> [SquasedFieldsArray] {
+  public static func makeSquashedArray(key: String, fields: [FieldsArray], squashedArray: [SquasedFieldsArray], keyArray: [String] = [String]()) -> [SquasedFieldsArray] {
     
     var localArray = squashedArray
     
@@ -58,7 +58,7 @@ public class Fields {
           localKey = key + "." + item.name
         }
         
-        localArray = MakeSquashedArray(key:localKey,
+        localArray = makeSquashedArray(key:localKey,
                                        fields:fieldArray,
                                        squashedArray: localArray,
                                        keyArray: localKeyArray)
@@ -125,7 +125,7 @@ public class Fields {
                                            dateField: dateField,
                                            range: range,
                                            sortBy: sortBy)
-    var settingsManager = SettingsDatatManager()
+    let settingsManager = SettingsDatatManager()
     searchObject.size = settingsManager.settings?.maximumDocumentsPerPage ?? 25
     searchObject.from = from
     
@@ -197,7 +197,7 @@ public class Fields {
       
     }
     
-    return Fields.MakeSquashedArray(key: "", fields: headersDictionary, squashedArray: [SquasedFieldsArray]() )
+    return Fields.makeSquashedArray(key: "", fields: headersDictionary, squashedArray: [SquasedFieldsArray]() )
   }
   
   // Takes all of the elastic objects

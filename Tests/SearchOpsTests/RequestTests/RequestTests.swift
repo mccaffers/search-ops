@@ -1,7 +1,7 @@
 // SearchOps Swift Package
 // Business logic for SearchOps iOS Application
 //
-// (c) 2023 Ryan McCaffery
+// (c) 2024 Ryan McCaffery
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
@@ -13,8 +13,11 @@ import SwiftyJSON
 @available(iOS 16.0.0, *)
 final class RequestTests: XCTestCase {
   
-  override func setUpWithError() throws {
-    try? RealmManager.DeleteRealmDatabase()
+  override func setUp() {
+    super.setUp()
+    // TODO
+    // Use in memory realm
+    // https://www.mongodb.com/docs/atlas/device-sdks/sdk/swift/test-and-debug/
   }
   
   func testValidJSONResponse() async throws {

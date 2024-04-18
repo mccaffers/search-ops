@@ -6,9 +6,12 @@
 // ---------------------------------------
 
 import Foundation
+import RealmSwift
 
-public class Constants {
-  private(set) public static var defaultPort = "443"
-  private(set) public static var defaultRequestTimeout = 15.0
+public class RealmUtilities {
+  
+  public static func deleteRealmDatabase() throws {
+    try? FileManager.default.removeItem(at: Realm.Configuration.defaultConfiguration.fileURL!)
+  }
+  
 }
-

@@ -173,7 +173,7 @@ public class Results {
   
   public static func getIndexArray(_ input: String) -> IndexResult {
     
-    var result = IndexResult()
+    let result = IndexResult()
     
     if let json = JsonTools.serialiseJson(input) {
       

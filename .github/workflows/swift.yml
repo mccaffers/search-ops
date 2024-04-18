@@ -7,13 +7,12 @@ on:
   push:
     branches:    
       - main
+      - development
   workflow_dispatch:
 
 jobs:
   build:
-
     runs-on: macos-14
-
     steps:
     - uses: actions/checkout@v4
     - name: Select Xcode  
@@ -58,7 +57,7 @@ jobs:
         run: >
           ls -l ./
       - name: Run sonar-scanner
-        uses: SonarSource/sonarcloud-github-action@v2.0.2
+        uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} 

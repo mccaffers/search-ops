@@ -7,8 +7,6 @@
 
 import Foundation
 
-public class Constants {
-  private(set) public static var defaultPort = "443"
-  private(set) public static var defaultRequestTimeout = 15.0
+public protocol RealmManagerProtocol {
+  
 }
-

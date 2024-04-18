@@ -49,7 +49,7 @@ public class ResponseError {
 	}
 	
 	public func ejectRealm() -> RealmResponseError {
-		var realmObj = RealmResponseError()
+		let realmObj = RealmResponseError()
 		realmObj.message = self.message
 		realmObj.title = self.title
 		realmObj.type = self.type
