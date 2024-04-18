@@ -20,20 +20,20 @@ public class FilterHistoryDataManager: ObservableObject {
     @Published public var items: [RealmFilterObject] = []
     
     public init() {
-        self.items = ReadServer()
+        self.items = readServer()
     }
     
     public func refresh() {
-        self.items = ReadServer()
+        self.items = readServer()
     }
     
     public func clear() {
-        DeleteAll()
+        deleteAll()
         self.items = [RealmFilterObject]()
     }
     
     public func addNew(item: RealmFilterObject) {
-        UpdateServerList(item: item);
+        updateServerList(item: item);
         refresh()
     }
     
@@ -62,15 +62,10 @@ public class FilterHistoryDataManager: ObservableObject {
 						
 						for item in items {
 							if let exists = item.query?.values.contains(where: {$0.string == queryItem.string}),
-								 exists == true {
+								 exists {
 								idSet.insert(item.id)
 							}
 						}
-//						let firstQuery = items.first(where: {$0.query?.values.contains(where: )})
-//							if let firstQuery = firstQuery {
-//									idSet.insert(firstQuery.id)
-//							}
-//
 					}
 				
         }
@@ -100,7 +95,7 @@ public class FilterHistoryDataManager: ObservableObject {
     
     public func updateDateForFilterHistory(id: UUID)  {
         if let realm = RealmManager().getRealm() {
-            try! realm.write {
+            try? realm.write {
                 let item = items.first(where: {$0.id == id})
                 item?.date = Date.now
                 item?.count = (item?.count ?? 0) + 1
@@ -108,16 +103,16 @@ public class FilterHistoryDataManager: ObservableObject {
         }
     }
 
-    private func DeleteAll(){
+    private func deleteAll(){
       if let realm = RealmManager().getRealm() {
-            try! realm.write {
+            try? realm.write {
                 let allUploadingObjects = realm.objects(RealmFilterObject.self)
                 realm.delete(allUploadingObjects)
             }
         }
     }
 
-    private func ReadServer() -> [RealmFilterObject] {
+    private func readServer() -> [RealmFilterObject] {
         if let realm = RealmManager().getRealm() {
             let realmArrayObject = realm.objects(RealmFilterObject.self)
             return Array(realmArrayObject)
@@ -126,31 +121,31 @@ public class FilterHistoryDataManager: ObservableObject {
         }
     }
     
-    private func UpdateServerList(item: RealmFilterObject) {
+    private func updateServerList(item: RealmFilterObject) {
         if let realm = RealmManager().getRealm() {
-            try! realm.write {
+            try? realm.write {
                 realm.add(item, update: Realm.UpdatePolicy.modified)
             }
             
             if items.count > 50 {
-                DeleteOldest()
+                deleteOldest()
             }
         }
     }
     
-    private func DeleteOldest() {
+    private func deleteOldest() {
         if let realm = RealmManager().getRealm() {
             if let oldest = items.sorted(by: {$0.date < $1.date}).first {
-                try! realm.write {
+                try? realm.write {
                     realm.delete(oldest)
                 }
             }
         }
     }
     
-    func DeleteItem(item: RealmFilterObject) {
+    func deleteItem(item: RealmFilterObject) {
         if let realm = RealmManager().getRealm() {
-            try! realm.write {
+            try? realm.write {
                 realm.delete(item)
             }
         }

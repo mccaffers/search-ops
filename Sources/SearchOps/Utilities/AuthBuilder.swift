@@ -30,8 +30,8 @@ public class AuthBuilder {
                 return emptyResponse
             }
             
-            let (host, port) = extractPortFromName(myStrings[0], Constants.DEFAULT_CLOUD_PORT) // (host, port) not used
-            let (esID, _) = extractPortFromName(myStrings[1], Constants.DEFAULT_CLOUD_PORT)
+            let (host, port) = extractPortFromName(myStrings[0], Constants.defaultPort) // (host, port) not used
+            let (esID, _) = extractPortFromName(myStrings[1], Constants.defaultPort)
             
             if !esID.isEmpty {
                 return ("https://" + esID + "." + host, port)

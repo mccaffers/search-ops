@@ -29,11 +29,11 @@ public class HostsDataManager: ObservableObject {
 	public var status : UUID = UUID()
 	
 	public init() {
-		self.items = ReadServer()
+		self.items = readServer()
 	}
 	
 	public func refresh() {
-		self.items = ReadServer()
+		self.items = readServer()
 	}
 	
 	public func getHostByID(_ id: UUID?) -> HostDetails? {
@@ -48,13 +48,9 @@ public class HostsDataManager: ObservableObject {
 	public func updateList(item: HostDetails, customHeaders: [LocalHeaders]) {
 		
 		// Trick to delete by ID
-		//        let getItem = items.first(where: {$0.id == item.id})
-		//        if let getItem = getItem {
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				item.customHeaders.removeAll()
-				
-				//                var realmHeaderArray = [Headers]()
 				
 				for header in customHeaders {
 					let realmHeader = Headers()
@@ -78,20 +74,20 @@ public class HostsDataManager: ObservableObject {
 		// if it doesn't exist
 		if !items.contains(where: {$0.id == item.id}){
 			items.append(item)
-			UpdateServerList(items: items);
+			updateServerList(items: items);
 		} else {
 			// if it's being edited, remove the existing
 			items.removeAll(where: {$0.id == item.id})
 			// add the new
 			items.append(item)
-			UpdateServerList(items: items);
+			updateServerList(items: items);
 		}
 	}
 	
 	public static func setConncetionType(item: HostDetails, connection: ConnectionType) {
 		
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				item.connectionType = connection
 				
 				if connection == ConnectionType.CloudID {
@@ -109,7 +105,7 @@ public class HostsDataManager: ObservableObject {
 	public static func setVersion(item: HostDetails, version: String) {
 		
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				item.version = version
 				
 			}
@@ -117,13 +113,9 @@ public class HostsDataManager: ObservableObject {
 		
 	}
 	
-	public static func RemoveHeaders(headers: [Headers], id: UUID) {
-		//        headers.removeAll()
-	}
-	
-	public static func RemoveCustomHeaders(item: HostDetails, id: UUID) {
+	public static func removeCustomHeaders(item: HostDetails, id: UUID) {
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				if let index = item.customHeaders.index(matching: {$0.id == id}) {
 					item.customHeaders.remove(at: index)
 					
@@ -139,18 +131,18 @@ public class HostsDataManager: ObservableObject {
 		}
 	}
 	
-	public static func SetScheme(item: HostDetails, scheme: HostScheme) {
+	public static func setScheme(item: HostDetails, scheme: HostScheme) {
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				item.host?.scheme = scheme
 			}
 		}
 	}
 	
-	public static func DetachFromSync(item:HostDetails) {
+	public static func detachFromSync(item:HostDetails) {
 		
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				
 				// we create a shallow copy of the realm obj
 				// so that it isn't updated as the user makes changes
@@ -164,21 +156,20 @@ public class HostsDataManager: ObservableObject {
 		
 	}
 	
-	public static func SaveItem(item:HostDetails) {
-		
+	public static func saveItem(item:HostDetails) {
 		
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				item.draft = false
 			}
 		}
 	}
 	
-	public static func RemoveTrailingSlash(item:HostDetails) {
+	public static func removeTrailingSlash(item:HostDetails) {
 		
 		
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				if let gate = item.host?.url.hasSuffix("/"),
 					 gate == true{
 					if let urlWithDroppedBackslash = item.host?.url.dropLast().string {
@@ -189,24 +180,24 @@ public class HostsDataManager: ObservableObject {
 		}
 	}
 	
-	public static func UpdateAuthentication(item: HostDetails, selection: AuthenticationTypes ) {
+	public static func updateAuthentication(item: HostDetails, selection: AuthenticationTypes ) {
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				item.authenticationType = selection
 			}
 		}
 	}
 	
-	public static func MarkForDeletion(item: HostDetails){
+	public static func markForDeletion(item: HostDetails){
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				item.softDelete = true
 			}
 			
 		}
 	}
 	
-	@MainActor
+  @MainActor
   public func deleteItems(itemsForDeletion: [HostDetails]) async {
     
     // Notes
@@ -231,17 +222,17 @@ public class HostsDataManager: ObservableObject {
     
     // localarray has been nil checked above with the 'if let itemFromWhereSearch'
     for item in localArray {
-      DeleteItem(item: item);
+      deleteItem(item: item);
     }
     
     refresh()
   }
 	
-	private func UpdateServerList(items: [HostDetails]) {
+	private func updateServerList(items: [HostDetails]) {
 		
 		if let realm = RealmManager().getRealm() {
 			for item in items {
-				try! realm.write {
+				try? realm.write {
 					realm.add(item, update: Realm.UpdatePolicy.modified)
 				}
 			}
@@ -249,7 +240,7 @@ public class HostsDataManager: ObservableObject {
 		
 	}
 	
-	private func ReadServer() -> [HostDetails] {
+	private func readServer() -> [HostDetails] {
 		
 		if let realm = RealmManager().getRealm() {
 			let realmArrayObject = realm.objects(HostDetails.self)
@@ -259,9 +250,9 @@ public class HostsDataManager: ObservableObject {
 		}
 	}
 	
-	public func DeleteItem(item: HostDetails) {
+	public func deleteItem(item: HostDetails) {
 		if let realm = RealmManager().getRealm() {
-			try! realm.write {
+			try? realm.write {
 				realm.delete(item)
 				refresh()
 			}

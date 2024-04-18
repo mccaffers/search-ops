@@ -35,8 +35,8 @@ class Request {
     } else {
       let sessionConfig = URLSessionConfiguration.default
       let settingsManager = SettingsDatatManager()
-      sessionConfig.timeoutIntervalForRequest =  TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.DEFAULT_REQUEST_TIMEOUT))
-      sessionConfig.timeoutIntervalForResource =  TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.DEFAULT_REQUEST_TIMEOUT))
+      sessionConfig.timeoutIntervalForRequest =  TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.defaultRequestTimeout))
+      sessionConfig.timeoutIntervalForResource =  TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.defaultRequestTimeout))
       self.localSession = URLSession(configuration: .default)
     }
     
@@ -132,7 +132,7 @@ class Request {
         request = URLRequest(
           url: url,
           cachePolicy: .reloadIgnoringLocalCacheData,
-          timeoutInterval: TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.DEFAULT_REQUEST_TIMEOUT))
+          timeoutInterval: TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.defaultRequestTimeout))
         )
         
         var authorisationString : String = ""

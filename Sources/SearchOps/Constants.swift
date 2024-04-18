@@ -8,7 +8,7 @@
 import Foundation
 
 public class Constants {
-	public static var DEFAULT_CLOUD_PORT = "443"
-	public static var DEFAULT_REQUEST_TIMEOUT = 15.0
+  private(set) public static var defaultPort = "443"
+  private(set) public static var defaultRequestTimeout = 15.0
 }
 

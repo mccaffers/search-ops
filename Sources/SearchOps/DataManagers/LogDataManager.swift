@@ -17,15 +17,15 @@ public class LogDataManager: ObservableObject {
   public var items: [LogEvent] = []
   
   public init() {
-    self.items = ReadServer()
+    self.items = readServer()
   }
   
   public func refresh() {
-    self.items = ReadServer()
+    self.items = readServer()
   }
   
   
-  private func ReadServer() -> [LogEvent] {
+  private func readServer() -> [LogEvent] {
     
     if let realm = RealmManager().getRealm() {
       let realmArrayObject = realm.objects(LogEvent.self)
@@ -36,22 +36,22 @@ public class LogDataManager: ObservableObject {
   }
   
   public func addNew(item: LogEvent) {
-    AddNewLogEntry(item: item);
-    RotateLogs()
+    addNewLogEntry(item: item);
+    rotateLogs()
   }
   
-  private func AddNewLogEntry(item: LogEvent) {
+  private func addNewLogEntry(item: LogEvent) {
     if let realm = RealmManager().getRealm() {
-      try! realm.write {
+      try? realm.write {
         realm.add(item, update: Realm.UpdatePolicy.modified)
       }
     }
   }
   
   
-  private func RotateLogs() {
+  private func rotateLogs() {
     if let realm = RealmManager().getRealm() {
-      try! realm.write {
+      try? realm.write {
         
         let realmArrayObject = realm.objects(LogEvent.self)
         let myArray = Array(realmArrayObject)
@@ -67,9 +67,9 @@ public class LogDataManager: ObservableObject {
   }
   
   
-  public func DeleteAll(){
+  public func deleteAll(){
     if let realm = RealmManager().getRealm() {
-      try! realm.write {
+      try? realm.write {
         let allUploadingObjects = realm.objects(LogEvent.self)
         realm.delete(allUploadingObjects)
       }
