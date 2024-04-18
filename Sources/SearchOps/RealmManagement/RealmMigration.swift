@@ -17,7 +17,7 @@ public class RealmMigration {
     return legacyKey != nil
   }
   
-  public static func PerformMigrationIfNecessary() -> (success:Bool, error:Error?) {
+  public static func performMigrationIfNecessary() -> (success:Bool, error:Error?) {
     // Check if key in kSecClassKey, save as kSecClassGenericPassword instead
     // for compatability between iOS and macOS
     let legacyKey = LegacyKeychainManager().RetrieveLegacyKeychain()

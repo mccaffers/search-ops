@@ -84,6 +84,10 @@ public class RealmManager : RealmManagerProtocol {
         return getRealm(retry: 1)
       }
       
+      // Option here, need to check the error message
+      // if it's an encryption issue, we're goign to have to delete the file
+      // if it's a read file issue, load in memory, and warn the user (to potentially restart the app)
+      
       if retry == 1 {
         // At this point we need to inform the user
         // and check if there is a realm database on disk
