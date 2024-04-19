@@ -26,19 +26,13 @@ class HostDataManagerUpdateTests: XCTestCase {
     hostDetail = HostDetails()
     hostDetail.id = UUID()
     
-    headers = [
-      LocalHeaders(id: UUID(), header: "Test-Header", value: "Test-Value"),
-      LocalHeaders(id: UUID(), header: "Test-Header", value: "Test-Value")
-    ]
-    
-    var myHeader = Headers()
+    let myHeader = Headers()
     myHeader.id = UUID()
     myHeader.header = "Test-Header"
     myHeader.value = "Test-Value"
     
-    var customHeaders : [Headers] = [myHeader]
+    let customHeaders : [Headers] = [myHeader]
     hostDetail.customHeaders.append(objectsIn: customHeaders) // Assuming Headers is a Realm Object
-    
     
   }
   
@@ -56,6 +50,11 @@ class HostDataManagerUpdateTests: XCTestCase {
     XCTAssertEqual(hostDetail.customHeaders.count, 1)
     XCTAssertEqual(hostDetail.customHeaders.first?.header, "Test-Header")
     XCTAssertEqual(hostDetail.customHeaders.first?.value, "Test-Value")
+    
+    headers = [
+      LocalHeaders(id: UUID(), header: "Test-Header", value: "Test-Value"),
+      LocalHeaders(id: UUID(), header: "Test-Header", value: "Test-Value")
+    ]
     
     // When: updateList is called with new headers
     hostsDataManager.updateList(item: hostDetail, customHeaders: headers)

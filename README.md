@@ -49,8 +49,9 @@ Local Database
 
 Testing
 * Swift testing with various responses `./Tests/Resources`
-* Nightly tests with Github Actions
-* [![Nightly Test](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml)
+* On push tests with Github Actions
+* [![On Push Test](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml)
+* [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps)
 
 ## Project Breakdown
 

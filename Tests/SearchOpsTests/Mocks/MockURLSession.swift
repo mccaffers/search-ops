@@ -31,7 +31,7 @@ class MockURLSession: URLSessionProtocol {
         
         let data = Data(response.utf8)
         
-        var response : URLResponse = HTTPURLResponse(url: request.url ?? URL(fileURLWithPath: "example.org"), statusCode: status, httpVersion: nil, headerFields: nil)!
+        let response : URLResponse = HTTPURLResponse(url: request.url ?? URL(fileURLWithPath: "example.org"), statusCode: status, httpVersion: nil, headerFields: nil)!
         return (data, response)
     }
 }
