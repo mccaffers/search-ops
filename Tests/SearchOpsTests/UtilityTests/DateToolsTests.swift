@@ -62,5 +62,10 @@ final class DateToolsTests: XCTestCase {
     
   }
   
-  
+  func testEjectRealmObject() {
+      let filter = RelativeRangeFilter(period: .Days, value: 2.0)
+      let realmObj = filter.ejectRealmObject()
+      XCTAssertEqual(realmObj.period, filter.period, "Realm object period should match the filter's period.")
+      XCTAssertEqual(realmObj.value, filter.value, "Realm object value should match the filter's value.")
+  }
 }
