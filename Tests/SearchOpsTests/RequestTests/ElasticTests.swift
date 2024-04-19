@@ -21,7 +21,7 @@ final class ElasticTests: XCTestCase {
   
   func testQueryShardException() async throws {
     
-    let response = try! SearchOpsTests().OpenFile(filename: "query_shard_exception")
+    let response = try SearchOpsTests().OpenFile(filename: "query_shard_exception")
     let output = Search.getObjects(input: response)
     
     let objectCount = output.data.count
@@ -33,7 +33,7 @@ final class ElasticTests: XCTestCase {
   
   func testInternalError() async throws {
     
-    let response = try! SearchOpsTests().OpenFile(filename: "internal_error")
+    let response = try SearchOpsTests().OpenFile(filename: "internal_error")
     let output = Search.getObjects(input: response)
     
     let objectCount = output.data.count
@@ -46,7 +46,7 @@ final class ElasticTests: XCTestCase {
   func testValidJSONResponse() async throws {
     
     // {"hello":"world"}
-    let jsonResponse = try! SearchOpsTests().OpenFile(filename: "test")
+    let jsonResponse = try SearchOpsTests().OpenFile(filename: "test")
     Request.mockedSession = MockURLSession(response: jsonResponse)
     
     // blank object
@@ -69,7 +69,7 @@ final class ElasticTests: XCTestCase {
   
   func testInvalidInput() async throws {
     
-    let jsonResponse = try! SearchOpsTests().OpenFile(filename: "randomText")
+    let jsonResponse = try SearchOpsTests().OpenFile(filename: "randomText")
     Request.mockedSession = MockURLSession(response: jsonResponse)
     
     // blank object
@@ -85,7 +85,7 @@ final class ElasticTests: XCTestCase {
   func testIndex() async throws {
     
     // {"hello":"world"}
-    let jsonResponse = try! SearchOpsTests().OpenFile(filename: "test")
+    let jsonResponse = try SearchOpsTests().OpenFile(filename: "test")
     Request.mockedSession = MockURLSession(response: jsonResponse)
     
     // blank object
@@ -101,7 +101,7 @@ final class ElasticTests: XCTestCase {
   func testGetErrorResponse() async throws {
     
     // JSON Response
-    let response = try! SearchOpsTests().OpenFile(filename: "error")
+    let response = try SearchOpsTests().OpenFile(filename: "error")
     
     // Serialise and extracts the JSON array from the response
     let objects = Search.getObjects(input: response)
