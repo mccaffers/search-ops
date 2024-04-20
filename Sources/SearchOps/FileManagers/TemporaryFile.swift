@@ -14,7 +14,7 @@ public class TemporaryFile {
     let fileName = NSUUID().uuidString
 
     // This returns a URL? even though it is an NSURL class method
-    let fullURL = NSURL.fileURL(withPathComponents: [directory, fileName])
+    _ = NSURL.fileURL(withPathComponents: [directory, fileName])
 
   }
 }

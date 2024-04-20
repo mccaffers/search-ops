@@ -12,7 +12,7 @@ import SwiftyJSON
 
 @available(iOS 16.0.0, *)
 
-final class ElasticSearch_v8_MappingTests: XCTestCase {
+final class ElasticSearchV8MappingTests: XCTestCase {
 
   @MainActor
   override func setUp() {

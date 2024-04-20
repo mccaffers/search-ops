@@ -32,7 +32,6 @@ public class SearchRender {
                     selectedIndex: index,
                     from:from)
     
-    let responseJSON : String = ""
     var hitCount : Int = 0
     
     if let error = response.error {

@@ -4,11 +4,13 @@
 
 This Swift Package contains the business logic for the SearchOps iOS application. Supports the authentication and querying of ElasticSearch & OpenSearch. Manages the local data store for credentials.
 
+[![On Push Test](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps)
+
 <br clear="left"/>
 
 ## Apple App Store
 
-The full application with the presentation layer (SwiftUI) is available on the Apple App Store.
+The full application with the presentation layer (written in SwiftUI) is available on the Apple App Store.
 
 [![Available on App Store](./AppStore.svg)](https://apps.apple.com/us/app/search-ops/id6453696339)
 
@@ -49,32 +51,4 @@ Local Database
 
 Testing
 * Swift testing with various responses `./Tests/Resources`
-* On push tests with Github Actions
-* [![On Push Test](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml)
-* [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps)
-
-## Project Breakdown
-
-```bash
- └── SearchOps # Swift Package   
-    ├── Sources
-│   └── SearchOps/
-│       ├── Constants.swift
-│       ├── DataManagers/ # Data Store for Hosts, Filters and Logs
-│       │   ├── FilterHistoryDataManager.swift
-│       │   ├── HostsDataManager.swift
-│       │   ├── LogDataManager.swift
-│       │   ├── RealmManager.swift
-│       │   └── SearchSettingsManager.swift
-│       ├── Functions/ # Request Logic for Searching, Indexes and Mapping
-│       │   ├── Fields.swift
-│       │   ├── IndexMap.swift
-│       │   ├── Indicies.swift
-│       │   ├── Request.swift
-│       │   ├── Results.swift
-│       │   └── Search.swift
-│       ├── Models/ # Several data models to store responses
-│       ├── SearchOps.swift
-│       └── Utilities/ # Various tools to build authentication, handle dates and JSON
-└── Tests/
-```
+* On push tests with Github Actions with Sonarcloud analysis

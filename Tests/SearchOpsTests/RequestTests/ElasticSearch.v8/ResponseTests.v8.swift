@@ -12,7 +12,7 @@ import RealmSwift
 @testable import SearchOps
 
 @available(iOS 16.0.0, *)
-final class ElasticSearch_v8_ResponseTests: XCTestCase {
+final class ElasticSearchV8ResponseTests: XCTestCase {
   
   @MainActor
   override func setUp() {

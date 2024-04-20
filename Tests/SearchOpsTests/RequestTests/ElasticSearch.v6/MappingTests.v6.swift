@@ -11,7 +11,7 @@ import SwiftyJSON
 @testable import SearchOps
 
 @available(iOS 16.0.0, *)
-final class ElasticSearch_v6_MappingTests: XCTestCase {
+final class ElasticSearchV6MappingTests: XCTestCase {
   
   @MainActor
   override func setUp() {

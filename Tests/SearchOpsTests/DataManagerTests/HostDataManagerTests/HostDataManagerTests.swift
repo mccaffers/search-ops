@@ -19,6 +19,10 @@ final class HostsDataManagerTests: XCTestCase {
   override func setUp() {
     super.setUp()
     
+    // https://www.mongodb.com/docs/atlas/device-sdks/sdk/swift/test-and-debug/
+    RealmManager().clearRealmInstance()
+    _ = RealmManager().getRealm(inMemory: true)
+    
     // Initialize the HostsDataManager
     hostsDataManager = HostsDataManager()
     
