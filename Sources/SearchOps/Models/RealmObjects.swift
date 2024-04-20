@@ -64,7 +64,7 @@ public class LocalHeaders : ObservableObject, Identifiable, Equatable  {
     @Published public var focusedIndexValue: Double = 0
 }
 
-public class Headers : Object  {
+public class Headers : Object  {  
     @Persisted public var id: UUID = UUID()
     @Persisted public var header: String = ""
     @Persisted public var value: String = ""
