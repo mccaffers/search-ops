@@ -7,12 +7,12 @@
 
 import XCTest
 import SwiftyJSON
-import Realm
+import RealmSwift
 
 @testable import SearchOps
 
 @available(iOS 16.0.0, *)
-final class ElasticSearch_v8_ResponseTests: XCTestCase {
+final class ElasticSearchV8ResponseTests: XCTestCase {
   
   @MainActor
   override func setUp() {
@@ -37,8 +37,7 @@ final class ElasticSearch_v8_ResponseTests: XCTestCase {
     
     let response = try! SearchOpsTests().OpenFile(filename: "response.1")
     let output = Fields.getFields(input: response)
-    
-    let fieldsCount = output.count
+  
     XCTAssertEqual(output.count, 7)
   }
   
@@ -75,7 +74,7 @@ final class ElasticSearch_v8_ResponseTests: XCTestCase {
     let objects = Search.getObjects(input: response)
     let fields = Fields.getFields(input: response)
     
-    var viewableFields: RenderedFields = RenderedFields(fields: [SquasedFieldsArray]())
+    let viewableFields: RenderedFields = RenderedFields(fields: [SquasedFieldsArray]())
     viewableFields.fields = Results.SortedFieldsWithDate(input: fields)
     
     let output = Results.UpdateResults(searchResults: objects.data,
@@ -100,9 +99,9 @@ final class ElasticSearch_v8_ResponseTests: XCTestCase {
     
     // Extract the headers and sort them
     let sortedFields = Results.SortedFieldsWithDate(input: fields)
-    var viewableFields: RenderedFields = RenderedFields(fields: sortedFields)
+    let viewableFields: RenderedFields = RenderedFields(fields: sortedFields)
     
-    var renderedResults = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
+    let renderedResults = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
     
     XCTAssertEqual(renderedResults?.headers.count, 17)
   }
@@ -119,17 +118,17 @@ final class ElasticSearch_v8_ResponseTests: XCTestCase {
     let fields = Fields.getFields(input: response)
     
     // Sorts the fields, put Date header at the start if it's there
-    var viewableFields: RenderedFields = RenderedFields(fields: [SquasedFieldsArray]())
+    let viewableFields: RenderedFields = RenderedFields(fields: [SquasedFieldsArray]())
     viewableFields.fields = Results.SortedFieldsWithDate(input: fields)
     
     // Creates an OrderedDictionary
-    var renderedObjects = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
+    let renderedObjects = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
     
     //
     // XCT Test Case - Value for field 'name'
     //
     
-    var nameField = renderedObjects!.headers.first(where: {$0.squashedString == "name"})
+    let nameField = renderedObjects!.headers.first(where: {$0.squashedString == "name"})
     
     let output = Results.getValueForKey(fieldParts: nameField!.fieldParts,
                                         item:renderedObjects!.results[0])
@@ -150,11 +149,11 @@ final class ElasticSearch_v8_ResponseTests: XCTestCase {
     let fields = Fields.getFields(input: response)
     
     // Sorts the fields, put Date header at the start if it's there
-    var viewableFields: RenderedFields = RenderedFields(fields: [SquasedFieldsArray]())
+    let viewableFields: RenderedFields = RenderedFields(fields: [SquasedFieldsArray]())
     viewableFields.fields = Results.SortedFieldsWithDate(input: fields)
     
     // Creates an OrderedDictionary
-    var renderedObjects = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
+    let renderedObjects = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
     
     //
     // XCT Test Case - Value for field 'name'
@@ -188,9 +187,9 @@ final class ElasticSearch_v8_ResponseTests: XCTestCase {
     
     // Extract the headers and sort them
     let sortedFields = Results.SortedFieldsWithDate(input: fields)
-    var viewableFields: RenderedFields = RenderedFields(fields: sortedFields)
+    let viewableFields: RenderedFields = RenderedFields(fields: sortedFields)
     
-    var renderedResults = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
+    let renderedResults = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
     
     XCTAssertEqual(renderedResults?.headers.count, 34)
     
