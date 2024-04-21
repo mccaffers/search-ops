@@ -66,3 +66,4 @@ jobs:
             -Dsonar.projectKey=mccaffers_SearchOps
             -Dsonar.organization=mccaffers
             -Dsonar.coverageReportPaths=artifact/sonarqube-generic-coverage.xml
+            -Dsonar.projectDescription="Business logic for the SearchOps iOS application"

@@ -10,7 +10,7 @@ This Swift Package contains the business logic for the SearchOps iOS application
 
 The full application with the presentation layer (written in SwiftUI) is available on the Apple App Store.
 
-[![Available on App Store](./AppStore.svg)](https://apps.apple.com/us/app/search-ops/id6453696339)
+[![Available on App Store](./AppStore.svg)](https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone)
 
 ## Supports
 
