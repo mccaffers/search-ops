@@ -142,9 +142,7 @@ public class HostDetails : Object  {
     if name.count > 0 {
       
       // Must have either a cloudID or a host url
-      if cloudid.count > 0 {
-        return true
-      } else if host?.url.count ?? 0 > 0{
+      if cloudid.count > 0 ||  host?.url.count ?? 0 > 0 {
         return true
       }
     }

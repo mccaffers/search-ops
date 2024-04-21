@@ -16,37 +16,41 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
   
   @MainActor
   override func setUp() {
-    // Initializes an in-memory Realm database to ensure each test is performed with a clean state.
+    // Set up a temporary, in-memory Realm database for testing to ensure a clean state for each test case.
     _ = RealmManager().getRealm(inMemory: true)
   }
   
-  // Tests the basic functionality of retrieving objects from an ElasticSearch response and counts the items returned.
+  // Evaluates the extraction of objects from a simulated ElasticSearch response and verifies the count of the items returned.
   func testObjects() async throws {
-    // Loads a static file, mimicking an ElasticSearch response, to avoid dependencies on external data during tests.
-    let response = try! SearchOpsTests().OpenFile(filename: "response.1")
-    // Parses objects from the response using a specific function designed to read and interpret these data structures.
+    
+    // Load a predefined static JSON file that simulates an ElasticSearch response to eliminate external dependencies during tests.
+    let response = try SearchOpsTests().OpenFile(filename: "response.1")
+    // Extract objects using a predefined parsing method tailored for ElasticSearch response structures.
     let output = Search.getObjects(input: response)
     
-    // Verifies that the number of data objects parsed matches expected values.
+    // Asserts that the number of parsed data objects is as expected, ensuring correct parsing functionality.
     let objectCount = output.data.count
     XCTAssertEqual(objectCount, 1)
     
-    // Verifies that the number of hits parsed (an Elasticsearch-specific metric) is as expected.
+    // Asserts that the number of hits (a specific metric relevant to ElasticSearch) retrieved matches the expected count.
     let hitsCount = Fields.getHits(input: response)
     XCTAssertEqual(hitsCount, 1)
   }
   
-  // Tests the retrieval and counting of fields within an ElasticSearch response.
+  // Verifies the correct retrieval and count of fields from a simulated ElasticSearch response.
   func testFields() async throws {
-    let response = try! SearchOpsTests().OpenFile(filename: "response.1")
+    // Load the same static response file used in other tests to ensure consistency.
+    let response = try SearchOpsTests().OpenFile(filename: "response.1")
+    // Invoke the function that extracts fields from the ElasticSearch response.
     let output = Fields.getFields(input: response)
   
+    // Check that the number of fields extracted matches the expected count, confirming the parser's accuracy.
     XCTAssertEqual(output.count, 7)
   }
   
   // Similar to testFields, but for a different response potentially containing more complex or nested data structures.
   func testFieldsWithDepth() async throws {
-    let response = try! SearchOpsTests().OpenFile(filename: "response.2")
+    let response = try SearchOpsTests().OpenFile(filename: "response.2")
     let output = Fields.getFields(input: response)
     
     XCTAssertEqual(output.count, 8)
@@ -54,7 +58,7 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
   
   // Tests parsing fields when the response includes arrays, which can complicate parsing logic.
   func testFieldsWithArray() async throws {
-    let response = try! SearchOpsTests().OpenFile(filename: "response.3")
+    let response = try SearchOpsTests().OpenFile(filename: "response.3")
     let output = Fields.getFields(input: response)
     
     XCTAssertEqual(output.count, 17)
@@ -62,7 +66,7 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
   
   // Tests the handling of large nested objects within a response, a common challenge in parsing complex JSON data.
   func testFieldsWithLargeNestedObject() async throws {
-    let response = try! SearchOpsTests().OpenFile(filename: "response.6")
+    let response = try SearchOpsTests().OpenFile(filename: "response.6")
     let output = Fields.getFields(input: response)
     
     XCTAssertEqual(output.count, 26)
@@ -70,7 +74,7 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
   
   // Evaluates the integration of multiple parsing methods to render objects based on the fields extracted from a response.
   func testRenderingObjects() async throws {
-    let response = try! SearchOpsTests().OpenFile(filename: "response.3")
+    let response = try SearchOpsTests().OpenFile(filename: "response.3")
     let objects = Search.getObjects(input: response)
     let fields = Fields.getFields(input: response)
     
@@ -89,7 +93,7 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
   
   // Verifies that headers are extracted and sorted correctly from the processed fields.
   func testHeaders() async throws {
-    let response = try! SearchOpsTests().OpenFile(filename: "response.3")
+    let response = try SearchOpsTests().OpenFile(filename: "response.3")
     let objects = Search.getObjects(input: response)
     let fields = Fields.getFields(input: response)
     
@@ -103,7 +107,7 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
   
   // Tests retrieval of a specific value by key, demonstrating the use of processed data to extract specific details.
   func testGetValueForKey() async throws {
-    let response = try! SearchOpsTests().OpenFile(filename: "response.3")
+    let response = try SearchOpsTests().OpenFile(filename: "response.3")
     let objects = Search.getObjects(input: response)
     let fields = Fields.getFields(input: response)
     
@@ -121,7 +125,7 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
   
   // Verifies correct retrieval of values from arrays within the parsed fields, addressing complexities in JSON array handling.
   func testGetArrayValue() async throws {
-    let response = try! SearchOpsTests().OpenFile(filename: "response.4")
+    let response = try SearchOpsTests().OpenFile(filename: "response.4")
     let objects = Search.getObjects(input: response)
     let fields = Fields.getFields(input: response)
     
@@ -145,7 +149,7 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
   
   // Handles the testing of very large objects to ensure robustness and correctness in handling extreme cases.
   func testLargeObject() async throws {
-    let response = try! SearchOpsTests().OpenFile(filename: "response.5")
+    let response = try SearchOpsTests().OpenFile(filename: "response.5")
     let objects = Search.getObjects(input: response)
     let fields = Fields.getFields(input: response)
     

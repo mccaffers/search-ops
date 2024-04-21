@@ -14,45 +14,42 @@ import SwiftyJSON
 @available(iOS 16.0.0, *)
 public class IndexMap {
   
+  // Fetches index mappings from an Elasticsearch server and processes them into a structured array.
+  // The function is designed to be called on the main thread.
   @MainActor
   public static func indexMappings(serverDetails: HostDetails,
-                                   index: String) async ->  [SquasedFieldsArray]  {
+                                   index: String) async -> [SquasedFieldsArray] {
     
+    let clock = ContinuousClock()  // Used for measuring the duration of the network request.
+    var response = ServerResponse()  // Holds the server's response.
+    var result = [SquasedFieldsArray]()  // Array to store the processed index mappings.
     
-    let clock = ContinuousClock()
-    var response = ServerResponse()
-    var result = [SquasedFieldsArray] ()
-    //		var parsed : String?
-    
-    // only measuring the request
+    // Measure the time taken to fetch and process the index mappings.
     let timeTaken = await clock.measure {
-      
-      var endpoint = "/"+index+"/_mapping"
-      if index.isEmpty {
-        endpoint = "/_mapping"
-      }
+      let endpoint = index.isEmpty ? "/_mapping" : "/\(index)/_mapping"
       response = await Request().invoke(serverDetails: serverDetails, endpoint: endpoint)
       
+      // If data is received, it is converted to a string.
       if let data = response.data {
-        response.parsed = String(bytes: data, encoding: String.Encoding.utf8) ?? "";
-        
+        response.parsed = String(bytes: data, encoding: String.Encoding.utf8) ?? ""
       }
-      
     }
     
-    if let mappingParsed = response.parsed  {
+    // Process the parsed data into a structured array if available.
+    if let mappingParsed = response.parsed {
       result = await IndexMap.indexMappingsResponseToArray(mappingParsed)
     }
     
+    // Record the duration of the request in the response.
     response.duration = timeTaken
     
+    // Log the event with details of the request and response.
     Logger.event(response: response,
                  index: index,
                  host: serverDetails,
                  hitCount: result.count)
     
-    return result
-    
+    return result  // Return the array of structured index mappings.
   }
   
   public static func indexMappingsResponseToArray(_ input: String) async -> [SquasedFieldsArray] {

@@ -12,7 +12,7 @@ import SwiftyJSON
 
 // Ensures that this class and its methods are only available on iOS 16.0.0 and later.
 @available(iOS 16.0.0, *)
-final class ElasticTests: XCTestCase {
+final class ResponseErrorTests: XCTestCase {
   
   // Setup method called before each test, used to configure or prepare the test environment.
   @MainActor override func setUp() {
