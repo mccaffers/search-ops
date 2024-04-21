@@ -54,63 +54,31 @@ public class IndexMap {
   
   public static func indexMappingsResponseToArray(_ input: String) async -> [SquasedFieldsArray] {
     
+    let data = Data(input.utf8)
+    
     do {
-      let data = Data(input.utf8)
+      
       // make sure this JSON is in the format we expect
       if let jsonArray = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-        // try to read out a string array
-        
-        var fieldsArray = [SquasedFieldsArray]()
-        var keyArray = Set<String>()
-        
-        for jsonObj in jsonArray as [String: Any]  {
-          
-          if let dictionary = jsonObj.value as? [String: Any]{
+
+        // Iterate through the top-level elements of the JSON, expected to be index mappings.
+        for (indexKey, value) in jsonArray {
+          if let dictionary = value as? [String: Any],
+             let mappingsObj = dictionary["mappings"] as? [String: Any] {
+
             
-            if let mappingsObj = dictionary["mappings"] as? [String: Any] {
-              
-              if let propertiesObj = mappingsObj["properties"] as? [String: Any] {
-                
-                for item in propertiesObj {
-                  
-                  var myDictionary = Dictionary<String, Any>()
-                  myDictionary[item.key]=item.value
-                  
-                  let output = indexMappingsResponseToArrayLopp(input:myDictionary,
-                                                                keyArray: keyArray,
-                                                                indexKey: jsonObj.key)
-                  
-                  
-                  output.forEach { keyArray.insert($0.squashedString) }
-                  fieldsArray.append(contentsOf: output)
-                }
-                
-                
-              } else if let typeKey = mappingsObj.first?.key,
-                        let innerObject = mappingsObj[typeKey] as? [String: Any] {
-                
-                if let propertiesObj = innerObject["properties"] as? [String: Any] {
-                  
-                  for item in propertiesObj {
-                    
-                    var myDictionary = Dictionary<String, Any>()
-                    myDictionary[item.key]=item.value
-                    
-                    let output = indexMappingsResponseToArrayLopp(input:myDictionary,
-                                                                  keyArray: keyArray,
-                                                                  indexKey: jsonObj.key)
-                    
-                    
-                    output.forEach { keyArray.insert($0.squashedString) }
-                    fieldsArray.append(contentsOf: output)
-                  }
-                  
-                }
-              }
+            if let propertiesObj = mappingsObj["properties"] as? [String: Any] {
+              return LoopProperties(propertiesObj: propertiesObj, indexKey: indexKey)
             }
+            
+            if let typeKey = mappingsObj.first?.key,
+               let innerObject = mappingsObj[typeKey] as? [String: Any] {
+              return Process(innerObject: innerObject, indexKey: indexKey)
+            }
+            
           }
         }
-        return fieldsArray
+        
       }
       
     } catch let error as NSError {
@@ -120,6 +88,45 @@ public class IndexMap {
     return [SquasedFieldsArray]()
   }
   
+  // Processes nested properties of a mappings object.
+  private static func Process(innerObject: [String : Any], indexKey: String) -> [SquasedFieldsArray] {
+    
+    var fieldsArray = [SquasedFieldsArray]()
+    
+    if let propertiesObj = innerObject["properties"] as? [String: Any] {
+      fieldsArray = LoopProperties(propertiesObj: propertiesObj, indexKey: indexKey)
+    }
+    
+    return fieldsArray
+  }
+  
+  // Loops through properties in the mappings JSON to create a structured array of index mappings.
+  private static func LoopProperties(propertiesObj: [String: Any],
+                                     indexKey: String) -> [SquasedFieldsArray]  {
+    
+    var fieldsArray = [SquasedFieldsArray]()
+    var keyArray = Set<String>()
+    
+    for item in propertiesObj {
+      
+      var myDictionary = Dictionary<String, Any>()
+      myDictionary[item.key]=item.value
+      
+      // Recursive loop to process and flatten the properties into structured arrays.
+      let output = indexMappingsResponseToArrayLopp(input:myDictionary,
+                                                    keyArray: keyArray,
+                                                    indexKey: indexKey)
+      
+      
+      output.forEach { keyArray.insert($0.squashedString) }
+      fieldsArray.append(contentsOf: output)
+    }
+    
+    return fieldsArray
+    
+  }
+
+  // Recursive function to deeply process and structure each index mapping field.
   private static func indexMappingsResponseToArrayLopp(input: [String: Any],
                                                        fieldObject: SquasedFieldsArray? = nil,
                                                        keyArray: Set<String>,
