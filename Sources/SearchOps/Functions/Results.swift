@@ -32,7 +32,7 @@ public class Results {
   }
   
   // Loop through all the inner objects of the results
-  public static func loopInnerObjects(item: SquasedFieldsArray, level: Int, input:  [[String: Any]], originalObject:[String: Any]?=nil) -> [[String : Any]] {
+  private static func loopInnerObjects(item: SquasedFieldsArray, level: Int, input:  [[String: Any]], originalObject:[String: Any]?=nil) -> [[String : Any]] {
     
     var myArray = [[String : Any]]()
     
