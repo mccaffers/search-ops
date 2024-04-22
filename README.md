@@ -2,23 +2,26 @@
 
 <img align="left" width=100 src="./Logo.png" style="padding-right:10px">
 
-This Swift Package contains the business logic for the SearchOps iOS application. Supports the authentication and querying of ElasticSearch & OpenSearch. Manages the local data store for credentials.
+This Swift Package contains the business logic for the SearchOps iOS application. It contains logics for how the application authenticates and queries ElasticSearch & OpenSearch instances. It also manages a local datastore, using Realm to keep the credentials private.
 
-[![Build](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=coverage)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps)
-
-## Apple App Store
-
-The full application with the presentation layer (written in SwiftUI) is available on the Apple App Store.
-
-[![Available on App Store](./AppStore.svg)](https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone)
+[![Build](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=coverage)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps)
 
 ## Supports
 
 - ElasticSearch version 6.0 and above
 - Opensearch version 1.0 and above
 
-<img align="left" width=45% src="./Screenshots/listview.png" style="padding:10px">
-<img align="left" width=45% src="./Screenshots/tableview.png" style="padding:10px">
+## Apple App Store
+
+The iOS application is available on the Apple App Store.
+
+[![Available on App Store](./AppStore.svg)](https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone)
+
+## Screenshots
+
+<img align="left" width=30% src="./Screenshots/listview.png" style="padding:10px">
+<img align="left" width=30% src="./Screenshots/tableview.png" style="padding:10px">
+<img align="left" width=30% src="./Screenshots/document.png" style="padding:10px">
 
 <br clear="left"/>
 
@@ -49,4 +52,4 @@ Local Database
 
 Testing
 * Swift testing with various responses `./Tests/Resources`
-* On push tests with Github Actions with Sonarcloud analysis
+* On build tests with Github Actions with Sonarcloud analysis
