@@ -15,13 +15,13 @@ This Swift Package contains the business logic for the SearchOps iOS application
 
 The iOS application is available on the Apple App Store.
 
-[![Available on App Store](./AppStore.svg)](https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone)
+<a href="https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone"><img width=18% src="./AppStore.svg"></a>
 
 ## Screenshots
 
-<img align="left" width=30% src="./Screenshots/listview.png" style="padding:10px">
-<img align="left" width=30% src="./Screenshots/tableview.png" style="padding:10px">
-<img align="left" width=30% src="./Screenshots/document.png" style="padding:10px">
+<img align="left" width=25% src="./Screenshots/listview.png" style="padding:10px">
+<img align="left" width=25% src="./Screenshots/tableview.png" style="padding:10px">
+<img align="left" width=25% src="./Screenshots/document.png" style="padding:10px">
 
 <br clear="left"/>
 

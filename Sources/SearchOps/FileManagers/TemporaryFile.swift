@@ -6,6 +6,7 @@
 // ---------------------------------------
 import Foundation
 
+// Not in use yet
 public class TemporaryFile {
   
   public func CreateTempFile() {
