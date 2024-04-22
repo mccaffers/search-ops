@@ -10,9 +10,9 @@ import Foundation
 public class KeychainOperations : KeychainOperationsProtocol {
   
   public init() {
-    // Required to create a public initialiser
     // For a type that’s defined as public, the default initializer is considered internal.
-    // If you want a public type to be initializable with a no-argument initializer when used in another module, you must explicitly provide a public no-argument initializer yourself as part of the type’s definition.
+    // If you want a public type to be initializable with a no-argument initializer when used in another module,
+    // you must explicitly provide a public no-argument initializer yourself as part of the type’s definition.
     // https://docs.swift.org/swift-book/documentation/the-swift-programming-language/accesscontrol/
     // SonarCloud - swift:S1186
   }
@@ -46,4 +46,13 @@ public class KeychainOperations : KeychainOperationsProtocol {
     }
     return true
   }
+  
+  public func SecItemDelete(query:[String:Any]) throws -> Bool {
+    let status = Security.SecItemDelete(query as CFDictionary)
+    guard status == errSecSuccess else {
+      return false
+    }
+    return true
+  }
+  
 }

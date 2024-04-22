@@ -13,10 +13,6 @@ public struct IndexField : Hashable, Identifiable {
     public var type: String = ""
 }
 
-// TODO
-// Switch to this from string, incase there
-// are two indexes with the same name (?)
-// not sure if thats possible
 public struct IndexKey : Hashable, Identifiable {
     public var id: UUID = UUID()
     public var name: String = ""

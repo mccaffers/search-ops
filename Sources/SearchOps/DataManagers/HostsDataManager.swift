@@ -64,8 +64,6 @@ public class HostsDataManager: ObservableObject {
 				
 				
 			}
-			//            }
-			//        }
 		}
 	}
 	
