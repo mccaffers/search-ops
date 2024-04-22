@@ -4,7 +4,7 @@
 
 This Swift Package contains the business logic for the SearchOps iOS application. Supports the authentication and querying of ElasticSearch & OpenSearch. Manages the local data store for credentials.
 
-[![On Push Test](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps)
+[![Build](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=coverage)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps)
 
 ## Apple App Store
 

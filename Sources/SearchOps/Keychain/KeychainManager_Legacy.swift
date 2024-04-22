@@ -31,7 +31,7 @@ public class LegacyKeychainManager {
       self.keyGenerator = keyGenerator
   }
   
-  public func RetrieveLegacyKeychain() -> Data? {
+  public func retrieveLegacyKeychain() -> Data? {
 
     let query = [kSecClass as String              : kSecClassKey as String,
                  kSecAttrApplicationTag as String : LegacyKeychainManager.keychainIdentifierData as AnyObject,
@@ -46,7 +46,7 @@ public class LegacyKeychainManager {
     }
   }
   
-  public func DeleteLegacyKeychain() {
+  public func deleteLegacyKeychain() -> Bool {
   
     let query: [NSString: AnyObject] = [
       kSecClass: kSecClassKey,
@@ -57,20 +57,23 @@ public class LegacyKeychainManager {
     
     if status == errSecSuccess {
       print("successly deleted")
+      return true
     } else {
       print("error deleting")
+      return false
     }
   }
   
-  public func AddLegacyKeychain() throws -> Data? {
-    let key = try keyGenerator.Generate()
-    
-    let query = [kSecClass as String              : kSecClassKey as String,
-                 kSecAttrApplicationTag as String : LegacyKeychainManager.keychainIdentifierData as AnyObject,
-                 kSecAttrKeySizeInBits as String  :  512 as AnyObject,
-                 kSecValueData as String          : key as AnyObject] as [String : Any]
-    
+  public func addLegacyKeychain() throws -> Data? {
     do {
+      
+      let key = try keyGenerator.Generate()
+      
+      let query = [kSecClass as String              : kSecClassKey as String,
+                   kSecAttrApplicationTag as String : LegacyKeychainManager.keychainIdentifierData as AnyObject,
+                   kSecAttrKeySizeInBits as String  :  512 as AnyObject,
+                   kSecValueData as String          : key as AnyObject] as [String : Any]
+      
       let response = try keychainOps.SecItemAdd(query: query)
       if response {
         return key
@@ -78,8 +81,7 @@ public class LegacyKeychainManager {
     } catch _ {
       return nil
     }
-    
-    return key
+    return nil
   }
   
 }

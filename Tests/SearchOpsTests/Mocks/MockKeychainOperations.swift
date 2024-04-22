@@ -9,6 +9,10 @@ import Foundation
 import SearchOps
 
 public class MockKeychainOperationsNotFound : KeychainOperationsProtocol {
+  public func SecItemDelete(query: [String : Any]) throws -> Bool {
+    throw KeychainManagerError.noItemFound
+  }
+  
   public func SecItemCopyMatching(query: [String : Any]) throws -> Data {
     throw KeychainManagerError.noItemFound
   }
@@ -26,6 +30,9 @@ public class MockKeychainOperationsUnexpected : KeychainOperationsProtocol {
   public func SecItemAdd(query: [String : Any]) throws -> Bool {
     throw KeychainManagerError.unexpectedData
   }
+  public func SecItemDelete(query: [String : Any]) throws -> Bool {
+    throw KeychainManagerError.unexpectedData
+  }
 }
 
 public class MockKeychainOperationsUnhandledError : KeychainOperationsProtocol {
@@ -34,6 +41,9 @@ public class MockKeychainOperationsUnhandledError : KeychainOperationsProtocol {
   }
   
   public func SecItemAdd(query: [String : Any]) throws -> Bool {
+    throw KeychainManagerError.unhandledError(status: 1)
+  }
+  public func SecItemDelete(query: [String : Any]) throws -> Bool {
     throw KeychainManagerError.unhandledError(status: 1)
   }
 }
@@ -45,6 +55,9 @@ public class MockKeychainOperationsValidResponse: KeychainOperationsProtocol {
   }
   
   public func SecItemAdd(query: [String : Any]) throws -> Bool {
+    return true
+  }
+  public func SecItemDelete(query: [String : Any]) throws -> Bool {
     return true
   }
 }

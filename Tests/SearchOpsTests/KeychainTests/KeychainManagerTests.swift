@@ -40,5 +40,4 @@ final class KeychainManagerTests: XCTestCase {
     let response = manager.Query()
     XCTAssertEqual(response?.count, 64)
   }
-  
 }

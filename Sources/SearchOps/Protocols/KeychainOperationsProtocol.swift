@@ -10,4 +10,5 @@ import Foundation
 public protocol KeychainOperationsProtocol {
   func SecItemCopyMatching(query:[String : Any]) throws -> Data
   func SecItemAdd(query:[String:Any]) throws -> Bool
+  func SecItemDelete(query:[String:Any]) throws -> Bool
 }

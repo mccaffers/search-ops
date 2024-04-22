@@ -37,12 +37,8 @@ public class FilterHistoryDataManager: ObservableObject {
     refresh()
   }
   
-  public func checkIfValueExists(query: List<QueryFilterObject>? = nil,
-                                 relativeRange: RelativeRangeFilter? = nil,
-                                 absoluteRange: AbsoluteDateRangeObject? = nil) -> UUID? {
-    
-    // id of objects found
-    var idSet = Set<UUID>()
+  public func checkIfValueExistsForAbsolute(incomingSet: Set<UUID>, absoluteRange: AbsoluteDateRangeObject? = nil) -> Set<UUID> {
+    var idSet = incomingSet
     
     if let absoluteRange = absoluteRange {
       let from = items.first(where: {$0.absoluteRange?.from == absoluteRange.from})
@@ -54,7 +50,28 @@ public class FilterHistoryDataManager: ObservableObject {
         idSet.insert(from.id)
       }
     }
+    return idSet
+  }
+  
+  public func checkIfValueExistsForRelative(incomingSet: Set<UUID>, relativeRange: RelativeRangeFilter? = nil) -> Set<UUID> {
+    var idSet = incomingSet
     
+    if let relativeRange = relativeRange {
+      let range = items.first(where: {$0.relativeRange?.value == relativeRange.value})
+      let period = items.first(where: {$0.relativeRange?.period == relativeRange.period})
+      
+      if let range = range,
+         let period = period,
+         range.id == period.id {
+        idSet.insert(range.id)
+      }
+      
+    }
+    return idSet
+  }
+  
+  public func checkIfValueExistsForQuery(incomingSet: Set<UUID>, query: List<QueryFilterObject>? = nil) -> Set<UUID> {
+    var idSet = incomingSet
     if let query = query {
       // list exists, convert it to an array
       let queryListArray = Array(query)
@@ -69,18 +86,18 @@ public class FilterHistoryDataManager: ObservableObject {
       }
       
     }
+    return idSet
+  }
+  
+  public func checkIfValueExists(query: List<QueryFilterObject>? = nil,
+                                 relativeRange: RelativeRangeFilter? = nil,
+                                 absoluteRange: AbsoluteDateRangeObject? = nil) -> UUID? {
     
-    if let relativeRange = relativeRange {
-      let range = items.first(where: {$0.relativeRange?.value == relativeRange.value})
-      let period = items.first(where: {$0.relativeRange?.period == relativeRange.period})
-      
-      if let range = range,
-         let period = period,
-         range.id == period.id {
-        idSet.insert(range.id)
-      }
-      
-    }
+    // id of objects found
+    var idSet = Set<UUID>()
+    idSet = checkIfValueExistsForAbsolute(incomingSet: idSet, absoluteRange: absoluteRange)
+    idSet = checkIfValueExistsForQuery(incomingSet: idSet, query: query)
+    idSet = checkIfValueExistsForRelative(incomingSet: idSet, relativeRange: relativeRange)
     
     if idSet.count == 0 {
       return nil
@@ -89,8 +106,6 @@ public class FilterHistoryDataManager: ObservableObject {
     } else  {
       return nil
     }
-    
-    
   }
   
   public func updateDateForFilterHistory(id: UUID)  {
