@@ -37,7 +37,6 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
     XCTAssertEqual(hitsCount, 1)
   }
   
-
   // Evaluates the integration of multiple parsing methods to render objects based on the fields extracted from a response.
   func testRenderingObjects() async throws {
     let response = try SearchOpsTests().OpenFile(filename: "response.3")
