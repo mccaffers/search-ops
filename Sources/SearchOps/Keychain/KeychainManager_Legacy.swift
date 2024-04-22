@@ -41,7 +41,7 @@ public class LegacyKeychainManager {
     do {
       return try keychainOps.SecItemCopyMatching(query: query)
     } catch let error {
-      print(error)
+      print("retrieveLegacyKeychain", error)
       return nil
     }
   }

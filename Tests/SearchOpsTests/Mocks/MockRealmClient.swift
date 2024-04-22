@@ -10,84 +10,62 @@ import RealmSwift
 
 @testable import SearchOps
 
-// Realm Error Codes
+// Documentation of common Realm error codes encountered in development:
+// - Error Domain=io.realm Code=2: "Unable to open a realm at path" - Typically due to permission issues.
+// - Error Domain=io.realm Code=3: "Failed to open file at path" - Operation not permitted.
+// - Error Domain=io.realm Code=5: "Failed to open file at path" - Directory does not exist.
+// - Error Domain=io.realm Code=20: "Failed to open Realm file at path" - Incorrect or missing encryption key.
+// References:
 // https://github.com/realm/realm-core/blob/master/src/realm/error_codes.cpp
 // https://github.com/realm/realm-swift/blob/309003bb852df09585b8912720d3f6ee5023afbe/Realm/RLMError.mm
 
-// Common ones I've seen:
-// Error Domain=io.realm Code=2 "Unable to open a realm at path" - Permissions
-// Error Domain=io.realm Code=3 "Failed to open file at path" - Operation not permitted
-// Error Domain=io.realm Code=5 "Failed to open file at path" - Directory doesn't exist
-// Error Domain=io.realm Code=20 "Failed to open Realm file at path" - Encryption key failed - InvalidDatabase
-
+/// A mock implementation of `RealmClientProtocol` that always fails, simulating errors encountered when trying to open a Realm database.
 public class MockRealmClientAlwaysFails: RealmClientProtocol {
-  
-  // From Apple Documentation,
-  // For a type that’s defined as public, the default initializer is considered internal.
-  // If you want a public type to be initializable with a no-argument initializer when used in another module,
-  // you must explicitly provide a public no-argument initializer yourself as part of the type’s definition.
-  // Source: https://docs.swift.org/swift-book/documentation/the-swift-programming-language/accesscontrol/
-  
+
+  /// Initializes a new instance of the class.
   public init() {
-    // SonarCloud - swift:S1186
+    // Explicit public no-argument initializer to comply with Swift access control when used in other modules.
   }
   
+  /// Simulates the failure to get a Realm instance by throwing an error.
   public func getRealm(config: Realm.Configuration) throws -> Realm {
-    let error = NSError(domain: "realm.io", code: 0, userInfo: [NSLocalizedDescriptionKey : "Unable to open a realm at path"])
-    throw error
+    throw NSError(domain: "realm.io", code: 0, userInfo: [NSLocalizedDescriptionKey : "Unable to open a realm at path"])
   }
-    
 }
 
+/// A mock `RealmClientProtocol` that fails only if the configuration does not specify an in-memory identifier, simulating file-related errors.
 public class MockRealmClientAlwaysFailsOnFile: RealmClientProtocol {
-  
-  // From Apple Documentation,
-  // For a type that’s defined as public, the default initializer is considered internal.
-  // If you want a public type to be initializable with a no-argument initializer when used in another module,
-  // you must explicitly provide a public no-argument initializer yourself as part of the type’s definition.
-  // Source: https://docs.swift.org/swift-book/documentation/the-swift-programming-language/accesscontrol/
-  
+
+  /// Initializes a new instance of the class.
   public init() {
-    // SonarCloud - swift:S1186
+    // Explicit public no-argument initializer to comply with Swift access control when used in other modules.
   }
   
+  /// Attempts to get a Realm instance, throws an error if not in-memory configuration is provided.
   @MainActor
   public func getRealm(config: Realm.Configuration) throws -> Realm {
-    if config.inMemoryIdentifier == nil {
-      
-      let query = [NSLocalizedDescriptionKey as String: "Reason",
-                   "RLMDeprecatedErrorCodeKey": "0",
-                   "RLMErrorCodeNameKey": "InvalidDatabase"] as [String : Any]
-      
-      let error = NSError(domain: "com.example.error", code: 0, userInfo: query);
-       
-      throw error
-    } else {
-      return RealmManager().getRealm(inMemory: true)!
+    guard config.inMemoryIdentifier != nil else {
+      let userInfo = [NSLocalizedDescriptionKey: "Failed to open Realm file due to invalid database", "RLMErrorCodeNameKey": "InvalidDatabase"]
+      throw NSError(domain: "com.example.error", code: 0, userInfo: userInfo)
     }
+    return RealmManager().getRealm(inMemory: true)!
   }
 }
 
+/// A mock `RealmClientProtocol` that simulates encryption key failure when a Realm database is accessed without an in-memory identifier.
 public class MockRealmClientEncryptionKeyFailed: RealmClientProtocol {
-  
-  // From Apple Documentation,
-  // For a type that’s defined as public, the default initializer is considered internal.
-  // If you want a public type to be initializable with a no-argument initializer when used in another module,
-  // you must explicitly provide a public no-argument initializer yourself as part of the type’s definition.
-  // Source: https://docs.swift.org/swift-book/documentation/the-swift-programming-language/accesscontrol/
-  
+
+  /// Initializes a new instance of the class.
   public init() {
-    // SonarCloud - swift:S1186
+    // Explicit public no-argument initializer to comply with Swift access control when used in other modules.
   }
   
+  /// Attempts to get a Realm instance, throws an encryption key failure error if not an in-memory configuration.
   @MainActor
   public func getRealm(config: Realm.Configuration) throws -> Realm {
-    if config.inMemoryIdentifier == nil {
-      let error = NSError(domain: "realm.io", code: 0, userInfo: [NSLocalizedDescriptionKey : "Encryption key failed"])
-      throw error
-    } else {
-      return RealmManager().getRealm(inMemory: true)!
+    guard config.inMemoryIdentifier != nil else {
+      throw NSError(domain: "realm.io", code: 0, userInfo: [NSLocalizedDescriptionKey : "Encryption key failed"])
     }
+    return RealmManager().getRealm(inMemory: true)!
   }
 }
-
