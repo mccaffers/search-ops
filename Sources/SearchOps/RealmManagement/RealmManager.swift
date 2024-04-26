@@ -50,19 +50,19 @@ public class RealmManager : RealmManagerProtocol {
     
     var config: Realm.Configuration
     
-    print("Attemping to load realm instance")
+    SystemLogger().message("Attemping to load realm instance")
     
     if let realmInstance = RealmManager.realmInstance {
-      print("Already loaded, Returning static instance")
+      SystemLogger().message("Already loaded, Returning static instance")
       return realmInstance
     }
     
     // Use the getKey() function to get the stored encryption key or create a new one
     if inMemory {
-      print("Loading in memory instance")
+      SystemLogger().message("Loading in memory instance")
       config = getRealmConfigInMemory()
     } else {
-      print("Loading in on disk instance")
+      SystemLogger().message("Loading in on disk instance")
       config = getRealmConfig()
     }
     
@@ -81,7 +81,7 @@ public class RealmManager : RealmManagerProtocol {
       print(error)
       
       if retry == 0 {
-        print("First retry, attempting again, after 1 second sleep")
+        SystemLogger().message("First retry, attempting again, after 1 second sleep", level: .warn)
         // Give it a second incase there is a system fault
         sleep(1)
         return getRealm(retry: 1)
