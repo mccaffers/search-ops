@@ -93,6 +93,20 @@ public class FilterHistoryDataManager: ObservableObject {
                                  relativeRange: RelativeRangeFilter? = nil,
                                  absoluteRange: AbsoluteDateRangeObject? = nil) -> UUID? {
     
+    var countToMatch = 0
+    
+    if query != nil {
+      countToMatch += 1
+    }
+    
+    if relativeRange != nil {
+      countToMatch += 1
+    }
+    
+    if absoluteRange != nil {
+      countToMatch += 1
+    }
+    
     // id of objects found
     var idSet = Set<UUID>()
     idSet = checkIfValueExistsForAbsolute(incomingSet: idSet, absoluteRange: absoluteRange)
@@ -101,7 +115,7 @@ public class FilterHistoryDataManager: ObservableObject {
     
     if idSet.count == 0 {
       return nil
-    } else if idSet.count == 1 {
+    } else if idSet.count == countToMatch {
       return idSet.first
     } else  {
       return nil

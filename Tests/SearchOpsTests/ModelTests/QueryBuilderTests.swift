@@ -58,4 +58,29 @@ class GenericQueryBuilderTests: XCTestCase {
     XCTAssertEqual(result.query?.bool?.must?.last?.range?["createdAt"]?.gte, "2021-01-01")
   }
   
+  
+  
+  func testEject() {
+    // Given
+    let queryObject = QueryObject()
+    let queryFilterObject1 = QueryFilterObject(string: "Filter 1")
+    let queryFilterObject2 = QueryFilterObject(string: "Filter 2")
+    queryObject.values.append(queryFilterObject1)
+    queryObject.values.append(queryFilterObject2)
+    queryObject.compound = .must
+    
+    // When
+    let ejectedObject = queryObject.eject()
+    
+    // Then
+    XCTAssertEqual(ejectedObject.values.count, 2)
+    XCTAssertEqual(ejectedObject.compound, .must)
+    
+    // Verify that the detached objects are copies, not references
+    for index in 0..<queryObject.values.count {
+      XCTAssertNotIdentical(queryObject.values[index], ejectedObject.values[index])
+      XCTAssertEqual(queryObject.values[index].string, ejectedObject.values[index].string)
+    }
+  }
+  
 }

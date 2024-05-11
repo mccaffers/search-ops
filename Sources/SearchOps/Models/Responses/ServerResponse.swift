@@ -8,10 +8,6 @@
 import Foundation
 import RealmSwift
 
-public enum ErrorResponseType : String, PersistableEnum {
-    case critical, warn, information
-}
-
 @available(macOS 13.0, *)
 @available(iOS 16.0, *)
 public class ServerResponse {
@@ -33,27 +29,5 @@ public class ServerResponse {
 	public var httpStatus: Int = 0
 	public var url : URL? = nil
 	public var method : String? = nil
-}
-
-@available(macOS 13.0, *)
-@available(iOS 15, *)
-public class ResponseError {
-	public let title: String
-	public let message: String
-	public let type : ErrorResponseType
-	
-	public init(title : String, message: String, type: ErrorResponseType) {
-		self.message = message
-		self.title = title
-		self.type = type
-	}
-	
-	public func ejectRealm() -> RealmResponseError {
-		let realmObj = RealmResponseError()
-		realmObj.message = self.message
-		realmObj.title = self.title
-		realmObj.type = self.type
-		return realmObj
-	}
 }
 

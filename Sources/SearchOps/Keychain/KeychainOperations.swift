@@ -30,13 +30,18 @@ public class KeychainOperations : KeychainOperationsProtocol {
       throw KeychainManagerError.unhandledError(status: status)
     }
     
-    // Parse the string value from the query result.
-    guard let existingItem = item as? [String: AnyObject],
-          let data = existingItem[kSecValueData as String] as? Data else {
-      throw KeychainManagerError.unexpectedData
+    if let existingItem = item as? [String: AnyObject],
+       let data = existingItem[kSecValueData as String] as? Data {
+      return data
+    } else if let existingItem = item as? Data {
+      // Legacy keychain kept the item as Data
+      #if DEBUG
+      print("Retrieved", existingItem.map { String(format: "%02x", $0) }.joined())
+      #endif
+      return existingItem
     }
-      
-    return data
+    
+    throw KeychainManagerError.unexpectedData
   }
   
   public func SecItemAdd(query:[String:Any]) throws -> Bool {

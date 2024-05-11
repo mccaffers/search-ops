@@ -60,9 +60,9 @@ public class SystemLogManager {
         fileHandle.closeFile() // Close the file to finalize the write operation.
       }
       
-      print("Content appended successfully at: \(fileURL.path)")
+//      print("Content appended successfully at: \(fileURL.path)")
     } catch {
-      print("Error handling file operations: \(error)")
+//      print("Error handling file operations: \(error)")
     }
   }
   

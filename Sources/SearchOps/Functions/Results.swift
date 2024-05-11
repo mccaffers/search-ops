@@ -32,7 +32,7 @@ public class Results {
   }
   
   // Loop through all the inner objects of the results
-  private static func loopInnerObjects(item: SquasedFieldsArray, level: Int, input:  [[String: Any]], originalObject:[String: Any]?=nil) -> [[String : Any]] {
+  private static func loopInnerObjects(item: SquashedFieldsArray, level: Int, input:  [[String: Any]], originalObject:[String: Any]?=nil) -> [[String : Any]] {
     
     var myArray = [[String : Any]]()
     
@@ -80,9 +80,9 @@ public class Results {
       let firstKey = fieldParts[0]
       
       if let innerObj = item[firstKey] as? [String: Any] {
-        
         return checkInnerObjects(fieldParts: fieldParts, level: 1, obj: innerObj)
-        
+      } else if let innerObj = item[firstKey] as? [Any] {
+        return checkInnerObjects(fieldParts: fieldParts, level: 1, obj: innerObj)
       }
     }
     
@@ -90,7 +90,7 @@ public class Results {
     
   }
   
-  public static func checkIfHeaderExistsInData(headers: [SquasedFieldsArray], item: OrderedDictionary<String, Any>)
+  public static func checkIfHeaderExistsInData(headers: [SquashedFieldsArray], item: OrderedDictionary<String, Any>)
   -> Bool {
     
     if headers.count == 0 {
@@ -124,10 +124,15 @@ public class Results {
   
   public static func checkInnerObjects(fieldParts: [String], level: Int, obj: [String: Any]) -> String {
     
-    if fieldParts.count <= level {
+//    if fieldParts.count-1 <= level {
       let key = fieldParts[level]
       
       if let innerObj = obj[key] as? [String: Any] {
+        if innerObj.count == 0 {
+          return ""
+        }
+        return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
+      } else if let innerObj = obj[key] as? [Any] {
         return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
       } else if let value = obj[key] as? String {
         return value
@@ -138,14 +143,26 @@ public class Results {
       } else if let value = obj[key] as? Array<Double> {
         return "[" +  value.compactMap { $0.string }.joined(separator: ",") + "]"
       }
-    }
+//    }
     
     return " "
   }
+
+  public static func checkInnerObjects(fieldParts: [String], level: Int, obj: [Any]) -> String {
+    
+    for item in obj {
+      if let innerObj = item as? [String: Any] {
+        return checkInnerObjects(fieldParts: fieldParts, level: level, obj: innerObj)
+      } else if let innerObj = item as? [Any] {
+        return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
+      }
+    }
+    return " "
+  }
   
-  public static func SortedFieldsWithDate(input: [SquasedFieldsArray]) ->  [SquasedFieldsArray] {
-    var sortedArray : [SquasedFieldsArray] = [SquasedFieldsArray] ()
-    var nonDateFieldsForAlphaSort : [SquasedFieldsArray] = [SquasedFieldsArray] ()
+  public static func SortedFieldsWithDate(input: [SquashedFieldsArray]) ->  [SquashedFieldsArray] {
+    var sortedArray : [SquashedFieldsArray] = [SquashedFieldsArray] ()
+    var nonDateFieldsForAlphaSort : [SquashedFieldsArray] = [SquashedFieldsArray] ()
     // update results immediately
     
     for item in input{

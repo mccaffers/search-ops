@@ -8,10 +8,29 @@
 import Foundation
 import RealmSwift
 
-public class RealmUtilities {
+public protocol RealmUtilitiesProtocol {
+  func deleteRealmDatabase() throws
+}
+
+
+public class RealmUtilities : RealmUtilitiesProtocol {
   
-  public static func deleteRealmDatabase() throws {
-    try? FileManager.default.removeItem(at: Realm.Configuration.defaultConfiguration.fileURL!)
+  public init(){}
+  
+  public func deleteRealmDatabase() throws {
+    print("Deleting realm instance")
+    let realmURL = Realm.Configuration.defaultConfiguration.fileURL!
+    let realmURLs = [
+      realmURL,
+      realmURL.appendingPathExtension("lock"),
+      realmURL.appendingPathExtension("note"),
+      realmURL.appendingPathExtension("management"),
+    ]
+    for URL in realmURLs {
+      let response = try? FileManager.default.removeItem(at: URL)
+      print(response ?? "")
+    }
+    
   }
   
 }

@@ -9,11 +9,25 @@ import XCTest
 
 @testable import SearchOps
 
+
+public class RealmUtilitiesMock : RealmUtilitiesProtocol {
+  var deleteCalledCount = 0
+  
+  public func deleteRealmDatabase() throws {
+    deleteCalledCount+=1
+  }
+  
+}
+
 final class RealmTests: XCTestCase {
   
-  @MainActor func testCreatingRealmOnDisk() throws {
+  @MainActor
+  override func setUp() {
     RealmManager().clearRealmInstance()
-    
+  }
+  
+  @MainActor
+  func testCreatingRealmOnDisk() throws {
     let realm = RealmManager().getRealm()
     
     // Check if the file exists on disk
@@ -24,8 +38,6 @@ final class RealmTests: XCTestCase {
   }
   
   @MainActor func testCreatingRealmOnDiskInMemory() throws {
-    RealmManager().clearRealmInstance()
-    
     let realm = RealmManager().getRealm(inMemory: true)
     
     // Check if the file exists on disk
@@ -36,17 +48,29 @@ final class RealmTests: XCTestCase {
   }
   
   @MainActor func testCreatingRealmAlwaysFails() throws {
-    RealmManager().clearRealmInstance()
     let mock = MockRealmClientAlwaysFails()
     let realm = RealmManager(realmClient: mock).getRealm()
     XCTAssertNil(realm)
   }
   
   @MainActor func testCreatingRealmWithDiscAccessIssues() throws {
-    RealmManager().clearRealmInstance()
     let mock = MockRealmClientAlwaysFailsOnFile()
     let realm = RealmManager(realmClient: mock).getRealm()
     XCTAssert(realm != nil)
+
+  }
+  
+  @MainActor func testCreatingRealmWithKeyIssues() throws {
+
+    let realmClientMock = MockRealmClientEncryptionKeyFailed()
+    var realUtilitiesMock = RealmUtilitiesMock()
+    
+    let realm = RealmManager(realmClient: realmClientMock,
+                             realmUtilities: realUtilitiesMock).getRealm()
+    
+    
+    XCTAssert(realm != nil)
+    XCTAssertEqual(realUtilitiesMock.deleteCalledCount, 1)
 
   }
   

@@ -25,9 +25,10 @@ public class KeyGenerator : KeyGeneratorProtocol {
     }
     
     if result == errSecSuccess {
+      SystemLogger().message("Generating a new encryption key for local realm database using Apple.Security (SecRandomCopyBytes)", level:.info)
       return keyData
     } else {
-      print("Problem generating random bytes")
+      SystemLogger().message("There was a problem generating random bytes (SecRandomCopyBytes)", level:.warn)
       throw KeyGeneratorError.failedToGenerate
     }
   }

@@ -8,85 +8,6 @@
 import Foundation
 import RealmSwift
 
-public enum ServiceType: String, PersistableEnum {
-    case ElasticSearch
-    case OpenSearch
-    case notCreated
-}
-
-public enum ConnectionType: String, PersistableEnum {
-    case CloudID = "Cloud ID"
-    case URL = "Host URL"
-}
-
-public enum HostScheme: String, PersistableEnum {
-    case HTTPS
-    case HTTP
-}
-
-public enum AuthenticationTypes: String, PersistableEnum {
-	case None = "None"
-	case UsernamePassword = "Username & Password"
-	case AuthToken = "Auth Token"
-	case APIToken = "API Token"
-	case APIKey = "API Key"
-}
-
-public class RequestLogs : Object  {
-    @Persisted public var id: UUID = UUID()
-    @Persisted public var date: String = ""
-    @Persisted public var url: String = ""
-    @Persisted public var port: String = ""
-    @Persisted public var headers: List<Headers>
-}
-
-@available(macOS 13.0, *)
-@available(iOS 13.0, *)
-public class LocalHeaders : ObservableObject, Identifiable, Equatable  {
-    
-    public static func == (lhs: LocalHeaders, rhs: LocalHeaders) -> Bool {
-        return lhs.id == rhs.id
-    }
-    
-    public init(id: UUID = UUID(), header: String = "", value: String = "", focusedIndexHeader: Double = 0, focusedIndexValue: Double = 0) {
-        self.id = id
-        self.header = header
-        self.value = value
-        self.focusedIndexHeader = focusedIndexHeader
-        self.focusedIndexValue = focusedIndexValue
-    }
-    
-
-    @Published public var id: UUID = UUID()
-    @Published public var header: String = ""
-    @Published public var value: String = ""
-    @Published public var focusedIndexHeader: Double = 0
-    @Published public var focusedIndexValue: Double = 0
-}
-
-public class Headers : Object  {  
-    @Persisted public var id: UUID = UUID()
-    @Persisted public var header: String = ""
-    @Persisted public var value: String = ""
-    @Persisted public var focusedIndexHeader: Double = 0
-    @Persisted public var focusedIndexValue: Double = 0
-}
-
-public class HostURL : Object  {
-  @Persisted public var scheme: HostScheme = HostScheme.HTTPS // defaults to HTTPS
-  @Persisted public var url: String = ""
-  @Persisted public var path: String = ""
-  @Persisted public var port: String = ""
-  @Persisted public var selfSignedCertificate: Bool = false
-}
-
-@available(iOS 15, *)
-public class LogHostDetails : Object  {
-    @Persisted public var name: String = ""
-    @Persisted public var host: HostURL? = HostURL()
-    @Persisted public var env: String = ""
-}
-
 @available(macOS 13.0, *)
 @available(iOS 15, *)
 public class HostDetails : Object  {
@@ -201,29 +122,4 @@ public class HostDetails : Object  {
     return localArray
   }
   
-}
-
-public enum BuiltInQueries: String, PersistableEnum {
-  case Indexes
-  case IndexMappings
-  case SearchIndex
-  case CustomSearch
-}
-
-//UNUSUED
-public class SavedQueries : Object  {
-    @Persisted(primaryKey: true) public var id: UUID = UUID()
-    @Persisted public var builtInQuery: BuiltInQueries = BuiltInQueries.Indexes
-    @Persisted public var hostID: UUID?
-    @Persisted public var detachedID: UUID?
-    
-    public func generateCopy() -> SavedQueries {
-        
-        let copy = SavedQueries()
-        copy.detachedID = self.id
-        copy.builtInQuery = self.builtInQuery
-        copy.hostID = self.hostID
-        
-        return copy
-    }
 }

@@ -27,6 +27,10 @@ public class SystemLogger : SystemLogBufferWritter {
     print(content)
     self.appendToFileWithBuffer(content: content, level:level) // Utilizes inherited method to append content to the log buffer.
   }
+  
+  public func flush() {
+    self.flushBuffer()
+  }
    
   /// Retrieves a list of all log files currently stored.
   /// - Returns: An array of strings, where each string is the name of a log file.

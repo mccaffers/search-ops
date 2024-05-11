@@ -13,31 +13,31 @@ final class KeychainManagerTests: XCTestCase {
   
   func testKeychainManagerQueryNotFound() throws {
     let manager = KeychainManager(keychainOps: MockKeychainOperationsNotFound())
-    let response = manager.Query()
+    let response = manager.query()
     XCTAssertNil(response)
   }
   
   func testKeychainManagerQueryUnexpected() throws {
     let manager = KeychainManager(keychainOps: MockKeychainOperationsUnexpected())
-    let response = manager.Query()
+    let response = manager.query()
     XCTAssertNil(response)
   }
   
   func testKeychainManagerQueryUnhandledError() throws {
     let manager = KeychainManager(keychainOps: MockKeychainOperationsUnhandledError())
-    let response = manager.Query()
+    let response = manager.query()
     XCTAssertNil(response)
   }
   
   func testKeychainManagerQueryValidResponse() throws {
     let manager = KeychainManager(keychainOps: MockKeychainOperationsValidResponse())
-    let response = manager.Query()
+    let response = manager.query()
     XCTAssertEqual(response?.count, 64)
   }
   
   func testKeychainManagerQueryKeyThrows() throws {
     let manager = KeychainManager(keychainOps: MockKeychainOperationsValidResponse())
-    let response = manager.Query()
+    let response = manager.query()
     XCTAssertEqual(response?.count, 64)
   }
 }

@@ -15,18 +15,20 @@ public class RealmKeyManagement {
     var key : Data?
     
     // Double check it exists
-    let outcome = KeychainManager().Query()
+    let outcome = KeychainManager().query()
     
     // Success! Realm key exists in the keychain, lets return the key
     if outcome != nil{
+      SystemLogger().message("Found an encryption key in the Keychain")
       return outcome!
     }
     
+    SystemLogger().message("No encryption key found in Keychain")
     // If not, lets generate a key and add it to the keychain
     do {
       // KeyGenerator can throw
       // SecAddItem can throw
-      key = try KeychainManager().Add()
+      key = try KeychainManager().add()
     } catch let error {
       print(error)
     }

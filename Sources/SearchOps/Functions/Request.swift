@@ -34,7 +34,7 @@ class Request {
       self.localSession = mock
     } else {
       let sessionConfig = URLSessionConfiguration.default
-      let settingsManager = SettingsDatatManager()
+      let settingsManager = SettingsDataManager()
       sessionConfig.timeoutIntervalForRequest =  TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.defaultRequestTimeout))
       sessionConfig.timeoutIntervalForResource =  TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.defaultRequestTimeout))
       self.localSession = URLSession(configuration: .default)
@@ -112,7 +112,7 @@ class Request {
       self.localSession = InsecureConnection.session()
     }
     
-    let settingsManager = SettingsDatatManager()
+    let settingsManager = SettingsDataManager()
     
     let resObject = ServerResponse()
     
@@ -193,11 +193,8 @@ class Request {
       let myError = ResponseError(title: "Request Error",
                                   message: errorMessage,
                                   type:.critical)
-      //			let resObject = ServerResponse(error:myError)
-      
       
       resObject.error = myError
-      //            return nil
     }
     
     return resObject

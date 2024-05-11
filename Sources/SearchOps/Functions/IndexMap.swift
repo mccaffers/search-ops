@@ -18,11 +18,11 @@ public class IndexMap {
   // The function is designed to be called on the main thread.
   @MainActor
   public static func indexMappings(serverDetails: HostDetails,
-                                   index: String) async -> [SquasedFieldsArray] {
+                                   index: String) async -> [SquashedFieldsArray] {
     
     let clock = ContinuousClock()  // Used for measuring the duration of the network request.
     var response = ServerResponse()  // Holds the server's response.
-    var result = [SquasedFieldsArray]()  // Array to store the processed index mappings.
+    var result = [SquashedFieldsArray]()  // Array to store the processed index mappings.
     
     // Measure the time taken to fetch and process the index mappings.
     let timeTaken = await clock.measure {
@@ -52,7 +52,7 @@ public class IndexMap {
     return result  // Return the array of structured index mappings.
   }
   
-  public static func indexMappingsResponseToArray(_ input: String) async -> [SquasedFieldsArray] {
+  public static func indexMappingsResponseToArray(_ input: String) async -> [SquashedFieldsArray] {
     
     let data = Data(input.utf8)
     
@@ -85,13 +85,13 @@ public class IndexMap {
       print("Failed to load: \(error.localizedDescription)")
     }
     
-    return [SquasedFieldsArray]()
+    return [SquashedFieldsArray]()
   }
   
   // Processes nested properties of a mappings object.
-  private static func Process(innerObject: [String : Any], indexKey: String) -> [SquasedFieldsArray] {
+  private static func Process(innerObject: [String : Any], indexKey: String) -> [SquashedFieldsArray] {
     
-    var fieldsArray = [SquasedFieldsArray]()
+    var fieldsArray = [SquashedFieldsArray]()
     
     if let propertiesObj = innerObject["properties"] as? [String: Any] {
       fieldsArray = LoopProperties(propertiesObj: propertiesObj, indexKey: indexKey)
@@ -102,9 +102,9 @@ public class IndexMap {
   
   // Loops through properties in the mappings JSON to create a structured array of index mappings.
   private static func LoopProperties(propertiesObj: [String: Any],
-                                     indexKey: String) -> [SquasedFieldsArray]  {
+                                     indexKey: String) -> [SquashedFieldsArray]  {
     
-    var fieldsArray = [SquasedFieldsArray]()
+    var fieldsArray = [SquashedFieldsArray]()
     var keyArray = Set<String>()
     
     for item in propertiesObj {
@@ -128,17 +128,17 @@ public class IndexMap {
 
   // Recursive function to deeply process and structure each index mapping field.
   private static func indexMappingsResponseToArrayLopp(input: [String: Any],
-                                                       fieldObject: SquasedFieldsArray? = nil,
+                                                       fieldObject: SquashedFieldsArray? = nil,
                                                        keyArray: Set<String>,
                                                        indexKey: String = "")
-  -> [SquasedFieldsArray] {
+  -> [SquashedFieldsArray] {
     
     // Create an array
-    var localObjArray = [SquasedFieldsArray]()
+    var localObjArray = [SquashedFieldsArray]()
     
     for key in input.keys {
       
-      let localObj = SquasedFieldsArray(squashedString: key)
+      let localObj = SquashedFieldsArray(squashedString: key)
       
       if fieldObject != nil {
         localObj.fieldParts = fieldObject!.fieldParts

@@ -88,16 +88,11 @@ public class Search {
           for jsonDict in objects {
             
             if let _source = jsonDict["_source"] as? [String: Any] {
-              
               // Pass all of the objects to a loop function
               holder.append(_source)
-              
-              
             }
           }
-          
           parsedObject = SearchResult(data:holder)
-          //                    return holder
         }
       } else if let errorMessage = jsonObj["error"] as? [String: Any] {
         
