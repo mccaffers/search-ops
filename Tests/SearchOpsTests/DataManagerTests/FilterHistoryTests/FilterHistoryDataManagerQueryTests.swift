@@ -50,11 +50,23 @@ class FilterHistoryDataManagerQueryTests: XCTestCase {
   
   @MainActor
   func testCheckIfValueExistsWithQueryAndRelativeRange() {
-    let queryFilter = List<QueryFilterObject>()
-    queryFilter.append(objectsIn: [QueryFilterObject(string: "test")])
-    let relativeRangeFilter = RelativeRangeFilter(period: .Hours, value: 1.0)
     
-    let resultId = manager.checkIfValueExists(query: queryFilter, relativeRange: relativeRangeFilter)
+    var myFilter = FilterObject()
+    myFilter.relativeRange = RelativeRangeFilter(period: .Hours, value: 1.0)
+    myFilter.query = QueryObject()
+
+    let queryObject = QueryObject()
+    let queryFilterObject1 = QueryFilterObject(string: "Filter 1")
+    let queryFilterObject2 = QueryFilterObject(string: "Filter 2")
+    myFilter.query?.values =  List<QueryFilterObject>()
+    myFilter.query?.values.append(queryFilterObject1)
+    myFilter.query?.values.append(queryFilterObject2)
+    myFilter.query?.compound = .must
+    
+    SearchMainViewLogic.SaveFilter(filterObject: myFilter)
+    
+    manager.refresh()
+    let resultId = manager.checkIfValueExists(query: myFilter.query?.values)
     
     XCTAssertNotNil(resultId, "Should return a UUID of an item that matches both the query and the relative range filter.")
   }

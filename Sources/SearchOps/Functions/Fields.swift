@@ -24,7 +24,7 @@ public class Fields {
     // SonarCloud - swift:S1186
   }
   
-  public static func makeSquashedArray(key: String, fields: [FieldsArray], squashedArray: [SquasedFieldsArray], keyArray: [String] = [String]()) -> [SquasedFieldsArray] {
+  public static func makeSquashedArray(key: String, fields: [FieldsArray], squashedArray: [SquashedFieldsArray], keyArray: [String] = [String]()) -> [SquashedFieldsArray] {
     
     var localArray = squashedArray
     
@@ -43,11 +43,11 @@ public class Fields {
       if item.values?.count == 0 {
         
         // By default, lets just add the current item name (eg. date)
-        var local = SquasedFieldsArray(id: item.id, squashedString: item.name)
+        var local = SquashedFieldsArray(id: item.id, squashedString: item.name)
         
         // If there is a key add that with a dot delimiter
         if !key.isEmpty {
-          local = SquasedFieldsArray(id: item.id, squashedString: key + "." + item.name)
+          local = SquashedFieldsArray(id: item.id, squashedString: key + "." + item.name)
         }
         
         // build up the key array
@@ -131,7 +131,7 @@ public class Fields {
                                            dateField: dateField,
                                            range: range,
                                            sortBy: sortBy)
-    let settingsManager = SettingsDatatManager()
+    let settingsManager = SettingsDataManager()
     searchObject.size = settingsManager.settings?.maximumDocumentsPerPage ?? 25
     searchObject.from = from
     
@@ -181,7 +181,7 @@ public class Fields {
   }
   
   
-  public static func getFields(input:String) -> [SquasedFieldsArray] {
+  public static func getFields(input:String) -> [SquashedFieldsArray] {
     
     var headersDictionary =  [FieldsArray]()
     
@@ -203,7 +203,7 @@ public class Fields {
       
     }
     
-    return Fields.makeSquashedArray(key: "", fields: headersDictionary, squashedArray: [SquasedFieldsArray]() )
+    return Fields.makeSquashedArray(key: "", fields: headersDictionary, squashedArray: [SquashedFieldsArray]() )
   }
   
   // Takes all of the elastic objects
@@ -225,9 +225,14 @@ public class Fields {
       // Is the object a dictionary
       if let field = item.value as? [String: Any] {
         // Trigger a rabbit hole, inner loop over the values
-        local = innerFields(key:item.key, items: field,  fieldsDictionary: local!)
+        local = innerFields(key:item.key, items: field,  
+                            fieldsDictionary: local!)
       }
-      
+      else if let field = item.value as? [Any] {
+        local = innerFields(key:item.key, items: field,
+                            fieldsDictionary: local!)
+      }
+    
       
       // Remove any references to the existing object
       localCopy.removeAll(where: {$0.name == item.key})
@@ -240,6 +245,25 @@ public class Fields {
     return localCopy
     
   }
+  
+  private static func innerFields(key: String, items: [Any], fieldsDictionary: FieldsArray) -> FieldsArray {
+    
+    var localCopy = fieldsDictionary
+    
+    // Loop the inner values
+    for item in items {
+      
+      if let field = item as? [String: Any] {
+        localCopy = innerFields(key: key, items: field, fieldsDictionary: fieldsDictionary)
+      } else if let field = item as? [Any] {
+        localCopy = innerFields(key: key, items: field, fieldsDictionary: fieldsDictionary)
+      }
+      
+    }
+    
+    return localCopy
+  }
+  
   
   private static func innerFields(key: String, items: [String: Any], fieldsDictionary: FieldsArray) -> FieldsArray {
     
@@ -278,6 +302,11 @@ public class Fields {
         localCopy.values?.append(fieldObj!)
         
       } else if let field = item.value as? [String: Any] {
+        // if it's not a string, call the same function to pull out it's values
+        // and append them
+        localCopy.values?.removeAll(where: {$0.name == item.key})
+        localCopy.values?.append(innerFields(key: item.key, items: field, fieldsDictionary: fieldObj!))
+      } else if let field = item.value as? [Any] {
         // if it's not a string, call the same function to pull out it's values
         // and append them
         localCopy.values?.removeAll(where: {$0.name == item.key})

@@ -44,7 +44,7 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
     let fields = Fields.getFields(input: response)
     
     // Demonstrates combining multiple steps in processing: sorting fields, rendering them, and then updating the results with these fields.
-    let viewableFields: RenderedFields = RenderedFields(fields: [SquasedFieldsArray]())
+    let viewableFields: RenderedFields = RenderedFields(fields: [SquashedFieldsArray]())
     viewableFields.fields = Results.SortedFieldsWithDate(input: fields)
     
     let output = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
@@ -76,7 +76,7 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
     let objects = Search.getObjects(input: response)
     let fields = Fields.getFields(input: response)
     
-    let viewableFields: RenderedFields = RenderedFields(fields: [SquasedFieldsArray]())
+    let viewableFields: RenderedFields = RenderedFields(fields: [SquashedFieldsArray]())
     viewableFields.fields = Results.SortedFieldsWithDate(input: fields)
     
     let renderedObjects = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
@@ -94,7 +94,7 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
     let objects = Search.getObjects(input: response)
     let fields = Fields.getFields(input: response)
     
-    let viewableFields: RenderedFields = RenderedFields(fields: [SquasedFieldsArray]())
+    let viewableFields: RenderedFields = RenderedFields(fields: [SquashedFieldsArray]())
     viewableFields.fields = Results.SortedFieldsWithDate(input: fields)
     
     let renderedObjects = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)

@@ -12,12 +12,12 @@ import Foundation
 public class RenderedFields : ObservableObject {
     
     @Published
-    public var fields: [SquasedFieldsArray]
+    public var fields: [SquashedFieldsArray]
     
     @Published
     public var id : UUID = UUID()
     
-    public init(fields: [SquasedFieldsArray]) {
+    public init(fields: [SquashedFieldsArray]) {
         self.fields = fields
     }
 }

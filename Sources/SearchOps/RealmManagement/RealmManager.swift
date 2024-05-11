@@ -8,15 +8,19 @@
 import Foundation
 import RealmSwift
 
+@available(macOS 13, *)
 public class RealmManager : RealmManagerProtocol {
   
-  private static let schemaVersion : UInt64 = 2
+  public static let schemaVersion : UInt64 = 3
   
   private let realmClient: RealmClientProtocol
+  private let realmUtilities: RealmUtilitiesProtocol
   
   // Enable the injection a different realm client for testing
-  public init(realmClient: RealmClientProtocol = RealmClient()) {
-      self.realmClient = realmClient
+  public init(realmClient: RealmClientProtocol = RealmClient(),
+              realmUtilities: RealmUtilitiesProtocol = RealmUtilities()) {
+    self.realmClient = realmClient
+    self.realmUtilities = realmUtilities
   }
   
   @MainActor
@@ -26,11 +30,24 @@ public class RealmManager : RealmManagerProtocol {
     
     do {
       return try Realm.Configuration(encryptionKey: RealmKeyManagement.generateOrGetKey(), schemaVersion: RealmManager.schemaVersion)
-    } catch let error {
-      print(error)
-      return Realm.Configuration(schemaVersion: RealmManager.schemaVersion)
+    } catch _ {
+      SystemLogger().message("Error loading realm confg with encryption key", level:.fatal)
+      
+      return Realm.Configuration(schemaVersion: RealmManager.schemaVersion,
+                                 migrationBlock: { migration, oldSchemaVersion in
+        if oldSchemaVersion < 3 {
+          migration.enumerateObjects(ofType: LogFilter.className()) { oldObject, newObject in
+            // Append price value to new prices list
+            newObject!["dateField"] = oldObject!["dateField"] as! RealmSquashedFieldsArray
+          }
+          migration.enumerateObjects(ofType: RealmFilterObject.className()) { oldObject, newObject in
+            // Append price value to new prices list
+            newObject!["dateField"] = oldObject!["dateField"] as! RealmSquashedFieldsArray
+          }
+          
+        }
+      })
     }
-    
   }
   
   private func getRealmConfigInMemory() -> Realm.Configuration {
@@ -41,7 +58,7 @@ public class RealmManager : RealmManagerProtocol {
   @MainActor
   public func clearRealmInstance() {
     RealmManager.realmInstance = nil
-    try? RealmUtilities.deleteRealmDatabase()
+    try? realmUtilities.deleteRealmDatabase()
   }
   
   @MainActor
@@ -50,38 +67,32 @@ public class RealmManager : RealmManagerProtocol {
     
     var config: Realm.Configuration
     
-    SystemLogger().message("Attemping to load realm instance")
-    
     if let realmInstance = RealmManager.realmInstance {
-      SystemLogger().message("Already loaded, Returning static instance")
       return realmInstance
     }
     
     // Use the getKey() function to get the stored encryption key or create a new one
     if inMemory {
-      SystemLogger().message("Loading in memory instance")
+      SystemLogger().message("Loading in memory instance without encryption", level: .warn)
       config = getRealmConfigInMemory()
     } else {
-      SystemLogger().message("Loading in on disk instance")
       config = getRealmConfig()
     }
     
     do {
-      
       // Open the realm with the configuration
       RealmManager.realmInstance = try realmClient.getRealm(config: config)
-      
+      SystemLogger().message("Successfully opened realm instance")
     } catch let error as NSError {
       
       // Realm has failed to open
       // We'll retry incase it's a temporary issue (eg. file system read)
       // However, if it's something worse, like the Key has become corrupt or is invalid
       // We'll need to load an in memory realm, and delete the existing realm database
-      
       print(error)
       
       if retry == 0 {
-        SystemLogger().message("First retry, attempting again, after 1 second sleep", level: .warn)
+        SystemLogger().message("Failed to open realm database. Retrying...", level: .warn)
         // Give it a second incase there is a system fault
         sleep(1)
         return getRealm(retry: 1)
@@ -92,10 +103,35 @@ public class RealmManager : RealmManagerProtocol {
       // if it's a read file issue, load in memory, and warn the user (to potentially restart the app)
       
       if retry == 1 {
-        // At this point we need to inform the user
-        // and check if there is a realm database on disk
-        print("Second retry, lets load an in memory realm database")
-        return getRealm(retry: 2, inMemory:true)
+        var errorsToCheck = error.userInfo.filter {$0.key == "Error Name" || $0.key == "RLMErrorCodeNameKey"}
+        if errorsToCheck.count > 0 {
+          if errorsToCheck.contains(where: {$0.value as? String == "InvalidEncryptionKey" ||
+                                      $0.value as? String == "InvalidDatabase"}) {
+            
+            do {
+              print("InvalidEncryptionKey / InvalidDatabase error, we're going to have to delete the realm database")
+              clearRealmInstance()
+              getRealm(retry: 2)
+            } catch let error {
+              print(error)
+              // FATAL Issue
+              // Can't open the realm database, and can't delete it
+              // Fall back to in memory realm database for the moment so the app can run
+              SystemLogger().message("Loading realm on disk failed, failed to delete, this shouldn't occur. Loading in memory Realm database. You may need to reinstall the app.", level:.warn)
+              return getRealm(retry: 2, inMemory:true)
+            }
+            
+          }
+        }
+
+          
+          
+        
+      } else {
+        // Encryption key failed, delete was successful
+        //
+        SystemLogger().message("Encryption key failed, delete was successful but there was still an error, loading in memory realm database", level:.warn)
+        return getRealm(retry: 2, inMemory: true)
       }
       
     }
@@ -114,8 +150,8 @@ public class RealmManager : RealmManagerProtocol {
           return fileSize / 1000000.0
         }
       }
-      catch (let error) {
-        print("FileManager Error: \(error)")
+      catch _ {
+        SystemLogger().message("FileManager Error", level:.fatal)
       }
     }
     

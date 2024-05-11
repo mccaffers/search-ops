@@ -23,8 +23,7 @@ public class JsonTools {
         return json
       }
     } catch let error as NSError {
-      print("Failed to load: \(error.localizedDescription)")
-      print(input)
+      SystemLogger().message("Failed to load: \(error.localizedDescription)")
     }
     return nil
   }

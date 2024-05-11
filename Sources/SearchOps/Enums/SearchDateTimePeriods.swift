@@ -6,11 +6,14 @@
 // ---------------------------------------
 
 import Foundation
-import OrderedCollections
+import RealmSwift
 
-@available(macOS 10.15, *)
-@available(iOS 15.0, *)
-public struct RenderObject {
-    public var headers : [SquasedFieldsArray]
-    public var results : [OrderedDictionary<String, Any>]
+public enum SearchDateTimePeriods: String, CaseIterable, PersistableEnum {
+  case Seconds
+  case Minutes
+  case Hours
+  case Days
+  case Weeks
+  case Months
+  case Years
 }

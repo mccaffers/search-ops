@@ -48,13 +48,16 @@ public class MockRealmClientAlwaysFailsOnFile: RealmClientProtocol {
       let userInfo = [NSLocalizedDescriptionKey: "Failed to open Realm file due to invalid database", "RLMErrorCodeNameKey": "InvalidDatabase"]
       throw NSError(domain: "com.example.error", code: 0, userInfo: userInfo)
     }
-    return RealmManager().getRealm(inMemory: true)!
+    let realmInMemoryForTesting = Realm.Configuration(inMemoryIdentifier: UUID().uuidString,
+                                                      schemaVersion: RealmManager.schemaVersion)
+    return try Realm(configuration: realmInMemoryForTesting)
   }
 }
 
 /// A mock `RealmClientProtocol` that simulates encryption key failure when a Realm database is accessed without an in-memory identifier.
 public class MockRealmClientEncryptionKeyFailed: RealmClientProtocol {
 
+  var attempt = 0
   /// Initializes a new instance of the class.
   public init() {
     // Explicit public no-argument initializer to comply with Swift access control when used in other modules.
@@ -63,9 +66,19 @@ public class MockRealmClientEncryptionKeyFailed: RealmClientProtocol {
   /// Attempts to get a Realm instance, throws an encryption key failure error if not an in-memory configuration.
   @MainActor
   public func getRealm(config: Realm.Configuration) throws -> Realm {
-    guard config.inMemoryIdentifier != nil else {
-      throw NSError(domain: "realm.io", code: 0, userInfo: [NSLocalizedDescriptionKey : "Encryption key failed"])
+    
+    attempt+=1
+    
+    // Fail on the first two attempts (encryption key failed, sleep to retry)
+    // Testing the flow when the encryption key is invalid
+    if attempt < 3 {
+      let userInfo = [NSLocalizedDescriptionKey: "Failed to open Realm file due to invalid database", "RLMErrorCodeNameKey": "InvalidEncryptionKey"]
+      throw NSError(domain: "com.example.error", code: 0, userInfo: userInfo)
     }
-    return RealmManager().getRealm(inMemory: true)!
+   
+    let realmInMemoryForTesting = Realm.Configuration(inMemoryIdentifier: UUID().uuidString,
+                                                      schemaVersion: RealmManager.schemaVersion)
+    return try Realm(configuration: realmInMemoryForTesting)
+
   }
 }

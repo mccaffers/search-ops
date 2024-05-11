@@ -11,32 +11,63 @@ import XCTest
 
 final class IndexFieldsTests: XCTestCase {
   
-  func testHashabilityAndEqualityForFields() {
-    let field1 = IndexField(id: UUID(), name: "Field1", type: "String")
-    let field2 = IndexField(id: field1.id, name: "Field1", type: "String")
-    let field3 = IndexField(id: UUID(), name: "Field2", type: "Number")
+  override func setUp() {
+    super.setUp()
     
-    XCTAssertEqual(field1, field2, "IndexField instances with the same ID, name, and type should be equal.")
-    XCTAssertNotEqual(field1, field3, "IndexField instances with different IDs, names, or types should not be equal.")
-    
-    var set = Set<IndexField>()
-    set.insert(field1)
-    set.insert(field2)
-    set.insert(field3)
-    
-    XCTAssertEqual(set.count, 2, "Set should contain two unique items based on their IDs, names, and types.")
-  }
-  
-  func testFunctionalityInCollectionsForFields() {
-    var fields = [UUID: IndexField]()
-    let field1 = IndexField(id: UUID(), name: "Field1", type: "String")
-    let field2 = IndexField(id: UUID(), name: "Field2", type: "Number")
-    
-    fields[field1.id] = field1
-    fields[field2.id] = field2
-    
-    XCTAssertEqual(fields[field1.id]?.name, "Field1", "The dictionary should retrieve the correct field by ID.")
-    XCTAssertEqual(fields.count, 2, "Dictionary should contain exactly two entries.")
+    jsonString = """
+        {
+          "geo": {
+            "mappings": {
+              "properties": {
+                "city": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "country": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "street": {
+                  "type": "text",
+                  "fields": {
+                    "keyword": {
+                      "type": "keyword",
+                      "ignore_above": 256
+                    }
+                  }
+                },
+                "boundings": {
+                  "properties": {
+                    "east": {
+                      "type": "float"
+                    },
+                    "north": {
+                      "type": "float"
+                    },
+                    "south": {
+                      "type": "float"
+                    },
+                    "west": {
+                      "type": "float"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        """
   }
   
   func testHashabilityAndEqualityForKeys() {
@@ -66,4 +97,42 @@ final class IndexFieldsTests: XCTestCase {
     XCTAssertEqual(keys[key1.id]?.name, "Key1", "The dictionary should retrieve the correct key by ID.")
     XCTAssertEqual(keys.count, 2, "Dictionary should contain exactly two entries.")
   }
+    
+  var jsonString: String = ""
+  
+  func testCityFieldMapping() async {
+    let map = await IndexMap.indexMappingsResponseToArray(jsonString)
+    XCTAssertEqual(map.count, 7, "Should be three properties")
+    XCTAssertEqual(map.first(where: {$0.squashedString == "city"})?.fieldParts.count, 1, "City should be of type text")
+    XCTAssertEqual(map.filter({$0.squashedString.contains("boundings")}).count, 4, "Should be four bounding entries")
+  }
+
+  //   Error handling for missing fields
+  func testErrorHandlingForMissingField() async {
+    let incompleteJsonString = """
+        {
+            "geo": {
+                "mappings": {
+                    "properties": {}
+                }
+            }
+        }
+        """
+    
+    let response = await IndexMap.indexMappingsResponseToArray(incompleteJsonString)
+    XCTAssert(response.isEmpty)
+    
+  }
+  
+  //   Error handling for unexpected data
+  func testErrorHandlingInvalidJSON() async {
+    // Invalid json
+    let incompleteJsonString = "a{///}}"
+    
+    let response = await IndexMap.indexMappingsResponseToArray(incompleteJsonString)
+    XCTAssert(response.isEmpty)
+    
+  }
+  
+    
 }

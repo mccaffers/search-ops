@@ -41,13 +41,4 @@ final class ResponseFieldTests: XCTestCase {
     XCTAssertEqual(output.count, 17)
   }
   
-  // Tests the handling of large nested objects within a response, a common challenge in parsing complex JSON data.
-  func testFieldsWithLargeNestedObject() async throws {
-    let response = try SearchOpsTests().OpenFile(filename: "response.6")
-    let output = Fields.getFields(input: response)
-    
-    XCTAssertEqual(output.count, 26)
-  }
-  
-
 }

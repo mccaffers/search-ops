@@ -6,8 +6,6 @@
 // ---------------------------------------
 import Foundation
 
-
-
 /// Manages a buffer for system log entries and writes them to a file at regular intervals.
 public class SystemLogBufferWritter : SystemLogManager {
 
@@ -41,7 +39,7 @@ public class SystemLogBufferWritter : SystemLogManager {
       
       // Combine the date string with the original content, followed by a newline.
       let contentWithDate = "\(dateString) | \(level.rawValue) | \(content)\n"
-      print(contentWithDate)
+
       // Add the new content with the date to the buffer.
       SystemLogBufferWritter.buffer += contentWithDate
       
@@ -53,7 +51,7 @@ public class SystemLogBufferWritter : SystemLogManager {
   
   /// Evaluates whether the buffer should be flushed based on the time since the last flush.
   /// - Parameter fileName: The name of the file to flush the buffer to.
-  private func maybeFlushBuffer() {
+  func maybeFlushBuffer() {
     let now = Date()
     // Check if the time since the last flush is less than the set interval.
     if let lastFlushDate = SystemLogBufferWritter.lastFlushDate, now.timeIntervalSince(lastFlushDate) < interval {      return
@@ -65,7 +63,7 @@ public class SystemLogBufferWritter : SystemLogManager {
   
   /// Writes the buffer to the specified file and then clears the buffer.
   /// - Parameter fileName: The name of the file to which the buffer will be written.
-  private func flushBuffer() {
+  func flushBuffer() {
     if !SystemLogBufferWritter.buffer.isEmpty {
       SystemLogManager().appendToFileInDocuments(content: SystemLogBufferWritter.buffer)
       SystemLogBufferWritter.buffer = ""  // Clears the buffer after writing.

@@ -8,10 +8,51 @@
 import Foundation
 
 extension String {
-    var isInt: Bool {
-        return Int(self) != nil
+  var isInt: Bool {
+    return Int(self) != nil
+  }
+  
+  public func truncated(to maxLength: Int, addEllipsis: Bool = true) -> String {
+    if self.count > maxLength {
+      let endIndex = maxLength - (addEllipsis ? 3 : 0)
+      return endIndex > 0 ? String(self.prefix(endIndex)) + (addEllipsis ? "..." : "") : ""
+    } else {
+      return self
     }
+  }
+  
+  
+  public func prettifyJSON() -> String {
+    
+    // Remove newlines inside empty brackets with optional whitespace
+    var jsonString = self
+
+    // Parse JSON string into a Foundation object (dictionary or array)
+    guard let jsonData = jsonString.data(using: .utf8),
+          let jsonObject = try? JSONSerialization.jsonObject(with: jsonData, options: []) else {
+        return self // Return original string if parsing fails
+    }
+    
+    // Convert the Foundation object back to JSON data with pretty-printing
+    let prettyJSONData: Data
+    do {
+        prettyJSONData = try JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted])
+    } catch {
+        return self // Return original string if prettification fails
+    }
+    
+    // Convert JSON data to a string
+    guard var prettyJSONString = String(data: prettyJSONData, encoding: .utf8) else {
+        return self // Return original string if conversion fails
+    }
+    prettyJSONString = prettyJSONString.replacingOccurrences(of: "\\{\\s*\n+\\s*\\}", with: "{}", options: .regularExpression)
+    prettyJSONString = prettyJSONString.replacingOccurrences(of: "\\[\n+\\]", with: "[]", options: .regularExpression)
+
+    return prettyJSONString
 }
+  
+}
+  
 
 extension StringProtocol {
     var data: Data { Data(utf8) }

@@ -16,7 +16,7 @@ import Foundation
 // this can be viewed in ./KeychainManager.swift
 
 // This code will need to remain to migrate any existing users
-public class LegacyKeychainManager {
+public class LegacyKeychainManager : LegacyKeychainManagerProtocol {
   
   private static let keychainIdentifierData = "io.Realm.EncryptionExampleKey".data(using: String.Encoding.utf8, 
                                                                                    allowLossyConversion: false)

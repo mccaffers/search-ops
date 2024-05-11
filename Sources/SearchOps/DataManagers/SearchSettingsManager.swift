@@ -9,20 +9,9 @@ import SwiftUI
 import Foundation
 import RealmSwift
 
-@available(iOS 15, *)
-public class ApplicationSettings : Object {
-
-	@Persisted(primaryKey: true) public var id: UUID = UUID()
-	
-	// Search Settings
-	@Persisted public var maximumDocumentsPerPage : Int = 25
-	@Persisted public var requestTimeout : Int = 15
-
-}
-
 @available(macOS 13.0, *)
 @available(iOS 15.0, *)
-public class SettingsDatatManager: ObservableObject {
+public class SettingsDataManager: ObservableObject {
   
   @Published
   public var settings: ApplicationSettings? = nil

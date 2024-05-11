@@ -15,7 +15,7 @@ final class SearchRenderTests: XCTestCase  {
   var searchRender: SearchRender!
   var filterObject: FilterObject!
   var queryObject: QueryObject!
-  var squasedFieldsArray: SquasedFieldsArray!
+  var squasedFieldsArray: SquashedFieldsArray!
   var relativeRangeFilter: RelativeRangeFilter!
   var sortObject: SortObject!
   var hostDetails: HostDetails!
@@ -32,7 +32,7 @@ final class SearchRenderTests: XCTestCase  {
       QueryFilterObject(string: "filter2")
     ])
     
-    squasedFieldsArray = SquasedFieldsArray(squashedString: "exampleField")
+    squasedFieldsArray = SquashedFieldsArray(squashedString: "exampleField")
     squasedFieldsArray.fieldParts = ["part1", "part2"]
     squasedFieldsArray.type = "text"
     squasedFieldsArray.index = "mainIndex"
@@ -77,7 +77,7 @@ final class SearchRenderTests: XCTestCase  {
   func testSortObjectProperties() {
     // Test the properties of SortObject
     XCTAssertEqual(sortObject.order, .Ascending)
-    XCTAssertEqual(sortObject.field, squasedFieldsArray, "Sort field should match the initialized SquasedFieldsArray")
+    XCTAssertEqual(sortObject.field, squasedFieldsArray, "Sort field should match the initialized SquashedFieldsArray")
   }
   
   override func tearDown() {

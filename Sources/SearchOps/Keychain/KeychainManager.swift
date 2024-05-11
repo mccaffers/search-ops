@@ -9,7 +9,7 @@ import Foundation
 
 // Manages Keychain operations across iOS and macOS
 // KeychainManager -> KeychainOperations -> Foundation.Security
-public class KeychainManager {
+public class KeychainManager : KeychainManagerProtocol {
 
   private static let applicationIdentifier = "searchops.app"
   private static let keychainIdentifer = "realm.key"
@@ -24,7 +24,7 @@ public class KeychainManager {
   }
   
   // Builds the query for the Keychain operations
-  public func Query() -> Data? {
+  public func query() -> Data? {
     
     let query = [kSecClass as String            : kSecClassGenericPassword as String,
                  kSecAttrService as String      : "searchops",
@@ -42,13 +42,19 @@ public class KeychainManager {
       
   // Builds the query for the Keychain operations
   @discardableResult
-  public func Add(input:Data? = nil) throws -> Data? {
+  public func add(input:Data? = nil) throws -> Data? {
     
-    var key = input
-    if (key == nil){
-      print("key is empty, generating")
+    var key = Data(count: 64)
+    
+    if (input == nil){
       key = try keyGenerator.Generate()
+    } else {
+      key = input!
     }
+    
+#if DEBUG
+    print("Adding", key.map { String(format: "%02x", $0) }.joined())
+#endif
     
     let query : [String : Any] = [
       kSecClass as String        : kSecClassGenericPassword as String,
@@ -56,24 +62,22 @@ public class KeychainManager {
       kSecAttrAccount as String  : "realm",
       kSecValueData as String    : key as AnyObject]
     
-    
     do {
       let response = try keychainOps.SecItemAdd(query: query)
+      print("Response", response)
       if response {
-        return key!
+        return key
       }
     } catch _ {
       return nil
     }
     
-    return key!
+    return key
     
   }
   
-  
-  public func Delete() throws {
+  public func delete() throws {
     
-    // Add the private key to the keychain
     do {
 
       let query : [String : Any] = [
@@ -89,9 +93,5 @@ public class KeychainManager {
     }
     
   }
-  
-
-  
- 
   
 }

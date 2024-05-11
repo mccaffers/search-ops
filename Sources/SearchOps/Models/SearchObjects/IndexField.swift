@@ -7,6 +7,7 @@
 
 import Foundation
 
-enum MyError: Error {
-    case runtimeError(String)
+public struct IndexKey : Hashable, Identifiable {
+    public var id: UUID = UUID()
+    public var name: String = ""
 }
