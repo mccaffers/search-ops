@@ -39,7 +39,6 @@ public class SystemLogBufferWritter : SystemLogManager {
       
       // Combine the date string with the original content, followed by a newline.
       let contentWithDate = "\(dateString) | \(level.rawValue) | \(content)\n"
-
       // Add the new content with the date to the buffer.
       SystemLogBufferWritter.buffer += contentWithDate
       
