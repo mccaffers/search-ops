@@ -61,18 +61,18 @@ public class Results {
   }
   
   // Extract the value for a key inside of the JSON object
-  public static func getValueForKey(fieldParts:[String], item: OrderedDictionary<String, Any>) -> String {
+  public static func getValueForKey(fieldParts:[String], item: OrderedDictionary<String, Any>) -> [String] {
     
     if fieldParts.count == 1 {
       let key = fieldParts[0]
       if let value = item[key] as? String {
-        return value
+        return [value]
       } else if let value = item[key] as? Double {
-        return value.string
+        return [value.string]
       } else if let value = item[key] as? Array<String> {
-        return "[" + value.joined(separator: ", ") + "]"
+        return value
       } else if let value = item[key] as? Array<Double> {
-        return "[" +  value.compactMap { $0.string }.joined(separator: ",") + "]"
+        return value.compactMap { $0.string }
       }
       
     } else {
@@ -86,7 +86,7 @@ public class Results {
       }
     }
     
-    return " "
+    return [""]
     
   }
   
@@ -100,10 +100,12 @@ public class Results {
     var flag = false
     
     for header in headers {
-      let output = getValueForKey(fieldParts: header.fieldParts, item: item)
+      let keys = getValueForKey(fieldParts: header.fieldParts, item: item)
       
-      if !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-        flag=true
+      for output in keys {
+        if !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+          flag=true
+        }
       }
     }
     
@@ -113,51 +115,53 @@ public class Results {
   
   public static func exportDate(dateField: [String], input: OrderedDictionary<String, Any>) -> String {
     
-    let output = Results.getValueForKey(
-      fieldParts: dateField,
-      item:input)
+    let output = Results.getValueForKey(fieldParts: dateField,
+                                        item:input).first
     
-    return output
+    return output ?? ""
   }
   
   
   
-  public static func checkInnerObjects(fieldParts: [String], level: Int, obj: [String: Any]) -> String {
+  public static func checkInnerObjects(fieldParts: [String], level: Int, obj: [String: Any]) -> [String] {
     
 //    if fieldParts.count-1 <= level {
       let key = fieldParts[level]
       
       if let innerObj = obj[key] as? [String: Any] {
         if innerObj.count == 0 {
-          return ""
+          return [""]
         }
         return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
       } else if let innerObj = obj[key] as? [Any] {
         return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
       } else if let value = obj[key] as? String {
-        return value
+        return [value]
       } else if let value = obj[key] as? Double {
-        return value.string
+        return [value.string]
       } else if let value = obj[key] as? Array<String> {
-        return "[" + value.joined(separator: ", ") + "]"
+        return value
       } else if let value = obj[key] as? Array<Double> {
-        return "[" +  value.compactMap { $0.string }.joined(separator: ",") + "]"
+        return value.compactMap { $0.string }
       }
 //    }
     
-    return " "
+    return [""]
   }
 
-  public static func checkInnerObjects(fieldParts: [String], level: Int, obj: [Any]) -> String {
+  public static func checkInnerObjects(fieldParts: [String], level: Int, obj: [Any]) -> [String] {
+    
+    var holder = [String]()
     
     for item in obj {
       if let innerObj = item as? [String: Any] {
-        return checkInnerObjects(fieldParts: fieldParts, level: level, obj: innerObj)
+        holder.append(contentsOf: checkInnerObjects(fieldParts: fieldParts, level: level, obj: innerObj))
       } else if let innerObj = item as? [Any] {
-        return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
+        holder.append(contentsOf: checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj))
       }
     }
-    return " "
+    
+    return holder
   }
   
   public static func SortedFieldsWithDate(input: [SquashedFieldsArray]) ->  [SquashedFieldsArray] {

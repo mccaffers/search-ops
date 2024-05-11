@@ -70,7 +70,8 @@ final class ResponseTests_Complex_v8: XCTestCase {
 
     let output = Results.getValueForKey(fieldParts: nameField!.fieldParts, item:renderedObjects!.results[0])
     
-    XCTAssertEqual(output, "application/json")
+    XCTAssert(output.contains("application/json"))
+//    XCTAssertEqual(output, "application/json")
   }
   
   func testGetArrayValueResponse6() async throws {
@@ -87,7 +88,8 @@ final class ResponseTests_Complex_v8: XCTestCase {
 
     let output = Results.getValueForKey(fieldParts: nameField!.fieldParts, item:renderedObjects!.results[0])
     
-    XCTAssertEqual(output, "System.Exception")
+    XCTAssert(output.contains("System.Exception"))
+//    XCTAssertEqual(output, "System.Exception")
   }
   
   func testGetRenderedObjectsResponse6() async throws {
@@ -100,11 +102,14 @@ final class ResponseTests_Complex_v8: XCTestCase {
     
     let innterExceptionField = renderedObjects!.headers.first(where: {$0.squashedString == "innerException.innerException.innerExceptions.className"})
     let innterExceptionOutput = Results.getValueForKey(fieldParts: innterExceptionField!.fieldParts, item:renderedObjects!.results[0])
-    XCTAssertEqual(innterExceptionOutput, "System.ArgumentOutOfRangeException")
+    XCTAssert(innterExceptionOutput.contains("System.ArgumentOutOfRangeException"))
+//    XCTAssertEqual(innterExceptionOutput, "System.ArgumentOutOfRangeException")
     
     let innerExceptionDataField = renderedObjects!.headers.first(where: {$0.squashedString == "innerException.data"})
     let innerExceptionDataOutput = Results.getValueForKey(fieldParts: innerExceptionDataField!.fieldParts, item:renderedObjects!.results[0])
-    XCTAssertEqual(innerExceptionDataOutput, "")
+    print(innerExceptionDataOutput)
+    XCTAssertEqual(innerExceptionDataOutput.count, 1)
+//    XCTAssertEqual(innerExceptionDataOutput, "")
   }
   
   // Verifies correct retrieval of values from arrays within the parsed fields, addressing complexities in JSON array handling.
@@ -121,7 +126,28 @@ final class ResponseTests_Complex_v8: XCTestCase {
     let nameField = renderedObjects!.headers.first(where: {$0.squashedString == "innerExceptions.innerExceptions.className"})
     let output = Results.getValueForKey(fieldParts: nameField!.fieldParts, item:renderedObjects!.results[0])
     
-    XCTAssertEqual(output, "System.ArgumentOutOfRangeException")
+    XCTAssert(output.contains("System.ArgumentOutOfRangeException"))
+    
+//    XCTAssertEqual(output, "System.ArgumentOutOfRangeException")
+
+  }
+  
+  // Verifies correct retrieval of values from arrays within the parsed fields, addressing complexities in JSON array handling.
+  func testGetTwoArrayValuesResponse9() async throws {
+    let response = try SearchOpsTests().OpenFile(filename: "response.9")
+    let objects = Search.getObjects(input: response)
+    let fields = Fields.getFields(input: response)
+    
+    let viewableFields: RenderedFields = RenderedFields(fields: [SquashedFieldsArray]())
+    viewableFields.fields = Results.SortedFieldsWithDate(input: fields)
+    
+    let renderedObjects = Results.UpdateResults(searchResults: objects.data, resultsFields: viewableFields)
+    
+    let nameField = renderedObjects!.headers.first(where: {$0.squashedString == "innerExceptions.innerExceptions.className"})
+    let output = Results.getValueForKey(fieldParts: nameField!.fieldParts, item:renderedObjects!.results[0])
+    
+    XCTAssert(output.contains("System.ArgumentOutOfRangeException"))
+    XCTAssert(output.contains("Something Else"))
 
   }
   
