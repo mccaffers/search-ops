@@ -159,9 +159,21 @@ public class Results {
       } else if let innerObj = item as? [Any] {
         holder.append(contentsOf: checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj))
       }
-    }
+//    }
     
     return holder
+  }
+
+  public static func checkInnerObjects(fieldParts: [String], level: Int, obj: [Any]) -> String {
+    
+    for item in obj {
+      if let innerObj = item as? [String: Any] {
+        return checkInnerObjects(fieldParts: fieldParts, level: level, obj: innerObj)
+      } else if let innerObj = item as? [Any] {
+        return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
+      }
+    }
+    return " "
   }
   
   public static func SortedFieldsWithDate(input: [SquashedFieldsArray]) ->  [SquashedFieldsArray] {

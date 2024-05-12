@@ -71,7 +71,6 @@ final class ResponseTests_Complex_v8: XCTestCase {
     let output = Results.getValueForKey(fieldParts: nameField!.fieldParts, item:renderedObjects!.results[0])
     
     XCTAssert(output.contains("application/json"))
-//    XCTAssertEqual(output, "application/json")
   }
   
   func testGetArrayValueResponse6() async throws {
@@ -89,7 +88,6 @@ final class ResponseTests_Complex_v8: XCTestCase {
     let output = Results.getValueForKey(fieldParts: nameField!.fieldParts, item:renderedObjects!.results[0])
     
     XCTAssert(output.contains("System.Exception"))
-//    XCTAssertEqual(output, "System.Exception")
   }
   
   func testGetRenderedObjectsResponse6() async throws {
@@ -103,13 +101,11 @@ final class ResponseTests_Complex_v8: XCTestCase {
     let innterExceptionField = renderedObjects!.headers.first(where: {$0.squashedString == "innerException.innerException.innerExceptions.className"})
     let innterExceptionOutput = Results.getValueForKey(fieldParts: innterExceptionField!.fieldParts, item:renderedObjects!.results[0])
     XCTAssert(innterExceptionOutput.contains("System.ArgumentOutOfRangeException"))
-//    XCTAssertEqual(innterExceptionOutput, "System.ArgumentOutOfRangeException")
     
     let innerExceptionDataField = renderedObjects!.headers.first(where: {$0.squashedString == "innerException.data"})
     let innerExceptionDataOutput = Results.getValueForKey(fieldParts: innerExceptionDataField!.fieldParts, item:renderedObjects!.results[0])
     print(innerExceptionDataOutput)
     XCTAssertEqual(innerExceptionDataOutput.count, 1)
-//    XCTAssertEqual(innerExceptionDataOutput, "")
   }
   
   // Verifies correct retrieval of values from arrays within the parsed fields, addressing complexities in JSON array handling.
@@ -128,8 +124,6 @@ final class ResponseTests_Complex_v8: XCTestCase {
     
     XCTAssert(output.contains("System.ArgumentOutOfRangeException"))
     
-//    XCTAssertEqual(output, "System.ArgumentOutOfRangeException")
-
   }
   
   // Verifies correct retrieval of values from arrays within the parsed fields, addressing complexities in JSON array handling.
