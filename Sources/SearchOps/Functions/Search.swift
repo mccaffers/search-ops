@@ -76,10 +76,22 @@ public class Search {
   
   public static func getObjects(input:String) -> SearchResult {
     
+    var hitCount = 0
+    
     var parsedObject = SearchResult()
+    
+    var headersDictionary =  [FieldsArray]()
     
     if let jsonObj = JsonTools.serialiseJson(input) {
       if let hits = jsonObj["hits"] as? [String: Any] {
+        
+        if let total = hits["total"] as? [String: Any] {
+          if let value = total["value"] as? Int {
+            hitCount = value
+          }
+        } else if let total = hits["total"] as? Int {
+          hitCount = total
+        }
         
         if let objects = hits["hits"] as? [[String: Any]] {
           
@@ -90,9 +102,14 @@ public class Search {
             if let _source = jsonDict["_source"] as? [String: Any] {
               // Pass all of the objects to a loop function
               holder.append(_source)
+              
+              // Pass all of the objects to a loop function
+              headersDictionary = Fields.loopFields(_source: _source, headersDictionary: headersDictionary)
+              
+              
             }
+            parsedObject = SearchResult(data:holder, hitCount: hitCount, fields: Fields.makeSquashedArray(key: "", fields: headersDictionary, squashedArray: [SquashedFieldsArray]()))
           }
-          parsedObject = SearchResult(data:holder)
         }
       } else if let errorMessage = jsonObj["error"] as? [String: Any] {
         

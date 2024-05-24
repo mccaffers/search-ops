@@ -24,29 +24,33 @@ public struct FieldsArray : Hashable {
 @available(macOS 10.15, *)
 @available(iOS 15.0, *)
 public class SquashedFieldsArray : Identifiable, Hashable, ObservableObject {
-    
-    public init(id: UUID = UUID(), squashedString: String = "", fieldParts : [String] = [String]()) {
-        self.id = id
-        self.squashedString = squashedString
-      self.fieldParts = fieldParts
-    }
-    
-    public var id : UUID
-    public var squashedString : String
-    public var fieldParts : [String] = [String]()
-    public var type : String = ""
-    public var index : String = ""
-    
-    @Published
-    public var visible : Bool =  false
-    
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-    
-    public static func == (lhs: SquashedFieldsArray, rhs: SquashedFieldsArray) -> Bool {
-       return lhs.id == rhs.id
-   }
+  
+  public init(id: UUID = UUID(), squashedString: String = "", fieldParts : [String] = [String]()) {
+    self.id = id
+    self.squashedString = squashedString
+    self.fieldParts = fieldParts
+  }
+  
+  public var id : UUID
+  public var squashedString : String
+  public var fieldParts : [String] = [String]()
+  public var type : String = ""
+  public var index : String = ""
+  
+  @Published
+  public var visible : Bool =  false
+  
+  public func hash(into hasher: inout Hasher) {
+    hasher.combine(id)
+  }
+  
+  public static func == (lhs: SquashedFieldsArray, rhs: SquashedFieldsArray) -> Bool {
+    return lhs.id == rhs.id
+  }
+  
+  public var debugDescription: String {
+    return "SquashedFieldsArray(id: \(id), squashedString: \(squashedString), fieldParts: \(fieldParts), type: \(type), index: \(index), visible: \(visible))"
+  }
 }
 
 

@@ -11,7 +11,7 @@ import SwiftyJSON
 @testable import SearchOps
 
 @available(iOS 15.0.0, *)
-final class SearchOpsTests: XCTestCase {
+public class SearchOpsTests: XCTestCase {
   
   func OpenFile(filename:String) throws -> String {
     

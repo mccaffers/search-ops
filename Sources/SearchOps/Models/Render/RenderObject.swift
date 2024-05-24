@@ -11,6 +11,7 @@ import OrderedCollections
 @available(macOS 10.15, *)
 @available(iOS 15.0, *)
 public struct RenderObject {
-    public var headers : [SquashedFieldsArray]
-    public var results : [OrderedDictionary<String, Any>]
+  public var headers : [SquashedFieldsArray]
+  public var results : [OrderedDictionary<String, Any>]
+  public var flat : [OrderedDictionary<String, Any>]? = nil
 }

@@ -116,8 +116,7 @@ public class IndexMap {
       let output = indexMappingsResponseToArrayLopp(input:myDictionary,
                                                     keyArray: keyArray,
                                                     indexKey: indexKey)
-      
-      
+
       output.forEach { keyArray.insert($0.squashedString) }
       fieldsArray.append(contentsOf: output)
     }

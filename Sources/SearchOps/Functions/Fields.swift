@@ -207,7 +207,7 @@ public class Fields {
   }
   
   // Takes all of the elastic objects
-  private static func loopFields(_source: [String: Any], headersDictionary: [FieldsArray]) -> [FieldsArray] {
+  static func _loopFields(_source: [String: Any], headersDictionary: [FieldsArray]) -> [FieldsArray] {
     
     // Local copy of the dictionary
     var localCopy = headersDictionary
@@ -246,6 +246,25 @@ public class Fields {
     
   }
   
+  static func loopFields(_source: [String: Any], headersDictionary: [FieldsArray]) -> [FieldsArray] {
+      var localCopy = Dictionary(uniqueKeysWithValues: headersDictionary.map { ($0.name, $0) })
+
+      for item in _source {
+          var local = localCopy[item.key] ?? FieldsArray(name: item.key, values: [FieldsArray]())
+
+          if let field = item.value as? [String: Any] {
+              local = innerFields(key: item.key, items: field, fieldsDictionary: local)
+          } else if let field = item.value as? [Any] {
+              local = innerFields(key: item.key, items: field, fieldsDictionary: local)
+          }
+
+          localCopy[item.key] = local
+      }
+
+      return Array(localCopy.values)
+  }
+
+  
   private static func innerFields(key: String, items: [Any], fieldsDictionary: FieldsArray) -> FieldsArray {
     
     var localCopy = fieldsDictionary
@@ -264,8 +283,29 @@ public class Fields {
     return localCopy
   }
   
+  static func innerFields(key: String, items: [String: Any], fieldsDictionary: FieldsArray) -> FieldsArray {
+      var localCopy = fieldsDictionary
+
+      var valuesDictionary = Dictionary(uniqueKeysWithValues: (localCopy.values ?? []).map { ($0.name, $0) })
+
+      for item in items {
+          var fieldObj = valuesDictionary[item.key] ?? FieldsArray(name: item.key, values: [FieldsArray]())
+
+          if item.value is String || item.value is Double || item.value is [String] || item.value is [Double] {
+              valuesDictionary[item.key] = fieldObj
+          } else if let field = item.value as? [String: Any] {
+              valuesDictionary[item.key] = innerFields(key: item.key, items: field, fieldsDictionary: fieldObj)
+          } else if let field = item.value as? [Any] {
+              valuesDictionary[item.key] = innerFields(key: item.key, items: field, fieldsDictionary: fieldObj)
+          }
+      }
+
+      localCopy.values = Array(valuesDictionary.values)
+      return localCopy
+  }
+
   
-  private static func innerFields(key: String, items: [String: Any], fieldsDictionary: FieldsArray) -> FieldsArray {
+  static func _innerFields(key: String, items: [String: Any], fieldsDictionary: FieldsArray) -> FieldsArray {
     
     var localCopy = fieldsDictionary
     
