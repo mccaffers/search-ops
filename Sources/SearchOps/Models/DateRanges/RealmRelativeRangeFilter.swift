@@ -14,4 +14,10 @@ import RealmSwift
 public class RealmRelativeRangeFilter : EmbeddedObject {
     @Persisted public var period: SearchDateTimePeriods = SearchDateTimePeriods.Minutes
     @Persisted public var value: Double = 0.0
+  
+  public func isEqual(object: RealmRelativeRangeFilter?) -> Bool {
+    guard self.period == object?.period else { return false }
+    guard self.value == object?.value else { return false }
+    return true
+  }
 }

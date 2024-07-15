@@ -12,6 +12,7 @@ import SwiftyJSON
 @MainActor 
 class SearchMainViewLogic {
   
+  
   static func SaveFilter(filterObject : FilterObject) {
     
     let saveFilteredObj = FilterHistoryDataManager()

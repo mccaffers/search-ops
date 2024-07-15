@@ -14,4 +14,5 @@ public struct RenderObject {
   public var headers : [SquashedFieldsArray]
   public var results : [OrderedDictionary<String, Any>]
   public var flat : [OrderedDictionary<String, Any>]? = nil
+  public var dateField : SquashedFieldsArray? = nil
 }

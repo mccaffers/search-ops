@@ -51,4 +51,42 @@ final class ElasticSearchV8MappingTests: XCTestCase {
     // verifying that the mapping is parsed correctly and completely.
     XCTAssertEqual(fieldsCount, 16)
   }
+  
+  @MainActor
+  func testMappingElasticAllv8small() async throws {
+    // Tries to open a file that presumably contains a mock response for a V8 mapping.
+    // The use of `try!` indicates that the test assumes the file must exist and be accessible;
+    // however, using `try?` or proper error handling could be safer to prevent crashes in case of errors.
+    let response = try! SearchOpsTests().OpenFile(filename: "_all_mapping_v8_small")
+    
+    // Calls the actual method under test, which fetches and parses the index mappings from ElasticSearch V8.
+    // `await` is used here to handle the asynchronous operation within this test.
+    let output = await IndexMap.indexMappingsResponseToArray(response)
+    
+    // Assigns the count of fields (or mappings) parsed to a local variable for clearer assertion.
+    let fieldsCount = output.count
+    
+    // Asserts that the number of fields parsed matches the expected count of 16,
+    // verifying that the mapping is parsed correctly and completely.
+    XCTAssertEqual(fieldsCount, 20)
+  }
+  
+  @MainActor
+  func testMappingElasticAllv8() async throws {
+    // Tries to open a file that presumably contains a mock response for a V8 mapping.
+    // The use of `try!` indicates that the test assumes the file must exist and be accessible;
+    // however, using `try?` or proper error handling could be safer to prevent crashes in case of errors.
+    let response = try! SearchOpsTests().OpenFile(filename: "_all_mapping_v8")
+    
+    // Calls the actual method under test, which fetches and parses the index mappings from ElasticSearch V8.
+    // `await` is used here to handle the asynchronous operation within this test.
+    let output = await IndexMap.indexMappingsResponseToArray(response)
+    
+    // Assigns the count of fields (or mappings) parsed to a local variable for clearer assertion.
+    let fieldsCount = output.count
+    
+    // Asserts that the number of fields parsed matches the expected count of 16,
+    // verifying that the mapping is parsed correctly and completely.
+    XCTAssertEqual(fieldsCount, 39)
+  }
 }

@@ -10,7 +10,7 @@ import Foundation
 @available(macOS 13.0, *)
 @available(iOS 13.0, *)
 
-public class ResponseError {
+public class ResponseError : LocalizedError {
   public let title: String
   public let message: String
   public let type : ErrorResponseType

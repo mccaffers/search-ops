@@ -22,6 +22,16 @@ public struct FieldsArray : Hashable {
 }
 
 @available(macOS 10.15, *)
+public class HostUpdatedNotifier : ObservableObject {
+  
+  public init(){}
+  
+  @Published
+  public var updated : UUID = UUID()
+  
+}
+
+@available(macOS 10.15, *)
 @available(iOS 15.0, *)
 public class SquashedFieldsArray : Identifiable, Hashable, ObservableObject {
   

@@ -31,7 +31,7 @@ public class Results {
     return nil
     
   }
-  public static func UpdateResultsWithFlatArray(searchResults: [[String: Any]]?, resultsFields: RenderedFields) -> RenderObject? {
+  public static func UpdateResultsWithFlatArray(searchResults: [[String: Any]]?, resultsFields: RenderedFields, datefield: SquashedFieldsArray? = nil) -> RenderObject? {
       guard let searchResults = searchResults else {
           return nil
       }
@@ -56,7 +56,8 @@ public class Results {
       return RenderObject(
           headers: resultsFields.fields.filter { $0.visible },
           results: myArray,
-          flat: flatArray
+          flat: flatArray,
+          dateField: datefield
       )
   }
 
@@ -279,7 +280,7 @@ public class Results {
       // Partition the array into date fields and non-date fields
       var nonDateFields = input
       let dateFields = nonDateFields.filter { $0.squashedString == "date" }
-      
+//    nonDateFields = nonDateFields.filter { $0.squashedString != "date" }
       // Sort the non-date fields alphabetically
       nonDateFields.sort { $0.squashedString < $1.squashedString }
       

@@ -11,7 +11,7 @@ import RealmSwift
 @available(macOS 13, *)
 public class RealmManager : RealmManagerProtocol {
   
-  public static let schemaVersion : UInt64 = 3
+  public static let schemaVersion : UInt64 = 4
   
   private let realmClient: RealmClientProtocol
   private let realmUtilities: RealmUtilitiesProtocol

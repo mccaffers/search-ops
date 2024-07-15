@@ -60,6 +60,8 @@ public class SearchRender {
       }
     }
     
+ 
+    
     // Log the event detailing the query and its outcomes for auditing and debugging purposes.
     Logger.event(response: response,
                  index: index,
@@ -67,6 +69,8 @@ public class SearchRender {
                  filterObject: filterObject,
                  page: pageInput,
                  hitCount: hitCount)
+    
+    
     
     return renderResult // Return the structured result of the query.
   }

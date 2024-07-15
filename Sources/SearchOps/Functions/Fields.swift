@@ -103,8 +103,17 @@ public class Fields {
       } else if filterObject.absoluteRange != nil {
         if let dateRange = filterObject.absoluteRange {
           range = GenericQueryBuilder.Date()
-          range?.gte = DateTools.dateString(dateRange.from)
-          range?.lte = DateTools.dateString(dateRange.to)
+          if dateRange.fromNow {
+            range?.gte = DateTools.dateString(Date.now)
+          } else {
+            range?.gte = DateTools.dateString(dateRange.from)
+          }
+          
+          if dateRange.toNow {
+            range?.lte = DateTools.dateString(Date.now)
+          } else {
+            range?.lte = DateTools.dateString(dateRange.to)
+          }
         }
       }
     }

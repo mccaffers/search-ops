@@ -57,4 +57,34 @@ public class FilterObject: ObservableObject {
     }
   }
   
+  public func ejectRealmObject()  -> RealmFilterObject {
+    let realmFilter = RealmFilterObject()
+    
+    if let dateField = self.dateField {
+      realmFilter.dateField = RealmSquashedFieldsArray(squasedField: dateField)
+    }
+    
+    if let queryObj = self.query {
+      realmFilter.query = queryObj.eject()
+    }
+    
+    if let relativeRange = self.relativeRange {
+      realmFilter.relativeRange = relativeRange.ejectRealmObject()
+    }
+    
+    if let absoluteRange = self.absoluteRange {
+      realmFilter.absoluteRange = absoluteRange.ejectRealmObject()
+    }
+    
+    return realmFilter
+  }
+  
+  func reset(){
+    query = nil
+    dateField = nil
+    relativeRange = nil
+    sort = nil
+    absoluteRange = nil
+  }
+  
 }
