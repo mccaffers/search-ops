@@ -1,9 +1,9 @@
+// SearchOps Swift Package
+// Business logic for SearchOps iOS Application
 //
-//  FieldTests.swift
-//  
-//
-//  Created by Ryan McCaffery on 23/05/2024.
-//
+// (c) 2024 Ryan McCaffery
+// This code is licensed under MIT license (see LICENSE.txt for details)
+// ---------------------------------------
 
 import XCTest
 
@@ -15,7 +15,7 @@ final class FieldTests: XCTestCase {
 
     func testExample() throws {
       let testDictionary: [String: Any] = [
-          "date": "2022-11-19T16:06:02.294Z",
+          "date": "2024-12-19T00:06:02.294Z",
           "url": "https://api.geo.dev/search",
           "path": "/search",
           "env": "DEVELOPMENT",
