@@ -79,7 +79,7 @@ public class FilterObject: ObservableObject {
     return realmFilter
   }
   
-  func reset(){
+  public func clear(){
     query = nil
     dateField = nil
     relativeRange = nil

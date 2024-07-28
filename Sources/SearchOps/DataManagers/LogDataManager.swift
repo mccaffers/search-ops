@@ -34,7 +34,6 @@ public class LogDataManager: ObservableObject {
       return []
     }
   }
- 
   
   public func addNew(item: LogEvent) {
     addNewLogEntry(item: item);

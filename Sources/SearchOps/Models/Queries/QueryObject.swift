@@ -35,24 +35,34 @@ public class QueryObject : EmbeddedObject {
   @Persisted public var compound: QueryCompoundEnum
   
 
+//  public func isEqual(object: QueryObject?) -> Bool {
+//
+//    guard let myObjects = object else { return false }
+//    guard object?.values.count == self.values.count else { return false }
+//    
+//    for item in myObjects.values.sorted(by: {$0.string<$1.string}) {
+//      for original in self.values.sorted(by: {$0.string<$1.string}) {
+//        if item.string != original.string {
+//          return false
+//        }
+//      }
+//    }
+//    
+//    if self.compound != object?.compound {
+//      return false
+//    }
+//    
+//    return true
+//  }
+  
   public func isEqual(object: QueryObject?) -> Bool {
-
-    guard let myObjects = object else { return false }
-    guard object?.values.count == self.values.count else { return false }
-    
-    for item in myObjects.values.sorted(by: {$0.string<$1.string}) {
-      for original in self.values.sorted(by: {$0.string<$1.string}) {
-        if item.string != original.string {
-          return false
-        }
-      }
-    }
-    
-    if self.compound != object?.compound {
-      return false
-    }
-    
-    return true
+      guard let myObjects = object else { return false }
+      guard self.values.count == myObjects.values.count else { return false }
+      
+      let selfStrings = self.values.map { $0.string }.sorted()
+      let objectStrings = myObjects.values.map { $0.string }.sorted()
+      
+      return selfStrings == objectStrings && self.compound == myObjects.compound
   }
 
 }

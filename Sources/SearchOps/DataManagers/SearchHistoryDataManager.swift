@@ -21,9 +21,9 @@ public class SearchHistoryDataManager: ObservableObject {
     var filterArray = [SearchEvent]()
     for item in items {
       
-      var event = SearchEvent()
+      let event = SearchEvent()
       
-      var filterHistory = item.filter?.eject()
+      let filterHistory = item.filter?.eject()
       filterHistory?.dateField = item.filter?.dateField?.eject()
       
       if let relativeRange = item.filter?.relativeRange {
@@ -46,15 +46,15 @@ public class SearchHistoryDataManager: ObservableObject {
       
       filterArray.append(event)
 
-      
     }
     
     return filterArray
   }
   
   func areDatesSameDay(date1: Date, date2: Date) -> Bool {
-      let calendar = Calendar.current
-      return calendar.isDate(date1, inSameDayAs: date2)
+    var calendar = Calendar.current
+    calendar.timeZone = TimeZone(identifier: "UTC")!
+    return calendar.isDate(date1, inSameDayAs: date2)
   }
   
   public func orderedByDate() -> [SearchEvent] {
@@ -74,21 +74,10 @@ public class SearchHistoryDataManager: ObservableObject {
   }
   
   public func groupByDate() -> Dictionary<Date, [SearchEvent]> {
-//    ForEach(filteredByDate.indices, id:\.self) { index in
-//      
-//      if index > 0 {
-//        if shouldShowHeader(previous: myList[index-1], for: myList[index], at: index) {
-//        }
-//      }
-//      
-//    }
-    
 
-//    var myDictionary = Dictionary<Date, [SearchEvent]>()
     var dateDictionary: [Date: [SearchEvent]] = [:]
 
-    for item in orderedByDate() { item
-      
+    for item in orderedByDate() {
       let calendar = Calendar.current
       let dateComponents = calendar.dateComponents([.year, .month, .day], from: item.date)
       if let dateOnly = calendar.date(from: dateComponents){
@@ -101,13 +90,8 @@ public class SearchHistoryDataManager: ObservableObject {
             // If the date key does not exist, create a new array with the value
             dateDictionary[dateOnly] = [item]
         }
-        
       }
-      
-   
     }
-    
-    
     
     return dateDictionary
   
