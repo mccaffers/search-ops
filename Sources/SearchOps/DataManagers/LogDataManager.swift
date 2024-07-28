@@ -52,16 +52,13 @@ public class LogDataManager: ObservableObject {
   private func rotateLogs() {
     if let realm = RealmManager().getRealm() {
       try? realm.write {
-        
         let realmArrayObject = realm.objects(LogEvent.self)
         let myArray = Array(realmArrayObject)
         let limit = (myArray.count - 20)
-        if limit > 1 {
-          if let oldest = myArray.sorted(by: { $0.date < $1.date }).first {
-            realm.delete(oldest)
-          }
+        if limit > 1,
+           let oldest = myArray.sorted(by: { $0.date < $1.date }).first {
+          realm.delete(oldest)
         }
-        
       }
     }
   }
