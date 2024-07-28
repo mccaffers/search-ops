@@ -11,6 +11,10 @@ import Foundation
 @available(iOS 15.0, *)
 
 public class RenderResult : ObservableObject {
+  
+  public init() {
+    
+  }
     public var results : [[String : Any]] = []
     public var error : ResponseError?
     public var pages : Int = 0

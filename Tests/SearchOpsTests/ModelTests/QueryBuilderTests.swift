@@ -83,4 +83,54 @@ class GenericQueryBuilderTests: XCTestCase {
     }
   }
   
+  func testIsEqual() {
+    // Test case 1: Equal objects
+    let query1 = QueryObject()
+    query1.compound = .must
+    query1.values.append(QueryFilterObject(string: "filter1"))
+    query1.values.append(QueryFilterObject(string: "filter2"))
+    
+    let query2 = QueryObject()
+    query2.compound = .must
+    query2.values.append(QueryFilterObject(string: "filter2"))
+    query2.values.append(QueryFilterObject(string: "filter1"))
+    
+    XCTAssertTrue(query1.isEqual(object: query2))
+    
+    // Test case 2: Different compound
+    let query3 = QueryObject()
+    query3.compound = .should
+    query3.values.append(QueryFilterObject(string: "filter1"))
+    query3.values.append(QueryFilterObject(string: "filter2"))
+    
+    XCTAssertFalse(query1.isEqual(object: query3))
+    
+    // Test case 3: Different number of values
+    let query4 = QueryObject()
+    query4.compound = .must
+    query4.values.append(QueryFilterObject(string: "filter1"))
+    
+    XCTAssertFalse(query1.isEqual(object: query4))
+    
+    // Test case 4: Different values
+    let query5 = QueryObject()
+    query5.compound = .must
+    query5.values.append(QueryFilterObject(string: "filter1"))
+    query5.values.append(QueryFilterObject(string: "filter3"))
+    
+    XCTAssertFalse(query1.isEqual(object: query5))
+    
+    // Test case 5: Nil object
+    XCTAssertFalse(query1.isEqual(object: nil))
+    
+    // Test case 6: Empty objects
+    let query6 = QueryObject()
+    query6.compound = .must
+    
+    let query7 = QueryObject()
+    query7.compound = .must
+    
+    XCTAssertTrue(query6.isEqual(object: query7))
+  }
+  
 }

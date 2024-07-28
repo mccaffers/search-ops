@@ -33,6 +33,23 @@ public class QueryObject : EmbeddedObject {
 
   @Persisted public var values: List<QueryFilterObject> = List<QueryFilterObject>()
   @Persisted public var compound: QueryCompoundEnum
+  
+  public func isEqual(object: QueryObject?) -> Bool {
+      guard let myObjects = object else { return false }
+      guard self.values.count == myObjects.values.count else { return false }
+      
+      let selfStrings = self.values.map { $0.string }.sorted()
+      let objectStrings = myObjects.values.map { $0.string }.sorted()
+      
+      return selfStrings == objectStrings && self.compound == myObjects.compound
+  }
+
+}
+
+extension Array where Element: Comparable {
+    func containsSameElements(as other: [Element]) -> Bool {
+        return self.count == other.count && self.sorted() == other.sorted()
+    }
 }
 
 

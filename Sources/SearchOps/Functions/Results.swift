@@ -27,9 +27,93 @@ public class Results {
       
     }
     
+    
     return nil
     
   }
+  public static func UpdateResultsWithFlatArray(searchResults: [[String: Any]]?, resultsFields: RenderedFields, datefield: SquashedFieldsArray? = nil) -> RenderObject? {
+      guard let searchResults = searchResults else {
+          return nil
+      }
+
+      var myArray = [OrderedDictionary<String, Any>]()
+      var flatArray = [OrderedDictionary<String, Any>]()
+
+      for item in searchResults {
+          let orderedItem = OrderedDictionary(uniqueKeys: item.keys, values: item.values)
+          myArray.append(orderedItem)
+
+          var flat = OrderedDictionary<String, Any>()
+          for header in resultsFields.fields {
+              let values = Results.getValueForKey(fieldParts: header.fieldParts, item: orderedItem)
+              if !values.isEmpty {
+                  flat[header.squashedString] = values
+              }
+          }
+          flatArray.append(flat)
+      }
+
+      return RenderObject(
+          headers: resultsFields.fields.filter { $0.visible },
+          results: myArray,
+          flat: flatArray,
+          dateField: datefield
+      )
+  }
+
+
+  
+  // Takes a mutlti-dimensional array and returns a RenderedObject
+  // Extracts all the fields out of the results
+  // This is different to _mapping, as it captures fields that are not mapped
+  public static func _UpdateResultsWithFlatArray(searchResults : [[String: Any]]?, resultsFields:  RenderedFields) -> RenderObject? {
+    
+    var myArray = [OrderedDictionary<String, Any>]()
+    var flat = OrderedDictionary<String, Any>()
+    var flatArray = [OrderedDictionary<String, Any>()]
+    
+    if let searchResults = searchResults {
+      for item in searchResults {
+        myArray.append(OrderedDictionary(uniqueKeys: item.keys, values: item.values))
+        
+        for header in resultsFields.fields {
+          let values = Results.getValueForKey(fieldParts: header.fieldParts,
+                                              item: convertToOrderedDictionary(item))
+          
+//            var flat : [String:String] = [:]
+//          
+          flat[header.squashedString] = values
+//          flat.append(OrderedDictionary(uniqueKeys: header.squashedString, values:values))
+          
+        }
+        flatArray.append(flat)
+        flat = OrderedDictionary<String, Any>()
+      }
+      
+      
+
+      
+      return RenderObject(headers: resultsFields.fields.filter({$0.visible == true}),
+                          results: myArray,
+                          flat: flatArray)
+      
+    }
+    
+    
+    return nil
+    
+  }
+  
+  // Function to convert [String: Any] to OrderedDictionary<String, Any>
+  static func convertToOrderedDictionary(_ dictionary: [String: Any]) -> OrderedDictionary<String, Any> {
+      var orderedDict = OrderedDictionary<String, Any>()
+      for (key, value) in dictionary {
+          orderedDict[key] = value
+      }
+      return orderedDict
+  }
+
+  
   
   // Loop through all the inner objects of the results
   private static func loopInnerObjects(item: SquashedFieldsArray, level: Int, input:  [[String: Any]], originalObject:[String: Any]?=nil) -> [[String : Any]] {
@@ -167,6 +251,7 @@ public class Results {
   
   
   public static func SortedFieldsWithDate(input: [SquashedFieldsArray]) ->  [SquashedFieldsArray] {
+    
     var sortedArray : [SquashedFieldsArray] = [SquashedFieldsArray] ()
     var nonDateFieldsForAlphaSort : [SquashedFieldsArray] = [SquashedFieldsArray] ()
     // update results immediately
@@ -187,6 +272,22 @@ public class Results {
     sortedArray.append(contentsOf: nonDateFieldsForAlphaSort)
     return sortedArray
   }
+  
+  public static func SortedFieldsWithDateImproved(input: [SquashedFieldsArray]) -> [SquashedFieldsArray] {
+      // Update all items' visibility
+      input.forEach { $0.visible = true }
+      
+      // Partition the array into date fields and non-date fields
+      var nonDateFields = input
+      let dateFields = nonDateFields.filter { $0.squashedString == "date" }
+//    nonDateFields = nonDateFields.filter { $0.squashedString != "date" }
+      // Sort the non-date fields alphabetically
+      nonDateFields.sort { $0.squashedString < $1.squashedString }
+      
+      // Combine date fields and sorted non-date fields
+    return dateFields + nonDateFields
+  }
+
   
   public static func CalculatePages(hits: Int, limit: Int) -> Int {
     var pages = Double(hits)/Double(limit)

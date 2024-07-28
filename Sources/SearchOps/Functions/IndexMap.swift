@@ -60,25 +60,27 @@ public class IndexMap {
       
       // make sure this JSON is in the format we expect
       if let jsonArray = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-
-        // Iterate through the top-level elements of the JSON, expected to be index mappings.
-        for (indexKey, value) in jsonArray {
-          if let dictionary = value as? [String: Any],
-             let mappingsObj = dictionary["mappings"] as? [String: Any] {
-
-            
-            if let propertiesObj = mappingsObj["properties"] as? [String: Any] {
-              return LoopProperties(propertiesObj: propertiesObj, indexKey: indexKey)
-            }
-            
-            if let typeKey = mappingsObj.first?.key,
-               let innerObject = mappingsObj[typeKey] as? [String: Any] {
-              return Process(innerObject: innerObject, indexKey: indexKey)
-            }
-            
-          }
-        }
         
+        var builder = [SquashedFieldsArray]()
+        // Iterate through the top-level elements of the JSON, expected to be index mappings.
+        for indices in jsonArray.keys {
+          guard let mappingArray = jsonArray[indices] as? [String: Any] else { continue }
+          for (indexKey, value) in mappingArray {
+            if let dictionary = value as? [String: Any] {
+              
+              if let propertiesObj = dictionary["properties"] as? [String: Any] {
+                builder.append(contentsOf: LoopProperties(propertiesObj: propertiesObj, indexKey: indexKey))
+              }
+              if let typeKey = dictionary.first?.key,
+                 let innerObject = dictionary[typeKey] as? [String: Any] {
+                builder.append(contentsOf:  Process(innerObject: innerObject, indexKey: indexKey))
+              }
+              
+            }
+          }
+         
+        }
+        return builder
       }
       
     } catch let error as NSError {
@@ -116,8 +118,7 @@ public class IndexMap {
       let output = indexMappingsResponseToArrayLopp(input:myDictionary,
                                                     keyArray: keyArray,
                                                     indexKey: indexKey)
-      
-      
+
       output.forEach { keyArray.insert($0.squashedString) }
       fieldsArray.append(contentsOf: output)
     }

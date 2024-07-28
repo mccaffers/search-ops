@@ -10,12 +10,16 @@ import Foundation
 @available(macOS 13.0, *)
 @available(iOS 13.0, *)
 public class SearchResult : ObservableObject {
-    
-    public init(data: [[String : Any]] = [], error: String? = nil) {
-        self.data = data
-        self.error = error
-    }
-    
-    public var data : [[String : Any]] = []
-    public var error : String?
+  
+  public init(data: [[String : Any]] = [], hitCount:Int = 0, fields : [SquashedFieldsArray] = [], error: String? = nil) {
+    self.data = data
+    self.error = error
+    self.hitCount = hitCount
+    self.fields = fields
+  }
+  
+  public var data : [[String : Any]] = []
+  public var hitCount : Int
+  public var fields : [SquashedFieldsArray]
+  public var error : String?
 }

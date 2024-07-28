@@ -53,12 +53,14 @@ public class SearchRender {
       } else {
         // Store the successfully parsed data and additional information in the result structure.
         renderResult.results = parsedResponse.data
-        renderResult.hits = Fields.getHits(input: data)
+        renderResult.hits = parsedResponse.hitCount // Fields.getHits(input: data)
         hitCount = renderResult.hits
-        renderResult.fields = Fields.getFields(input: data)
+        renderResult.fields = parsedResponse.fields // Fields.getFields(input: data)
         renderResult.pages = Results.CalculatePages(hits: renderResult.hits, limit: limitObj.size)
       }
     }
+    
+ 
     
     // Log the event detailing the query and its outcomes for auditing and debugging purposes.
     Logger.event(response: response,
@@ -67,6 +69,8 @@ public class SearchRender {
                  filterObject: filterObject,
                  page: pageInput,
                  hitCount: hitCount)
+    
+    
     
     return renderResult // Return the structured result of the query.
   }

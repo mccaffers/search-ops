@@ -1,0 +1,303 @@
+{
+  "price": {
+    "mappings": {
+      "properties": {
+        "ask": {
+          "type": "float"
+        },
+        "bid": {
+          "type": "float"
+        },
+        "date": {
+          "type": "date"
+        },
+        "symbol": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  },
+  "geo": {
+    "mappings": {
+      "properties": {
+        "boundings": {
+          "properties": {
+            "east": {
+              "type": "float"
+            },
+            "north": {
+              "type": "float"
+            },
+            "south": {
+              "type": "float"
+            },
+            "west": {
+              "type": "float"
+            }
+          }
+        },
+        "city": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "country": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "country_code": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "county": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "display_name": {
+          "type": "text"
+        },
+        "location": {
+          "type": "geo_point"
+        },
+        "name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "state": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "street": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "type": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "wikidata": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "wikipedia": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  },
+  "report": {
+    "mappings": {
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "date": {
+          "type": "date"
+        },
+        "hostname": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  },
+  "init": {
+    "mappings": {
+      "properties": {
+        "date": {
+          "type": "date"
+        },
+        "hostname": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "instanceCount": {
+          "type": "long"
+        },
+        "runID": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "runIteration": {
+          "type": "long"
+        },
+        "strategy": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "symbols": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  },
+  "live-function-logs": {
+    "mappings": {
+      "properties": {
+        "action": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "date": {
+          "type": "date"
+        },
+        "function": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "status": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  },
+  ".internal.alerts-stack.alerts-default-000001": {
+    "mappings": {
+      "dynamic": "false",
+      "_meta": {
+        "namespace": "default",
+        "kibana": {
+          "version": "8.12"
+        },
+        "managed": true
+      },
+      "properties": {
+        "@timestamp": {
+          "type": "date",
+          "ignore_malformed": false
+        },
+        "event": {
+          "properties": {
+            "action": {
+              "type": "keyword"
+            },
+            "kind": {
+              "type": "keyword"
+            }
+          }
+        },
+        "kibana": {
+          "properties": {
+            "alert": {
+              "properties": {
+                "action_group": {
+                  "type": "keyword"
+                },
+                "case_ids": {
+                  "type": "keyword"
+                }
+              },
+              "space_ids": {
+                "type": "keyword"
+              },
+              "version": {
+                "type": "version"
+              }
+            }
+          },
+          "tags": {
+            "type": "keyword"
+          }
+        }
+      }
+    }
+  }
+}
