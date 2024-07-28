@@ -125,6 +125,7 @@ public class FilterHistoryDataManager: ObservableObject {
   public func updateDateForFilterHistory(id: UUID)  {
     if let realm = RealmManager().getRealm() {
       try? realm.write {
+        refresh()
         let item = items.first(where: {$0.id == id})
         item?.date = Date.now
         item?.count = (item?.count ?? 0) + 1
@@ -150,24 +151,24 @@ public class FilterHistoryDataManager: ObservableObject {
     }
   }
   
-  private func updateServerList(item: RealmFilterObject) {
+  func updateServerList(item: RealmFilterObject) {
     if let realm = RealmManager().getRealm() {
       try? realm.write {
         realm.add(item, update: Realm.UpdatePolicy.modified)
       }
-      
+      refresh()
       if items.count > 50 {
         deleteOldest()
       }
     }
   }
   
-  private func deleteOldest() {
-    if let realm = RealmManager().getRealm() {
-      if let oldest = items.sorted(by: {$0.date < $1.date}).first {
-        try? realm.write {
-          realm.delete(oldest)
-        }
+  func deleteOldest() {
+    refresh()
+    if let realm = RealmManager().getRealm(),
+       let oldest = items.sorted(by: {$0.date < $1.date}).first {
+      try? realm.write {
+        realm.delete(oldest)
       }
     }
   }

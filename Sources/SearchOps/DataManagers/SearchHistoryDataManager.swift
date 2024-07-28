@@ -61,17 +61,17 @@ public class SearchHistoryDataManager: ObservableObject {
     return staticList().sorted(by: {$0.date > $1.date})
   }
   
-  private func isSameDate(previous: SearchEvent, for event: SearchEvent, at index: Int) -> Bool {
-    if index == 0 {
-      return true
-    }
-    
-    if areDatesSameDay(date1: previous.date, date2: event.date) {
-      return false
-    } else {
-      return true
-    }
-  }
+//  private func isSameDate(previous: SearchEvent, for event: SearchEvent, at index: Int) -> Bool {
+//    if index == 0 {
+//      return true
+//    }
+//    
+//    if areDatesSameDay(date1: previous.date, date2: event.date) {
+//      return false
+//    } else {
+//      return true
+//    }
+//  }
   
   public func groupByDate() -> Dictionary<Date, [SearchEvent]> {
 
@@ -121,7 +121,7 @@ public class SearchHistoryDataManager: ObservableObject {
     
     for item in items {
       if item.host == newEntry.host,
-         item.index == item.index,
+         item.index == newEntry.index,
          item.filter?.equals(input: newEntry.filter) ?? false
       {
         return item
@@ -133,7 +133,7 @@ public class SearchHistoryDataManager: ObservableObject {
   }
   
   public func addNew(item: RealmSearchEvent) {
-    var response = checkIfEntryExists(newEntry: item)
+    let response = checkIfEntryExists(newEntry: item)
     if response != nil {
       // it exists just update the time
       if let realm = RealmManager().getRealm() {
@@ -160,22 +160,22 @@ public class SearchHistoryDataManager: ObservableObject {
   }
   
   
-  private func rotateLogs() {
-    if let realm = RealmManager().getRealm() {
-      try? realm.write {
-        
-        let realmArrayObject = realm.objects(RealmSearchEvent.self)
-        let myArray = Array(realmArrayObject)
-        let limit = (myArray.count - 20)
-        if limit > 1 {
-          if let oldest = myArray.sorted(by: { $0.date < $1.date }).first {
-            realm.delete(oldest)
-          }
-        }
-        
-      }
-    }
-  }
+//  private func rotateLogs() {
+//    if let realm = RealmManager().getRealm() {
+//      try? realm.write {
+//        
+//        let realmArrayObject = realm.objects(RealmSearchEvent.self)
+//        let myArray = Array(realmArrayObject)
+//        let limit = (myArray.count - 20)
+//        if limit > 1 {
+//          if let oldest = myArray.sorted(by: { $0.date < $1.date }).first {
+//            realm.delete(oldest)
+//          }
+//        }
+//        
+//      }
+//    }
+//  }
   
   
   public func deleteAll(){
