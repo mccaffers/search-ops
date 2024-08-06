@@ -61,6 +61,7 @@ public class SearchHistoryDataManager: ObservableObject {
     return staticList().sorted(by: {$0.date > $1.date})
   }
   
+<<<<<<< HEAD
   // If you delete the host, lets delete all it's history
   public func deleteByHost(id: UUID) {
     refresh()
@@ -74,6 +75,19 @@ public class SearchHistoryDataManager: ObservableObject {
       }
     }
   }
+=======
+//  private func isSameDate(previous: SearchEvent, for event: SearchEvent, at index: Int) -> Bool {
+//    if index == 0 {
+//      return true
+//    }
+//    
+//    if areDatesSameDay(date1: previous.date, date2: event.date) {
+//      return false
+//    } else {
+//      return true
+//    }
+//  }
+>>>>>>> main
   
   public func groupByDate() -> Dictionary<Date, [SearchEvent]> {
 
@@ -157,8 +171,7 @@ public class SearchHistoryDataManager: ObservableObject {
       }
     }
   }
-  
-  
+
   public func deleteAll(){
     if let realm = RealmManager().getRealm() {
       try? realm.write {
