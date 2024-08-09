@@ -28,11 +28,10 @@ public class SearchRender {
     let from = pageInput == 0 ? 0 : ((pageInput - 1) * limitObj.size)
     
     // Execute the query with specified filters, host details, index, and pagination offset.
-    let response = await Fields
-      .QueryElastic(filterObject: filterObject,
-                    item: host,
-                    selectedIndex: index,
-                    from: from)
+    let response = await Fields.QueryElastic(filterObject: filterObject,
+                                              item: host,
+                                              selectedIndex: index,
+                                              from: from)
     
     var hitCount : Int = 0 // Initialize the counter for hits returned by the query.
     
