@@ -195,4 +195,28 @@ class FilterHistoryDataManagerQueryTests: XCTestCase {
     XCTAssertNotNil(realm.object(ofType: RealmFilterObject.self, forPrimaryKey: newItem.id), "The new item should be in the Realm")
   }
   
+  @MainActor
+  func testClearItems() async throws {
+    let expectation = XCTestExpectation(description: "Clear items")
+    
+    // Add some items
+    for _ in 0..<3 {
+      let newItem = RealmFilterObject()
+      newItem.id = UUID()
+      newItem.date = Date()
+      await manager.addNew(item: newItem)
+    }
+    
+    // Clear items
+    await manager.clear()
+    
+    DispatchQueue.main.async {
+      XCTAssertEqual(self.manager.items.count, 0)
+      expectation.fulfill()
+    }
+    
+    await fulfillment(of: [expectation], timeout: 5.0)
+  }
+
+  
 }

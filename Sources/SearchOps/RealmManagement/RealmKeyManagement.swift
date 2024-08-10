@@ -39,7 +39,4 @@ public class RealmKeyManagement {
     return key
   }
  
-  public static func getKeyMacOS() throws -> Data {
-    return Data()
-  }
 }

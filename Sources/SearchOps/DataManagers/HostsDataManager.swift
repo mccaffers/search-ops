@@ -204,6 +204,7 @@ public class HostsDataManager: ObservableObject {
     if itemsForDeletion.count == 0 {
       return
     }
+    
     var localArray : [HostDetails] = [HostDetails]()
     for item in itemsForDeletion {
       
@@ -248,7 +249,23 @@ public class HostsDataManager: ObservableObject {
     }
   }
   
+  public func deleteById(id: UUID) {
+    // Get item by ID
+    refresh()
+    var item = items.first { $0.id == id }
+    if item != nil {
+      SystemLogger().message("Deleting host \(item?.name.truncated(to: 20))")
+      if let realm = RealmManager().getRealm() {
+        try? realm.write {
+          realm.delete(item!)
+          refresh()
+        }
+      }
+    }
+  }
+  
   public func deleteItem(item: HostDetails) {
+    
     SystemLogger().message("Deleting host \(item.name.truncated(to: 20))")
     if let realm = RealmManager().getRealm() {
       try? realm.write {
