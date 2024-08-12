@@ -125,7 +125,14 @@ public class Fields {
     
     var sortBy : [String:String]? = nil
     if let sortObject = filterObject.sort {
-      sortBy = [sortObject.field.squashedString:sortObject.order.rawValue]
+      var sortString = sortObject.field.squashedString
+      
+      // TODO, assuming dynamic fields has been made
+      // need to come back to this asap
+      if sortObject.field.type == "text" {
+        sortString = sortString + ".keyword"
+      }
+      sortBy = [sortString:sortObject.order.rawValue]
     }
     
     
