@@ -35,6 +35,7 @@ public class LogEvent : Object {
   @Persisted public var hitCount : Int = 0
 }
 
+
 @available(macOS 13, *)
 @available(iOS 13.0, *)
 public class RealmSearchEvent : Object {
@@ -50,6 +51,11 @@ public class RealmSearchEvent : Object {
   
   // Request
   @Persisted public var filter : RealmFilterObject? = nil
+  @Persisted public var query: QueryObject? = nil
+  @Persisted public var dateField: RealmSquashedFieldsArray?
+  @Persisted public var relativeRange: RealmRelativeRangeFilter?
+  @Persisted public var absoluteRange: RealmAbsoluteDateRangeObject?
+
  
 }
 

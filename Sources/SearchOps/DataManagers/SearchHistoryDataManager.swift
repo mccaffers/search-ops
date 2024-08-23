@@ -24,17 +24,17 @@ public class SearchHistoryDataManager: ObservableObject {
       let event = SearchEvent()
       
       // Convert filter data
-      let filterHistory = item.filter?.eject()
-      filterHistory?.dateField = item.filter?.dateField?.eject()
+      let filterHistory = FilterObject()
+      filterHistory.dateField = item.dateField?.eject()
       
-      if let relativeRange = item.filter?.relativeRange {
-        filterHistory?.relativeRange = RelativeRangeFilter(period: relativeRange.period, value: relativeRange.value)
+      if let relativeRange = item.relativeRange {
+        filterHistory.relativeRange = RelativeRangeFilter(period: relativeRange.period, value: relativeRange.value)
       }
-      if let absoluteRange = item.filter?.absoluteRange {
-        filterHistory?.absoluteRange = AbsoluteDateRangeObject(from: absoluteRange.from, to: absoluteRange.to)
+      if let absoluteRange = item.absoluteRange {
+        filterHistory.absoluteRange = AbsoluteDateRangeObject(from: absoluteRange.from, to: absoluteRange.to)
       }
       
-      filterHistory?.query = item.filter?.query?.eject()
+      filterHistory.query = item.query?.eject()
       
       event.filter = filterHistory
       event.host = item.host
@@ -42,6 +42,17 @@ public class SearchHistoryDataManager: ObservableObject {
       event.date = item.date
       
       return event
+    }
+  }
+  
+  public func migrateAwayFromFilterObjects() {
+    for item in items {
+      if let filter = item.filter {
+        item.dateField = filter.dateField
+        item.absoluteRange = filter.absoluteRange
+        item.relativeRange = filter.relativeRange
+        item.filter = nil
+      }
     }
   }
   
@@ -121,9 +132,11 @@ public class SearchHistoryDataManager: ObservableObject {
     return items.first { item in
       item.host == newEntry.host &&
       item.index == newEntry.index &&
-      item.filter?.equals(input: newEntry.filter) ?? false
+      !ObjectStaticCheck.doBothObjectsMatch(item.query, newEntry.query) ?? false
     }
   }
+  
+  
   
   /// Adds a new search event or updates an existing one
   /// - Parameter item: The RealmSearchEvent to add or update

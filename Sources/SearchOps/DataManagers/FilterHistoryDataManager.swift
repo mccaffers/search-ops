@@ -33,9 +33,12 @@ public class FilterHistoryDataManager: ObservableObject {
   }
   
   public func addNew(item: RealmFilterObject) {
+    print("adding \(item.query?.values.first) ")
     updateServerList(item: item);
     refresh()
   }
+  
+
   
   public func checkIfValueExistsForAbsolute(incomingSet: Set<UUID>, absoluteRange: AbsoluteDateRangeObject? = nil) -> Set<UUID> {
     var idSet = incomingSet
@@ -122,6 +125,65 @@ public class FilterHistoryDataManager: ObservableObject {
     }
   }
   
+  public func checkIfValueExistsJustQuery(query: List<QueryFilterObject>? = nil) -> UUID? {
+    
+    
+    var countToMatch = 0
+    
+    if query != nil {
+      countToMatch += 1
+    }
+    
+    // id of objects found
+    var idSet = Set<UUID>()
+    
+    idSet = checkIfValueExistsForQuery(incomingSet: idSet, query: query)
+    
+    if idSet.count == 0 {
+      return nil
+    } else if idSet.count == countToMatch {
+      return idSet.first
+    } else  {
+      return nil
+    }
+  }
+  
+  public func queryObjectExists(_ queryToFind: QueryObject) -> Bool {
+      for item in items {
+          if let itemQuery = item.query {
+              if itemQuery.isEqual(object: queryToFind) {
+                  return true
+              }
+          }
+      }
+      return false
+  }
+
+  
+  // Moved away from storing everything in a FilterHistory
+  // this is now more of a Query String History Manager
+  // Refactoring TODO
+  public func removeQueryDuplicates() {
+    var uniqueItems: [RealmFilterObject] = []
+    var seenQueries: Set<String> = []
+    
+    for item in items {
+      if let query = item.query {
+        
+        // Create a unique string representation of the query
+        let queryRepresentation = query.values.map { $0.string }.sorted().joined(separator: ",") + "\(query.compound)"
+        
+        if !seenQueries.contains(queryRepresentation) {
+          uniqueItems.append(item)
+          seenQueries.insert(queryRepresentation)
+        } else {
+          deleteItem(item: item)
+        }
+      }
+    }
+
+  }
+
   public func updateDateForFilterHistory(id: UUID)  {
     if let realm = RealmManager().getRealm() {
       try? realm.write {
@@ -145,7 +207,9 @@ public class FilterHistoryDataManager: ObservableObject {
   private func readServer() -> [RealmFilterObject] {
     if let realm = RealmManager().getRealm() {
       let realmArrayObject = realm.objects(RealmFilterObject.self)
-      return Array(realmArrayObject)
+      let res = Array(realmArrayObject)
+      print("readServer() - res.count.string " + res.count.string)
+      return res
     } else {
       return []
     }
@@ -153,10 +217,14 @@ public class FilterHistoryDataManager: ObservableObject {
   
   func updateServerList(item: RealmFilterObject) {
     if let realm = RealmManager().getRealm() {
+      print("updateServerList - items before writting " + items.count.string)
       try? realm.write {
-        realm.add(item, update: Realm.UpdatePolicy.modified)
+        realm.add(item)
       }
+      print("updateServerList - items after adding to realm" + items.count.string)
       refresh()
+      
+      print("updateServerList - after refresh() " + items.count.string)
       if items.count > 50 {
         deleteOldest()
       }
