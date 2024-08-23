@@ -8,6 +8,8 @@
 import Foundation
 
 public enum SearchSheet: String, Identifiable {
-    case query, main, fields 
-    public var id: String { rawValue }
+  case query, main, fields, timer, recent
+  public var id: String { rawValue }
 }
+
+
