@@ -52,25 +52,38 @@ final class FilterHistoryManagerDuplicatesTests: XCTestCase {
     let item4 = RealmFilterObject()
     item4.query = nil
     
+//    let items
     let items = [item1, item2, item3, item4, item1]  // Note: item1 is repeated
     
+    for item in items {
+      if let realm = RealmManager().getRealm() {
+        try? realm.write {
+          realm.add(item)
+        }
+      }
+    }
+    
+    manager.refresh()
+    
     // Call the function
-    let result = manager.removeQueryDuplicates(from: items)
+    manager.removeQueryDuplicates()
+    
+    manager.refresh()
     
     // Assertions
-    XCTAssertEqual(result.count, 3, "Should have 3 unique items")
+    XCTAssertEqual(manager.items.count, 3, "Should have 3 unique items")
     
     // Check that item1/item2 (duplicates) are represented once
-    XCTAssertEqual(result.filter { $0.query?.compound == .must }.count, 1)
+    XCTAssertEqual(manager.items.filter { $0.query?.compound == .must }.count, 1)
     
     // Check that item3 is present
-    XCTAssertEqual(result.filter { $0.query?.compound == .should }.count, 1)
+    XCTAssertEqual(manager.items.filter { $0.query?.compound == .should }.count, 1)
     
     // Check that item4 (nil query) is present
-    XCTAssertEqual(result.filter { $0.query == nil }.count, 1)
+    XCTAssertEqual(manager.items.filter { $0.query == nil }.count, 1)
     
     // Verify the content of the unique must compound query
-    if let mustQuery = result.first(where: { $0.query?.compound == .must })?.query {
+    if let mustQuery = manager.items.first(where: { $0.query?.compound == .must })?.query {
       XCTAssertEqual(mustQuery.values.count, 2)
       let strings = mustQuery.values.map { $0.string }.sorted()
       XCTAssertEqual(strings, ["apple", "banana"])

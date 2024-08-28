@@ -129,14 +129,50 @@ public class SearchHistoryDataManager: ObservableObject {
   /// - Parameter newEntry: The new RealmSearchEvent to check
   /// - Returns: The existing RealmSearchEvent if found, nil otherwise
   public func checkIfEntryExists(newEntry: RealmSearchEvent) -> RealmSearchEvent? {
-    return items.first { item in
-      item.host == newEntry.host &&
-      item.index == newEntry.index &&
-      !ObjectStaticCheck.doBothObjectsMatch(item.query, newEntry.query) ?? false
+      return items.first { currentItem in
+          areEntriesMatching(currentItem: currentItem, newEntry: newEntry)
+      }
+  }
+
+  private func areEntriesMatching(currentItem: RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    
+    // Do the host match
+    guard currentItem.host == newEntry.host else { return false }
+    // Do the indiex match
+    guard currentItem.index == newEntry.index else { return false }
+    // Do the object match (both nil or both not nil)
+    guard ObjectStaticCheck.doBothObjectsMatch(currentItem.query, newEntry.query) else { return false }
+    // Do the query strings match
+    guard queryStringMatches(currentEntry: currentItem, newEntry: newEntry) else { return false }
+    // Do the date fields match
+    guard dateFieldMatches(currentEntry: currentItem, newEntry: newEntry) else { return false }
+    
+    return true
+  }
+
+  public func queryStringMatches(currentEntry:RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    if let query = currentEntry.query {
+      if query.isEqual(object: newEntry.query) {
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return true
     }
   }
   
-  
+  public func dateFieldMatches(currentEntry:RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    if let dateField = currentEntry.dateField {
+      if dateField.squashedString == newEntry.dateField?.squashedString {
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return true
+    }
+  }
   
   /// Adds a new search event or updates an existing one
   /// - Parameter item: The RealmSearchEvent to add or update

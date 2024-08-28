@@ -33,7 +33,6 @@ public class FilterHistoryDataManager: ObservableObject {
   }
   
   public func addNew(item: RealmFilterObject) {
-    print("adding \(item.query?.values.first) ")
     updateServerList(item: item);
     refresh()
   }
@@ -219,7 +218,7 @@ public class FilterHistoryDataManager: ObservableObject {
     if let realm = RealmManager().getRealm() {
       print("updateServerList - items before writting " + items.count.string)
       try? realm.write {
-        realm.add(item)
+        realm.add(item, update: .modified)
       }
       print("updateServerList - items after adding to realm" + items.count.string)
       refresh()
