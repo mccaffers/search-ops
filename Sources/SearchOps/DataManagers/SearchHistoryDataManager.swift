@@ -46,12 +46,23 @@ public class SearchHistoryDataManager: ObservableObject {
   }
   
   public func migrateAwayFromFilterObjects() {
-    for item in items {
-      if let filter = item.filter {
-        item.dateField = filter.dateField
-        item.absoluteRange = filter.absoluteRange
-        item.relativeRange = filter.relativeRange
-        item.filter = nil
+    if let realm = RealmManager().getRealm() {  
+      for item in items {
+        if let filter = item.filter {
+          try? realm.write {
+            // new embedded object
+            if let dateField = filter.dateField?.copy() {
+              item.dateField = dateField
+            }
+            if let absoluteRange = filter.absoluteRange?.copy() {
+              item.absoluteRange = absoluteRange
+            }
+            if let relativeRange = filter.relativeRange?.copy() {
+              item.relativeRange = relativeRange
+            }
+            item.filter = nil
+          }
+        }
       }
     }
   }
@@ -134,7 +145,7 @@ public class SearchHistoryDataManager: ObservableObject {
       }
   }
 
-  private func areEntriesMatching(currentItem: RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+  public func areEntriesMatching(currentItem: RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
     
     // Do the host match
     guard currentItem.host == newEntry.host else { return false }
@@ -146,6 +157,9 @@ public class SearchHistoryDataManager: ObservableObject {
     guard queryStringMatches(currentEntry: currentItem, newEntry: newEntry) else { return false }
     // Do the date fields match
     guard dateFieldMatches(currentEntry: currentItem, newEntry: newEntry) else { return false }
+    // Do relative ranges match
+    guard areRelativeRangeTheSame(currentEntry: currentItem, newEntry: newEntry) else { return false }
+    guard areAbsoluteRangesTheSame(currentEntry: currentItem, newEntry: newEntry) else { return false }
     
     return true
   }
@@ -165,6 +179,36 @@ public class SearchHistoryDataManager: ObservableObject {
   public func dateFieldMatches(currentEntry:RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
     if let dateField = currentEntry.dateField {
       if dateField.squashedString == newEntry.dateField?.squashedString {
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return true
+    }
+  }
+  
+  public func areRelativeRangeTheSame(currentEntry:RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    if let currentRelativeRange = currentEntry.relativeRange,
+       let newRelativeRange = newEntry.relativeRange {
+      if currentRelativeRange.value == newRelativeRange.value,
+         currentRelativeRange.period == newRelativeRange.period {
+        return true
+      } else {
+        return false
+      }
+    }
+    return true
+  }
+  
+  public func areAbsoluteRangesTheSame(currentEntry:RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    // if either are nil, return true
+    if let currentAbsoluteRange = currentEntry.absoluteRange,
+       let newAbsoluteRange = newEntry.absoluteRange {
+      if currentAbsoluteRange.fromNow == newAbsoluteRange.fromNow,
+         currentAbsoluteRange.toNow == newAbsoluteRange.toNow,
+         currentAbsoluteRange.from == newAbsoluteRange.from,
+         currentAbsoluteRange.to == newAbsoluteRange.to {
         return true
       } else {
         return false

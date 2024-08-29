@@ -41,6 +41,15 @@ public class RealmSquashedFieldsArray : EmbeddedObject {
     return fieldArray
   }
   
+  public func copy() -> RealmSquashedFieldsArray {
+    let dateField = RealmSquashedFieldsArray()
+    dateField.fieldParts = self.fieldParts
+    dateField.squashedString = self.squashedString
+    dateField.type = self.type
+    dateField.index = self.index
+    return dateField
+  }
+  
   public func isEqual(object: RealmSquashedFieldsArray?) -> Bool {
     guard self.squashedString == object?.squashedString else { return false }
     guard self.fieldParts.count == object?.fieldParts.count else { return false }
