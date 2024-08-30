@@ -50,6 +50,7 @@ public class RelativeRangeFilter : ObservableObject {
     realmObj.value = self.value
     return realmObj
   }
+  
   func sliceString(str: String, start: Int, end: Int) -> String {
       let data = Array(str)
       return String(data[start..<end])
