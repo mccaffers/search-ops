@@ -35,6 +35,11 @@ public class SearchHistoryDataManager: ObservableObject {
       }
       
       filterHistory.query = item.query?.eject()
+    
+      if let sortObject = item.sortObject,
+         let fields = sortObject.field?.eject() {
+        filterHistory.sort = SortObject(order: sortObject.order, field: fields)
+      }
       
       event.filter = filterHistory
       event.host = item.host

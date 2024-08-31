@@ -28,6 +28,8 @@ public class SortObject : ObservableObject {
   }
 }
 
+@available(macOS 10.15, *)
+@available(iOS 15.0, *)
 public class RealmSortObject : EmbeddedObject {
   
   @Persisted public var order: SortOrderEnum

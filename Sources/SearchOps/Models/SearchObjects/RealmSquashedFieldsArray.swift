@@ -8,7 +8,7 @@
 import Foundation
 import RealmSwift
 
-@available(macOS 13, *)
+@available(macOS 10.15, *)
 @available(iOS 15.0, *)
 public class RealmSquashedFieldsArray : EmbeddedObject {
   
