@@ -35,6 +35,11 @@ public class SearchHistoryDataManager: ObservableObject {
       }
       
       filterHistory.query = item.query?.eject()
+    
+      if let sortObject = item.sortObject,
+         let fields = sortObject.field?.eject() {
+        filterHistory.sort = SortObject(order: sortObject.order, field: fields)
+      }
       
       event.filter = filterHistory
       event.host = item.host
@@ -46,12 +51,23 @@ public class SearchHistoryDataManager: ObservableObject {
   }
   
   public func migrateAwayFromFilterObjects() {
-    for item in items {
-      if let filter = item.filter {
-        item.dateField = filter.dateField
-        item.absoluteRange = filter.absoluteRange
-        item.relativeRange = filter.relativeRange
-        item.filter = nil
+    if let realm = RealmManager().getRealm() {  
+      for item in items {
+        if let filter = item.filter {
+          try? realm.write {
+            // new embedded object
+            if let dateField = filter.dateField?.copy() {
+              item.dateField = dateField
+            }
+            if let absoluteRange = filter.absoluteRange?.copy() {
+              item.absoluteRange = absoluteRange
+            }
+            if let relativeRange = filter.relativeRange?.copy() {
+              item.relativeRange = relativeRange
+            }
+            item.filter = nil
+          }
+        }
       }
     }
   }
@@ -129,14 +145,83 @@ public class SearchHistoryDataManager: ObservableObject {
   /// - Parameter newEntry: The new RealmSearchEvent to check
   /// - Returns: The existing RealmSearchEvent if found, nil otherwise
   public func checkIfEntryExists(newEntry: RealmSearchEvent) -> RealmSearchEvent? {
-    return items.first { item in
-      item.host == newEntry.host &&
-      item.index == newEntry.index &&
-      !ObjectStaticCheck.doBothObjectsMatch(item.query, newEntry.query) ?? false
+      return items.first { currentItem in
+          areEntriesMatching(currentItem: currentItem, newEntry: newEntry)
+      }
+  }
+
+  public func areEntriesMatching(currentItem: RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    
+    // Do the host match
+    guard currentItem.host == newEntry.host else { return false }
+    // Do the indiex match
+    guard currentItem.index == newEntry.index else { return false }
+    // Do the object match (both nil or both not nil)
+    guard ObjectStaticCheck.doBothObjectsMatch(currentItem.query, newEntry.query) else { return false }
+    // Do the query strings match
+    guard queryStringMatches(currentEntry: currentItem, newEntry: newEntry) else { return false }
+    // Do the date fields match
+    guard dateFieldMatches(currentEntry: currentItem, newEntry: newEntry) else { return false }
+    // Do relative ranges match
+    guard areRelativeRangeTheSame(currentEntry: currentItem, newEntry: newEntry) else { return false }
+    guard areAbsoluteRangesTheSame(currentEntry: currentItem, newEntry: newEntry) else { return false }
+    
+    return true
+  }
+
+  public func queryStringMatches(currentEntry:RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    if let query = currentEntry.query {
+      if query.isEqual(object: newEntry.query) {
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return true
     }
   }
   
+  public func dateFieldMatches(currentEntry:RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    if let dateField = currentEntry.dateField {
+      if dateField.squashedString == newEntry.dateField?.squashedString {
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return true
+    }
+  }
   
+  public func areRelativeRangeTheSame(currentEntry:RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    if let currentRelativeRange = currentEntry.relativeRange,
+       let newRelativeRange = newEntry.relativeRange {
+      if currentRelativeRange.value == newRelativeRange.value,
+         currentRelativeRange.period == newRelativeRange.period {
+        return true
+      } else {
+        return false
+      }
+    }
+    return true
+  }
+  
+  public func areAbsoluteRangesTheSame(currentEntry:RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    // if either are nil, return true
+    if let currentAbsoluteRange = currentEntry.absoluteRange,
+       let newAbsoluteRange = newEntry.absoluteRange {
+      if currentAbsoluteRange.fromNow == newAbsoluteRange.fromNow,
+         currentAbsoluteRange.toNow == newAbsoluteRange.toNow,
+         currentAbsoluteRange.from == newAbsoluteRange.from,
+         currentAbsoluteRange.to == newAbsoluteRange.to {
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return true
+    }
+  }
   
   /// Adds a new search event or updates an existing one
   /// - Parameter item: The RealmSearchEvent to add or update

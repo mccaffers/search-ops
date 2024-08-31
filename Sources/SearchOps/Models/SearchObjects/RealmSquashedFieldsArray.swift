@@ -8,7 +8,7 @@
 import Foundation
 import RealmSwift
 
-@available(macOS 13, *)
+@available(macOS 10.15, *)
 @available(iOS 15.0, *)
 public class RealmSquashedFieldsArray : EmbeddedObject {
   
@@ -39,6 +39,15 @@ public class RealmSquashedFieldsArray : EmbeddedObject {
     fieldArray.type = self.type
     fieldArray.index = self.index
     return fieldArray
+  }
+  
+  public func copy() -> RealmSquashedFieldsArray {
+    let dateField = RealmSquashedFieldsArray()
+    dateField.fieldParts = self.fieldParts
+    dateField.squashedString = self.squashedString
+    dateField.type = self.type
+    dateField.index = self.index
+    return dateField
   }
   
   public func isEqual(object: RealmSquashedFieldsArray?) -> Bool {

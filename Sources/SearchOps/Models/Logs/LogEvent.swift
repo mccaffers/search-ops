@@ -55,7 +55,7 @@ public class RealmSearchEvent : Object {
   @Persisted public var dateField: RealmSquashedFieldsArray?
   @Persisted public var relativeRange: RealmRelativeRangeFilter?
   @Persisted public var absoluteRange: RealmAbsoluteDateRangeObject?
-
+  @Persisted public var sortObject: RealmSortObject?
  
 }
 

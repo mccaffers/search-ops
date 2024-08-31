@@ -28,6 +28,15 @@ public class RealmAbsoluteDateRangeObject : EmbeddedObject {
   @Persisted public var fromNow: Bool = false
   @Persisted public var toNow: Bool = false
   
+  public func copy() -> RealmAbsoluteDateRangeObject {
+    let absoluteObject = RealmAbsoluteDateRangeObject()
+    absoluteObject.active = self.active
+    absoluteObject.from = self.from
+    absoluteObject.to = self.to
+    absoluteObject.fromNow = self.fromNow
+    absoluteObject.toNow = self.toNow
+    return absoluteObject
+  }
   
   public func isEqual(object: RealmAbsoluteDateRangeObject?) -> Bool {
     guard self.from == object?.from else { return false }
