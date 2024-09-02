@@ -164,15 +164,13 @@ public class HostsDataManager: ObservableObject {
   }
   
   public static func removeTrailingSlash(item:HostDetails) {
-    
-    
+  
     if let realm = RealmManager().getRealm() {
       try? realm.write {
         if let gate = item.host?.url.hasSuffix("/"),
-           gate {
-          if let urlWithDroppedBackslash = item.host?.url.dropLast().string {
-            item.host?.url = urlWithDroppedBackslash
-          }
+           gate == true,
+           let urlWithDroppedBackslash = item.host?.url.dropLast().string {
+          item.host?.url = urlWithDroppedBackslash
         }
       }
     }
