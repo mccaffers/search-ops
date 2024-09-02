@@ -148,20 +148,17 @@ public class FilterHistoryDataManager: ObservableObject {
   }
   
   public func queryObjectExists(_ queryToFind: QueryObject) -> Bool {
-      for item in items {
-          if let itemQuery = item.query {
-              if itemQuery.isEqual(object: queryToFind) {
-                  return true
-              }
-          }
+    for item in items {
+      if let itemQuery = item.query,
+         itemQuery.isEqual(object: queryToFind) {
+        return true
       }
-      return false
+    }
+    
+    return false
   }
 
-  
-  // Moved away from storing everything in a FilterHistory
-  // this is now more of a Query String History Manager
-  // Refactoring TODO
+
   public func removeQueryDuplicates() {
     var uniqueItems: [RealmFilterObject] = []
     var seenQueries: Set<String> = []
