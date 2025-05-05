@@ -16,65 +16,44 @@ enum IconStatus: String, Hashable {
 }
 
 struct IconButton: View {
-    
-    var systemName : String
-    var status : IconStatus
-    var active : Bool
-    var buttonSize = CGFloat(38)
-    var rotate : Angle = .degrees(0)
-    var paddingBottom = CGFloat(0)
-    var statusPaddingRight = CGFloat(0)
-    var width = CGFloat(56)
-    var iconSize = CGFloat(18)
-    var height = CGFloat(45)
-
-    func IconStatusColor() -> Color {
-        if !active {
-            return .clear
-        }
-        
-        if status == .Checkmark {
-            return .green
-        } else if status == .Questionmark {
-            return .orange
-        } else if status == .Exclamationmark {
-            return .red
-        }
-        
-        return .clear
+  
+  var systemName : String
+  var status : IconStatus
+  var active : Bool
+  var buttonSize = CGFloat(38)
+  var rotate : Angle = .degrees(0)
+  var paddingBottom = CGFloat(0)
+  var statusPaddingRight = CGFloat(0)
+  var width = CGFloat(56)
+  var iconSize = CGFloat(18)
+  var height = CGFloat(45)
+  
+  func IconStatusColor() -> Color {
+    if !active {
+      return .clear
     }
     
-    var body: some View {
-        ZStack {
-            
-            VStack {
-                Image(systemName: systemName)
-//                    .foregroundStyle(ButtonColor.BackgroundAccent(active ? true : nil))
-                    .font(.system(size: buttonSize))
-                    .rotationEffect(rotate)
-                    .padding(.bottom, paddingBottom)
-            }
-            
-           
-//                VStack {
-//                    Spacer()
-//                    HStack(alignment:.bottom) {
-//                        Spacer()
-//                        
-//                        Image(systemName: status.rawValue)
-//                            .fontWeight(.light)
-//                            .foregroundColor(IconStatusColor())
-//                            .font(.system(size: iconSize))
-//                            .background(Color("Background"))
-//                            .cornerRadius(10)
-//                            .opacity(status == .None ? 0 : 1)
-//                    }
-//                    .frame(height: 20)
-//                    .frame(width: width)
-//                    .padding(.leading, statusPaddingRight)
-//                    
-//                }.frame(height: height)
-            
-        }
+    if status == .Checkmark {
+      return .green
+    } else if status == .Questionmark {
+      return .orange
+    } else if status == .Exclamationmark {
+      return .red
     }
+    
+    return .clear
+  }
+  
+  var body: some View {
+    ZStack {
+      
+      VStack {
+        Image(systemName: systemName)
+          .font(.system(size: buttonSize))
+          .rotationEffect(rotate)
+          .padding(.bottom, paddingBottom)
+      }
+      
+    }
+  }
 }

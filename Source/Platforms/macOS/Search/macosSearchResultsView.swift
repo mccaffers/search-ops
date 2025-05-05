@@ -122,11 +122,7 @@ struct macosSearchResultsView: View {
               .buttonStyle(PlainButtonStyle())
               .disabled(currentPage == pageCount)
               
-              
-              
             }
-            
-            
             
           }
         }
