@@ -42,7 +42,7 @@ jobs:
         echo 'OTHER_CFLAGS=-isysroot $(xcrun --show-sdk-path) -target arm64-apple-ios15.0-simulator' > $XCODE_XCCONFIG_FILE
         
         xcodebuild \
-          -scheme Search_Ops \
+          -scheme 'Search Ops' \
           -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
           -derivedDataPath Build/DerivedData \
           clean build \
