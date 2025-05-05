@@ -101,4 +101,3 @@ struct macosSearchTopButtonsView: View {
 }
 
 #endif
-§
