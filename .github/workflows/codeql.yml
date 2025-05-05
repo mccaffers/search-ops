@@ -38,9 +38,6 @@ jobs:
     # Command-line for building Swift code with CodeQL
     - name: Build with CodeQL
       run: |
-        export XCODE_XCCONFIG_FILE=$RUNNER_TEMP/codeql-xcconfig
-        echo 'OTHER_CFLAGS=-isysroot $(xcrun --show-sdk-path) -target arm64-apple-ios15.0-simulator' > $XCODE_XCCONFIG_FILE
-        
         xcodebuild \
           -scheme 'Search Ops' \
           -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
