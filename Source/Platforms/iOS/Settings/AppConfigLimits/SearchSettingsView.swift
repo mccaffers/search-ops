@@ -120,7 +120,6 @@ struct SearchSettingsView: View {
                 }
               }
             }
-<<<<<<< HEAD
             label: {
               HStack {
                 Text(selection.string + " seconds")
@@ -139,26 +138,6 @@ struct SearchSettingsView: View {
             .onChange(of: selection) { newValue in
               print(newValue)
             }
-=======
-          label: {
-            HStack {
-              Text(selection.string + " seconds")
-              Image(systemName: "chevron.down")
-            }
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .background(Color("Button"))
-            .foregroundColor(.white)
-            .cornerRadius(5)
-            .onChange(of: selection) { newValue in
-              settingsManager.setTimeoiut(input: newValue)
-            }
-            
-          }
-          .onChange(of: selection) { newValue in
-            print(newValue)
-          }
->>>>>>> main
           }
           .padding(.bottom, 5)
           
@@ -181,30 +160,18 @@ struct SearchSettingsView: View {
             .frame(maxWidth: .infinity, alignment:.leading)
             .multilineTextAlignment(.leading)
           
-<<<<<<< HEAD
           
-=======
-       
->>>>>>> main
           Button(action: {
             clearSearchHistoryText = "Sucess"
             clearSearchHistoryButtonBackground = Color("PositiveButton")
             clearSearchHistoryButtonAction()
             clearSearchHistoryButtonDisabled = true
-<<<<<<< HEAD
             
-=======
-          
->>>>>>> main
             Task {
               searchHistory =  filterHistoryDataManager.items.count
               
               try await Task.sleep(seconds: 1.5)
-<<<<<<< HEAD
               
-=======
-
->>>>>>> main
               withAnimation {
                 clearSearchHistoryButtonBackground = Color("Button")
                 clearSearchHistoryText = "Clear Search History"
@@ -220,15 +187,9 @@ struct SearchSettingsView: View {
               .cornerRadius(5.0)
           })
           .disabled(clearSearchHistoryButtonDisabled)
-<<<<<<< HEAD
           
           
           
-=======
-
-          
-         
->>>>>>> main
           HostAddDivider()
           
           Text("Recent History")
@@ -248,7 +209,6 @@ struct SearchSettingsView: View {
             .multilineTextAlignment(.leading)
           
           
-<<<<<<< HEAD
           
           Button(action: {
             if !isCleared {
@@ -279,38 +239,6 @@ struct SearchSettingsView: View {
           }
           .buttonStyle(PlainButtonStyle())
           
-=======
-            
-            Button(action: {
-              if !isCleared {
-                searchHistoryManager.deleteAll()
-                searchHistoryManager.refresh()
-                recentHistory = searchHistoryManager.items.count
-                withAnimation(.easeInOut(duration: 0.3)) {
-                  isCleared = true
-                  buttonText = "Cleared"
-                }
-                
-                // Reset button after a delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                  withAnimation(.easeInOut(duration: 0.3)) {
-                    isCleared = false
-                    buttonText = "Clear Recent Searches"
-                  }
-                }
-              }
-            }) {
-              Text(buttonText)
-                .padding(.vertical, 15)
-                .frame(maxWidth: .infinity)
-                .background(isCleared ? Color("PositiveButton") : Color("Button"))
-                .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 5))
-                .animation(.easeInOut(duration: 0.3), value: isCleared)
-            }
-            .buttonStyle(PlainButtonStyle())
-
->>>>>>> main
           Spacer()
           
         }
