@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "C2E4CF8B-74C4-4E79-A6EF-5674ACD24569",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:SearchOps.xcodeproj",
+        "identifier" : "94CC67CF2DC6266400D5C6E2",
+        "name" : "SearchOpsUnitTests"
+      }
+    }
+  ],
+  "version" : 1
+}
