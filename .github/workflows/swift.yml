@@ -13,24 +13,23 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
     - uses: actions/checkout@v4
     - name: Select Xcode  
-      run: sudo xcode-select -switch /Applications/Xcode_15.2.app && /usr/bin/xcodebuild -version
-    # - name: Build
-    #   run: xcodebuild build  -scheme SearchOpsTests  -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 14,OS=latest' 
+      run: sudo xcode-select -switch /Applications/Xcode_16.app && /usr/bin/xcodebuild -version
+      # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md
     - name: Boot iOS Simulator
       run: >
-          xcrun simctl boot "iPhone 15"
+          xcrun simctl boot "iPhone 16"
     - name: Run tests
       run: >
           xcodebuild 
-          -scheme SearchOpsTests 
-          -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' 
+          -scheme SearchOpsUnitTests 
+          -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' 
           -resultBundlePath TestResult/ 
           -enableCodeCoverage YES 
-          -derivedDataPath "${RUNNER_TEMP}/Build/DerivedData"
+          -derivedDataPath "${RUNNER_TEMP}/Build/DerivedData" 
           clean build test 
           CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO 
           | xcpretty -r junit && exit ${PIPESTATUS[0]}

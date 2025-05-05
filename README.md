@@ -2,7 +2,7 @@
 
 <img align="left" width=100 src="./Logo.png" style="padding-right:10px">
 
-This Swift Package contains the business logic for the SearchOps iOS application. It contains logics for how the application authenticates and queries ElasticSearch & OpenSearch instances. It also manages a local datastore, using Realm to keep the credentials private.
+This repository contains the complete open-source iOS and macOS applications for SearchOps. It includes all source code for authenticating and querying ElasticSearch & OpenSearch instances, along with a local encrypted datastore using Realm.
 
 [![Build](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=coverage)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps)
 
@@ -13,7 +13,7 @@ This Swift Package contains the business logic for the SearchOps iOS application
 
 ## Apple App Store
 
-The iOS application is available on the Apple App Store.
+Available on the Apple App Store for iOS and macOS platforms
 
 <a href="https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone"><img width=18% src="./AppStore.svg"></a>
 
