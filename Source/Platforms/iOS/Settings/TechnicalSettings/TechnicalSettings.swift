@@ -21,14 +21,13 @@ struct TechnicalSettings: View {
     
     keychainMigrationCompleted=false
     lastSeenVersionNotes=""
-
+    
     
     Task { @MainActor in
       keychainMigrationCompleted=false
       lastSeenVersionNotes=""
       
     }
-//    throw MyError.runtimeError("")
     
   }
   
@@ -54,18 +53,18 @@ struct TechnicalSettings: View {
           .cornerRadius(5.0)
         
       })
-
+      
       Spacer()
       
     }
     .padding(.horizontal, 20)
     .navigationTitle("Database Settings")
     .toolbarBackground(Color.pink,
-                 for: .navigationBar)
-         
+                       for: .navigationBar)
+    
     .frame(maxWidth: .infinity)
     .background(Color("Background"))
-
+    
   }
 }
 

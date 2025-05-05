@@ -23,14 +23,11 @@ struct macosSearchMainView: View {
   @Binding var selection: macosSearchViewEnum
   @State var viewableFields: RenderedFields = RenderedFields(fields: [])
   
-//  @Binding var selectedHostForIndices : HostDetails?
-  // fileds from _mapping
   @State var fields = [SquashedFieldsArray]()
   @State var onlyVisibleFields = [SquashedFieldsArray]()
   
   @State var updatedFieldsNotification : UUID = UUID()
 
-  
   // detailed item view
   @StateObject var itemDetail : DocumentDetail = DocumentDetail()
   @State var searchResultsUpdated : UUID = UUID()
@@ -107,7 +104,6 @@ struct macosSearchMainView: View {
       
       
       // TODO, should this go in the call above?
-//      if !firstSearchAfterSelectingIndex {
         var searchEvent = RealmSearchEvent()
         searchEvent.date = Date.now
         searchEvent.host = selectedHost.id
@@ -115,8 +111,6 @@ struct macosSearchMainView: View {
         searchEvent.filter = filterObject.ejectRealmObject()
         
         SearchHistoryDataManager().addNew(item: searchEvent)
-//      }
-      
 
       
       let response = await SearchRender.call(pageInput: page,
@@ -192,9 +186,6 @@ struct macosSearchMainView: View {
       Color("Background")
       
       VStack(spacing:0) {
-        
-         
-          
         macosSearchTopButtonsView(macosSearchRouterPath:$macosSearchRouterPath,
                                     selection: $selection,
                                     showFilterSidebar: $showFilterSidebar,
@@ -393,22 +384,12 @@ struct macosSearchMainView: View {
                                 stopTimer: stopTimer)
         }
         
-      
-        
       }
+      
       if showingTextFieldSuggestions {
-        
-//        Rectangle().fill(Color.black).opacity(0.4)
-//          .frame(maxWidth: .infinity, alignment: .leading)
-//          .frame(maxHeight: .infinity)
-//          .contentShape(Rectangle())
-//          .onTapGesture {
-//            selection = .None
-//          }
         
         VStack {
           HStack {
-//            Spacer(minLength: currentWidth)
             macosSidebarAutoSuggest(selection: $selection,
                                     searchText: $searchText,
                                     fields: $fields,
@@ -438,8 +419,6 @@ struct macosSearchMainView: View {
         items = serverObjects.items
         if items.count == 1 {
           selectedHost = items.first
-//          selectedHostForIndices =  items.first
-          //          showingScreen = SideBarWrapper(item: .Indices)
         }
       }
     }
@@ -468,17 +447,6 @@ struct macosSearchMainView: View {
       }
     }
     .environmentObject(filterObject)
-//    .sheet(isPresented: $showingModal) { // This sheet is presented as a modal view
-//      if let selectedHostToEdit = selectedHostToEdit {
-//        macosHostAddView(showingModal: $showingModal, item: selectedHostToEdit)
-//          .environmentObject(serverObjects)
-//          .environmentObject(hostsUpdated)
-//      } else {
-//        macosHostAddView(showingModal: $showingModal)
-//          .environmentObject(serverObjects)
-//          .environmentObject(hostsUpdated)
-//      }
-//    }
   }
 }
 

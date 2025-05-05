@@ -79,13 +79,11 @@ struct macosSearchTopButtonsView: View {
               if showFilterSidebar {
                 HStack{
                   Image(systemName: "arrow.right")
-//                    .padding(6)
                   Text("Hide Fields")
                 }
               } else {
                 HStack{
                   Image(systemName: "arrow.left")
-//                    .padding(6)
                   Text("Show Fields")
                 }
               }
