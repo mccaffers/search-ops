@@ -104,7 +104,6 @@ struct macosSearchMainView: View {
       
       
       // TODO, should this go in the call above?
-//      if !firstSearchAfterSelectingIndex {
         var searchEvent = RealmSearchEvent()
         searchEvent.date = Date.now
         searchEvent.host = selectedHost.id
@@ -112,12 +111,7 @@ struct macosSearchMainView: View {
         searchEvent.filter = filterObject.ejectRealmObject()
         
         SearchHistoryDataManager().addNew(item: searchEvent)
-//      }
-      
-<<<<<<< HEAD
-=======
 
->>>>>>> main
       
       let response = await SearchRender.call(pageInput: page,
                                              filterObject: filterObject,
