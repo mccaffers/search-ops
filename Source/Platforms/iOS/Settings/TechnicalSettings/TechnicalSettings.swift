@@ -53,18 +53,30 @@ struct TechnicalSettings: View {
           .cornerRadius(5.0)
         
       })
+<<<<<<< HEAD
       
+=======
+
+>>>>>>> main
       Spacer()
       
     }
     .padding(.horizontal, 20)
     .navigationTitle("Database Settings")
     .toolbarBackground(Color.pink,
+<<<<<<< HEAD
                        for: .navigationBar)
     
     .frame(maxWidth: .infinity)
     .background(Color("Background"))
     
+=======
+                 for: .navigationBar)
+         
+    .frame(maxWidth: .infinity)
+    .background(Color("Background"))
+
+>>>>>>> main
   }
 }
 
