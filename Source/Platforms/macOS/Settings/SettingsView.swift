@@ -90,9 +90,6 @@ struct SettingsView: View {
         Text("Version: " + (appVersion ?? ""))
           .frame(maxWidth: .infinity, alignment:.leading)
         
-        Text("Build: " + (Bundle.main.commitHash ?? ""))
-          .frame(maxWidth: .infinity, alignment:.leading)
-        
         Text("App: " + (Bundle.main.appHash ?? ""))
           .frame(maxWidth: .infinity, alignment:.leading)
         
