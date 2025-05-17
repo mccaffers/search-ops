@@ -241,7 +241,6 @@
 		947F63142BFB5BD5009C5904 /* macosGridRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 947F63132BFB5BD5009C5904 /* macosGridRowView.swift */; };
 		94815F042C0B6465007E618C /* macosSidebarHostsDropdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94815F032C0B6465007E618C /* macosSidebarHostsDropdownView.swift */; };
 		94815F062C0B658E007E618C /* macosSidebarIndicesDropdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94815F052C0B658E007E618C /* macosSidebarIndicesDropdownView.swift */; };
-		948309392A628DDA006BE550 /* SettingsAboutPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 948309382A628DDA006BE550 /* SettingsAboutPage.swift */; };
 		9483093B2A629E02006BE550 /* AddHostHeaderLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9483093A2A629E02006BE550 /* AddHostHeaderLabel.swift */; };
 		9483093D2A63E828006BE550 /* SearchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9483093C2A63E828006BE550 /* SearchSettingsView.swift */; };
 		948577722C5E795B007E5E75 /* macosSidebarTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 948577712C5E795B007E5E75 /* macosSidebarTimerView.swift */; };
@@ -646,7 +645,6 @@
 		947F63132BFB5BD5009C5904 /* macosGridRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosGridRowView.swift; sourceTree = "<group>"; };
 		94815F032C0B6465007E618C /* macosSidebarHostsDropdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSidebarHostsDropdownView.swift; sourceTree = "<group>"; };
 		94815F052C0B658E007E618C /* macosSidebarIndicesDropdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSidebarIndicesDropdownView.swift; sourceTree = "<group>"; };
-		948309382A628DDA006BE550 /* SettingsAboutPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsAboutPage.swift; sourceTree = "<group>"; };
 		9483093A2A629E02006BE550 /* AddHostHeaderLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddHostHeaderLabel.swift; sourceTree = "<group>"; };
 		9483093C2A63E828006BE550 /* SearchSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSettingsView.swift; sourceTree = "<group>"; };
 		948577712C5E795B007E5E75 /* macosSidebarTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSidebarTimerView.swift; sourceTree = "<group>"; };
@@ -856,7 +854,6 @@
 				94583A172BD8F5110055EDD9 /* ApplicationLogs */,
 				942283EC2A5DF7E700671046 /* SettingsDetailView */,
 				9436515C2A57F60700D8F000 /* SettingAppLogs.swift */,
-				948309382A628DDA006BE550 /* SettingsAboutPage.swift */,
 				9419F1A92A6E6D8800DADB4C /* SettingsSourceCodeModalView.swift */,
 				9467F3A22A71195300A0F80C /* SettingsAnalyticsMessageView.swift */,
 				94B58E022AB60128007A355B /* ReleaseNotesModalView.swift */,
@@ -2478,7 +2475,6 @@
 				940322692A4D8B4B00FC8BBE /* QuerySheetRecentCard.swift in Sources */,
 				94F6670C2C0C5EA800D576DC /* IdleStateView.swift in Sources */,
 				945FAB142C32929A0091003F /* macosDatePickerRefreshView.swift in Sources */,
-				948309392A628DDA006BE550 /* SettingsAboutPage.swift in Sources */,
 				9488481E2C2177A90016944D /* macosAbsoluteCalendarWrapperView.swift in Sources */,
 				944A54762BECEE7F00DB8B06 /* ReducingBarView.swift in Sources */,
 				940322922A4D8B4C00FC8BBE /* ElasticSearchButton.swift in Sources */,

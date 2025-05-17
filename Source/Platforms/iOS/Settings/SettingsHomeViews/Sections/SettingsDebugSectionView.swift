@@ -26,10 +26,10 @@ struct SettingsDebugSectionView: View {
             .foregroundColor(.white)
             .padding(.vertical, 15)
             .frame(maxWidth: .infinity, alignment: .center)
-            .background(Color("Button"))
+            .background(Color.red)
             .cornerRadius(5.0)
 
-        })
+        }).padding(.top, 10)
       }
       .navigationDestination(isPresented: $showTechnicalSettings, destination: {
         TechnicalSettings()

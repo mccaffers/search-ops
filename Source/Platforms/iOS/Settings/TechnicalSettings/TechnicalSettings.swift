@@ -15,6 +15,9 @@ struct TechnicalSettings: View {
   @AppStorage("keychainMigrationCompleted") private var keychainMigrationCompleted: Bool = false
   
   @MainActor func debug() throws {
+    
+    // Debug only
+    // Not for production use
     RealmManager().clearRealmInstance()
     try KeychainManager().delete()
     _=LegacyKeychainManager().deleteLegacyKeychain()
@@ -22,13 +25,10 @@ struct TechnicalSettings: View {
     keychainMigrationCompleted=false
     lastSeenVersionNotes=""
     
-    
     Task { @MainActor in
       keychainMigrationCompleted=false
       lastSeenVersionNotes=""
-      
     }
-    
   }
   
   var body: some View {
@@ -38,7 +38,11 @@ struct TechnicalSettings: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 10)
       
-      Text("This will delete the Realm Database on disk, and the encrypted key in the keychain. This is non-reversable. A new blank realm database and new encryption key will be generated so you can continue to use the application.")
+      Text("This will delete the Realm Database on disk, and the encrypted key in the keychain")
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 10)
+      
+      Text("This is non-reversable. A new blank realm database and new encryption key will be generated so you can continue to use the application.")
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 10)
       
