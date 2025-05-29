@@ -50,18 +50,7 @@ struct Version_2_0: View {
       NavigationStack {
         ScrollView {
           VStack (spacing:0) {
-            //            if title == "New Update" {
-            //              Text("Version 2.0")
-            //                .font(.title2)
-            //                .bold()
-            //                .frame(maxWidth: .infinity, alignment: .leading)
-            //                .opacity(showText ? 1 : 1)  // Start with hidden text
-            //                .animation(.easeInOut(duration: animateDuration), value: showText)
-            //                .padding(.vertical, 10)
-            //                .padding(.horizontal, 20)
-            //                .padding(.top, 10)
-            //            }
-            
+
             VStack(alignment: .leading, spacing:5) {
               VStack(alignment:.leading, spacing:10) {
                 
@@ -243,7 +232,7 @@ struct Version_2_0: View {
         
         .frame(maxWidth: .infinity)
         .onAppear {
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {  // Delay of 2 seconds
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {  // Delay of 2 seconds
             
             if !showContinueButton && !showFireworks {
               fireworkSettings.showFireworks = true

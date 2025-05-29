@@ -23,28 +23,12 @@ struct SettingsAnalyticsMessageView: View {
           .frame(maxWidth: .infinity, alignment:.leading)
         
         
-        Text("The entire application is written in Swift, with only one external framework (Realm) to provide a local on device database. Realm is an open source mobile database by MongoDB. Encryption is turned on by default.")
+        Text("The entire application is written in Swift, with only one external framework (Realm) to provide a local on device database. Realm is an open source mobile database by MongoDB")
           .frame(maxWidth: .infinity, alignment:.leading)
         
-        VStack (spacing:5){
-          Button {
-            openURL(URL(string: "https://github.com/realm/realm-swift")!)
-          } label: {
-            HStack {
-              Image(systemName: "link")
-              Text("realm / realm-swift")
-            }
-            .padding(.vertical, 15)
-            .frame(maxWidth: .infinity)
-            .foregroundColor(.white)
-            .background(Color("Button"))
-            .cornerRadius(5)
-          }
-          Text("Opens an external link to the Github Repository")
-            .font(.system(size: 14))
-            .foregroundColor(Color("TextSecondary"))
-            .frame(maxWidth: .infinity, alignment:.center)
-        }
+        Text("Encryption is turned on by default")
+          .frame(maxWidth: .infinity, alignment:.leading)
+        
       }
       .padding(.horizontal, 20)
       .padding(.top, 10)

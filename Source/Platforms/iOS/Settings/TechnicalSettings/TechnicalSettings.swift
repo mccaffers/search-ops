@@ -23,12 +23,15 @@ struct TechnicalSettings: View {
     _=LegacyKeychainManager().deleteLegacyKeychain()
     
     keychainMigrationCompleted=false
-    lastSeenVersionNotes=""
+    lastSeenVersionNotes="0"
     
     Task { @MainActor in
       keychainMigrationCompleted=false
-      lastSeenVersionNotes=""
+      lastSeenVersionNotes="0"
     }
+    
+    fatalError("Intentional crash for testing")
+
   }
   
   var body: some View {

@@ -22,11 +22,17 @@ struct ReleaseNotesList: View {
   var body: some View {
     ScrollView{
       VStack(spacing:25) {
+        
+        ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 10))!,
+                               buttonText: "Version 3",
+                               buttonDescription: "Fully open source the application",
+                               buttonAction: { showingRelease = "Version 3.0" },  activeButton: true, isLatest: true)
+        .padding(.top, 15)
 
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2024, month: 9, day: 3))!,
                                buttonText: "Version 2.0.2",
                                buttonDescription: "Fixing bugs. Updating screenshots and video previews on Apple App Store",
-                               buttonAction: {  },  isLatest: true)
+                               buttonAction: {  })
         .padding(.top, 15)
         
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2024, month: 9, day: 3))!,
@@ -122,6 +128,8 @@ struct ReleaseNotesList: View {
         Version_1_94(title: showingRelease, lastSeenVersionNotes: .constant(""))
       } else if showingRelease == "Version 2.0" {
         Version_2_0(title: showingRelease)
+      } else if showingRelease == "Version 3.0" {
+        Version_3_0(title: showingRelease)
       }
     }
   }

@@ -14,7 +14,7 @@ struct SettingsDebugSectionView: View {
   
     var body: some View {
       VStack(spacing:5){
-        Text("Debug Section")
+        Text("Debug Section - Here be Dragons")
           .foregroundColor(Color("TextSecondary"))
           .font(.system(size:15))
           .frame(maxWidth: .infinity, alignment:.leading)

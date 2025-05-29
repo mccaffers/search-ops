@@ -27,17 +27,17 @@ struct ApplicationMain: App {
   }
   
   init(){
-    print("Current Bundle Commit:" + (Bundle.main.commitHash ?? "undefined"))
+    print("Current Bundle Commit:" + (Bundle.main.appHash ?? "undefined"))
   }
   
-  static let myBundleID = "com.mccaffers.searchops.prod"
+  
    
   static func isValidBundleID() -> Bool {
        guard let bundleID = Bundle.main.bundleIdentifier else {
            return false
        }
        
-       return bundleID == myBundleID
+      return bundleID == Bundle.myBundleID
    }
   
   var body: some Scene {
@@ -105,16 +105,7 @@ extension Data {
 }
 
 
-extension Bundle {
-    var commitHash: String? {
-        infoDictionary?["GitCommitHash"] as? String
-    }
-    
-    var appHash: String? {
-        infoDictionary?["GitCommitHashApp"] as? String
-    }
-    
-}
+
 
 extension Task where Success == Never, Failure == Never {
     static func sleep(seconds: Double) async throws {

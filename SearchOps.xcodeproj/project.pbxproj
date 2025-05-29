@@ -354,6 +354,8 @@
 		94B241E72C2EBFF40036862F /* macosSidebarAutoSuggest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B241E62C2EBFF40036862F /* macosSidebarAutoSuggest.swift */; };
 		94B41E702C466625001C4F6E /* macosSearchHomeSort.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B41E6F2C466625001C4F6E /* macosSearchHomeSort.swift */; };
 		94B41E722C466656001C4F6E /* macosSearchHomeQueryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B41E712C466656001C4F6E /* macosSearchHomeQueryView.swift */; };
+		94B48C0C2DE7729700FF391B /* Version_3_0.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B48C0B2DE7729700FF391B /* Version_3_0.swift */; };
+		94B48C0E2DE7737D00FF391B /* Bundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B48C0D2DE7737900FF391B /* Bundle.swift */; };
 		94B58E032AB60128007A355B /* ReleaseNotesModalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B58E022AB60128007A355B /* ReleaseNotesModalView.swift */; };
 		94B849BB2C22C6B000E4ABE7 /* macosDateRangeHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B849BA2C22C6B000E4ABE7 /* macosDateRangeHeaderView.swift */; };
 		94B849BD2C22C75200E4ABE7 /* macosDateRangeAbsoluteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B849BC2C22C75200E4ABE7 /* macosDateRangeAbsoluteView.swift */; };
@@ -755,6 +757,8 @@
 		94B241E62C2EBFF40036862F /* macosSidebarAutoSuggest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSidebarAutoSuggest.swift; sourceTree = "<group>"; };
 		94B41E6F2C466625001C4F6E /* macosSearchHomeSort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSearchHomeSort.swift; sourceTree = "<group>"; };
 		94B41E712C466656001C4F6E /* macosSearchHomeQueryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSearchHomeQueryView.swift; sourceTree = "<group>"; };
+		94B48C0B2DE7729700FF391B /* Version_3_0.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Version_3_0.swift; sourceTree = "<group>"; };
+		94B48C0D2DE7737900FF391B /* Bundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bundle.swift; sourceTree = "<group>"; };
 		94B58E022AB60128007A355B /* ReleaseNotesModalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotesModalView.swift; sourceTree = "<group>"; };
 		94B849BA2C22C6B000E4ABE7 /* macosDateRangeHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosDateRangeHeaderView.swift; sourceTree = "<group>"; };
 		94B849BC2C22C75200E4ABE7 /* macosDateRangeAbsoluteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosDateRangeAbsoluteView.swift; sourceTree = "<group>"; };
@@ -1610,6 +1614,7 @@
 			children = (
 				941325F32BC837F000AC438F /* Version_1_94.swift */,
 				94F879D42C6A99710066B7E9 /* Version_2_0.swift */,
+				94B48C0B2DE7729700FF391B /* Version_3_0.swift */,
 			);
 			path = Versions;
 			sourceTree = "<group>";
@@ -1719,6 +1724,7 @@
 			isa = PBXGroup;
 			children = (
 				9446358F2BFB2EE900E52AB7 /* FilterViews */,
+				94B48C0D2DE7737900FF391B /* Bundle.swift */,
 				940321D22A4D8B4B00FC8BBE /* SimpleSearchResultsView.swift */,
 			);
 			path = SharedViews;
@@ -2109,14 +2115,14 @@
 		94D6C2022AECF2090039AA9D /* iOS */ = {
 			isa = PBXGroup;
 			children = (
-				940321752A4D8B4B00FC8BBE /* Navigation.swift */,
-				940322B22A4D8B7500FC8BBE /* ContentView.swift */,
 				941325F02BC8373C00AC438F /* InitialScreens */,
 				940321722A4D8B4B00FC8BBE /* Dashboard */,
 				940321D42A4D8B4B00FC8BBE /* Hosts */,
 				940321892A4D8B4B00FC8BBE /* Search */,
 				940321592A4D8B4B00FC8BBE /* Settings */,
 				940321782A4D8B4B00FC8BBE /* ViewUtilities */,
+				940321752A4D8B4B00FC8BBE /* Navigation.swift */,
+				940322B22A4D8B7500FC8BBE /* ContentView.swift */,
 			);
 			path = iOS;
 			sourceTree = "<group>";
@@ -2347,6 +2353,7 @@
 				94FE2BC72C47E20F00AD98BA /* macosSearchHomeInitView.swift in Sources */,
 				94A15C692C5B5C7B0087F95A /* macosHostAddNameEnvViews.swift in Sources */,
 				940322912A4D8B4C00FC8BBE /* ServerItemView.swift in Sources */,
+				94B48C0C2DE7729700FF391B /* Version_3_0.swift in Sources */,
 				94D2948C2C257FC70093A5AD /* macosAppHistory.swift in Sources */,
 				940322522A4D8B4B00FC8BBE /* ResultsPlaceholderView.swift in Sources */,
 				9403228E2A4D8B4C00FC8BBE /* ServerItemStatsView.swift in Sources */,
@@ -2593,6 +2600,7 @@
 				94A7F3FC2DC1309C006780BC /* QuickButtons.swift in Sources */,
 				94A7F3FD2DC1309C006780BC /* HostEnums.swift in Sources */,
 				94A7F3ED2DC13094006780BC /* SearchHistoryDataManager.swift in Sources */,
+				94B48C0E2DE7737D00FF391B /* Bundle.swift in Sources */,
 				94A7F3EE2DC13094006780BC /* ApplicationSettings.swift in Sources */,
 				94A7F3EF2DC13094006780BC /* LogDataManager.swift in Sources */,
 				94A7F3F02DC13094006780BC /* SearchSettingsManager.swift in Sources */,

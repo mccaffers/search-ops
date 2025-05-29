@@ -17,10 +17,13 @@ struct SettingsSourceCodeModalView: View {
       
       
       VStack(spacing:20) {
-        Text("The entire Search Ops Application is available on Github, fully Open Source")
+        Text("Search Ops app is Open Source, available on Github")
           .frame(maxWidth: .infinity, alignment:.leading)
         
-        Text("This repository contains the SwiftUI and Business logic for application processing and querying of your infrastructure. The build hash aligns with the commit hash on Github")
+        Text("This repository contains the full application, the SwiftUI and Business logic for processing and querying of your infrastructure. The build hash aligns with the commit hash on Github")
+          .frame(maxWidth: .infinity, alignment:.leading)
+        
+        Text("Build: " + (Bundle.main.appHash ?? ""))
           .frame(maxWidth: .infinity, alignment:.leading)
         
         VStack (spacing:5){
