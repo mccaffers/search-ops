@@ -1,8 +1,16 @@
 # SearchOps
 
-<img align="left" width=100 src="./Logo.png" style="padding-right:10px">
+**SearchOps is now completely Open Source!** 🎉
 
-This repository contains the complete open-source iOS and macOS applications for SearchOps. It includes all source code for authenticating and querying ElasticSearch & OpenSearch instances, along with a local encrypted datastore using Realm.
+This repository contains the complete open-source iOS and macOS applications for SearchOps. The entire application source code is available on GitHub, including all UI components, business logic, and features for authenticating and querying ElasticSearch & OpenSearch instances.
+
+I'm sharing Search Ops with a **Convenience Pricing Model** - the complete source code is freely available here, providing transparency, with pre-built versions are available on the App Store for those who prefer the convenience of automatic updates and easy installation. 
+
+<a href="https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone"><img width=20% src="./AppStore.svg"></a>
+
+I appreciate your support when purchasing via the Apple App Store, which supports further development of the application.
+
+## Development
 
 [![Build](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=coverage)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps)
 
@@ -15,7 +23,6 @@ This repository contains the complete open-source iOS and macOS applications for
 
 Available on the Apple App Store for iOS and macOS platforms
 
-<a href="https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone"><img width=18% src="./AppStore.svg"></a>
 
 ## Screenshots
 
@@ -43,7 +50,7 @@ Authentication:
 * Readonly access only. Requires a user with Viewer and Monitoring User
 
 Privacy & Transparency:
-* Open Source business logic on Github
+* Fully Open Source - complete application source code on GitHub
 * No tracking or analytics
 * Uses a local on device database (Realm) with encryption on
 
