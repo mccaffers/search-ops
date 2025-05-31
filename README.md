@@ -8,7 +8,7 @@ I'm sharing Search Ops with a **Convenience Pricing Model** - the complete sourc
 
 <a href="https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone"><img width=20% src="./AppStore.svg"></a>
 
-I appreciate your support when purchasing via the Apple App Store, which supports further development of the application.
+> If you get value, I appreciate purchasing via the Apple App Store, which supports further development of the application and gets you automated updates. If you can't purchase right now, feel free to download and compile directly from source from here straight on to your device (iPhone/iPad or macOS). I'm an independent developer building software that I find useful. If you have any feedback or suggestions do send me a message. Thanks for dropping by! <br/> ***@mccaffers (Ryan McCaffery)***
 
 ## Development
 
