@@ -46,7 +46,7 @@ struct Version_3_0: View {
                 
                 VStack(alignment:.leading, spacing:15) {
                   VStack(alignment:.leading, spacing:5) {
-                    Text("Search Ops is now completely Open Source, available to see the entire application on Github with a Convenience Pricing Model.")
+                    Text("Search Ops is now completely Open Source, available to see the entire application on Github with a Convenience Pricing Model")
                       .padding(.bottom, 10)
                     
                     Image("github_repo")

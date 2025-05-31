@@ -41,7 +41,12 @@ struct TechnicalSettings: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 10)
       
-      Text("This will delete the Realm Database on disk, and the encrypted key in the keychain")
+      Text("""
+        This will delete:
+          * Realm Database
+          * Encryption Key in Keychain
+          * Welcome screen boolean
+        """)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 10)
       
@@ -49,6 +54,7 @@ struct TechnicalSettings: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 10)
       
+
       Button(action: {
         try! debug()
       }, label: {
@@ -56,7 +62,7 @@ struct TechnicalSettings: View {
           .foregroundColor(.white)
           .padding(.vertical, 15)
           .frame(maxWidth: .infinity, alignment: .center)
-          .background(Color("WarnText"))
+          .background(Color.red)
           .cornerRadius(5.0)
         
       })
