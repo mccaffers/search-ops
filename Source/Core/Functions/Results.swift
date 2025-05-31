@@ -152,10 +152,14 @@ public class Results {
       let key = fieldParts[0]
       if let value = item[key] as? String {
         return [value]
+      } else if let value = item[key] as? Int {
+        return [String(value)]
       } else if let value = item[key] as? Double {
         return [value.string]
       } else if let value = item[key] as? Array<String> {
         return value
+      } else if let value = item[key] as? Array<Int> {
+        return value.map { String($0) }
       } else if let value = item[key] as? Array<Double> {
         return value.compactMap { $0.string }
       }
@@ -222,10 +226,14 @@ public class Results {
       return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
     } else if let value = obj[key] as? String {
       return [value]
+    } else if let value = obj[key] as? Int {
+      return [String(value)]
     } else if let value = obj[key] as? Double {
       return [value.string]
     } else if let value = obj[key] as? Array<String> {
       return value
+    } else if let value = obj[key] as? Array<Int> {
+      return value.map { String($0) }
     } else if let value = obj[key] as? Array<Double> {
       return value.compactMap { $0.string }
     }
