@@ -302,6 +302,7 @@ public class Results {
     
     if let json = JsonTools.serialiseJson(input) {
       
+      // Check for standard Elasticsearch error format
       if let errorMessage = json["error"] as? [String: Any] {
         
         if let errorItems = errorMessage["root_cause"] as? [[String: Any]] {
@@ -313,6 +314,16 @@ public class Results {
           }
         }
         
+        // Return early if there's an error to prevent processing error response fields
+        return result
+      }
+      
+      // Check for alternative error format with "message" and "ok" fields
+      if let message = json["message"] as? String,
+         let ok = json["ok"] as? Bool,
+         ok == false {
+        result.error = message
+        return result
       }
       
       for item in json {
