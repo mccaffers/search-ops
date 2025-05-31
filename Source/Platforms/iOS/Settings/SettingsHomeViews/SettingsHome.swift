@@ -17,7 +17,7 @@ struct SettingsHome: View {
   
   @AppStorage("appearanceSelection") private var appearanceSelection: Int = 2
   @ObservedObject var fireworksSettings = FireworkSettings()
-//  @State var showFireworks = false
+  //  @State var showFireworks = false
   @State private var isVisible = false
   @State private var opacity = 1.0
   @State private var refreshFireworks = UUID()
@@ -33,9 +33,9 @@ struct SettingsHome: View {
         ScrollView {
           VStack (spacing:15) {
             
-            SettingsActionView(searchHistoryManager: searchHistoryManager, 
+            SettingsActionView(searchHistoryManager: searchHistoryManager,
                                filterHistoryDataManager: filterHistoryDataManager)
-              .padding(.top, 20)
+            .padding(.top, 20)
             
             HostAddDivider()
             
@@ -44,7 +44,7 @@ struct SettingsHome: View {
             HostAddDivider()
             
             ReleaseNotesSectionView()
-              
+            
             
             HostAddDivider()
             
@@ -52,9 +52,10 @@ struct SettingsHome: View {
             
             Feedback()
             
-//#if DEBUG
-//            SettingsDebugSectionView()
-//#endif
+#if DEBUG
+            HostAddDivider()
+            SettingsDebugSectionView()
+#endif
             
             Spacer()
           }
@@ -144,19 +145,15 @@ struct SettingsHome: View {
         
         // Wait for the animation to finish
         try await Task.sleep(seconds: 1.5)
-      
+        
         // Hide the view
         self.isVisible = false
         
         // Update task tracking
         myTaskTracker=false
         return ""
+      }
     }
-      
-      
-    }
-    
-    
   }
 }
 #endif

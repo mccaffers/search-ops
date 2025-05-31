@@ -14,27 +14,13 @@ struct AboutSearchOpsView: View {
   @State var showingModal = false
   @State var showingAboutPage = false
 
-
-
-  var open: AttributedString {
-    var result = AttributedString("Open Source")
-    result.foregroundColor = Color("ButtonLight")
-    return result
-  }
-  
   var body: some View {
     VStack(spacing:5){
       
-
-//      Text("About SearchOps")
-//        .foregroundColor(Color("TextSecondary"))
-//        .font(.system(size:15))
-//        .frame(maxWidth: .infinity, alignment:.leading)
-
       VStack(alignment:.leading, spacing:10) {
         
         HStack(spacing:5) {
-          Text("Build: " + (Bundle.main.commitHash ?? ""))
+          Text("Build: " + (Bundle.main.appHash ?? ""))
           Button {
             showingModal=true
           } label: {
@@ -51,10 +37,6 @@ struct AboutSearchOpsView: View {
         }
         .frame(maxWidth: .infinity, alignment:.leading)
         
-        
-        Text("App: " + (Bundle.main.appHash ?? ""))
-          .frame(maxWidth: .infinity, alignment:.leading)
-        
         let databaseSize =  RealmManager.checkRealmFileSize()
         Text("Database Size: " +  String(format: "%.2f", databaseSize) + "mb")
           .frame(maxWidth: .infinity, alignment:.leading)
@@ -65,15 +47,10 @@ struct AboutSearchOpsView: View {
       .padding(15)
       .background(Color("BackgroundAlt"))
       .cornerRadius(5)
-
       
     }
       .navigationDestination(isPresented:$showingModal, destination: {
         SettingsSourceCodeModalView()
-      })
-
-      .navigationDestination(isPresented:$showingAboutPage, destination: {
-        SettingsAboutPage()
       })
   
   }

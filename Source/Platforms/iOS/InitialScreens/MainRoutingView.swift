@@ -17,6 +17,7 @@ struct MainRoutingView: View {
   private enum VersionSheetEnum : String, Identifiable {
     case Version1_94
     case Version2_0
+    case Version3_0
     public var id: String { rawValue }
   }
 
@@ -32,15 +33,22 @@ struct MainRoutingView: View {
           .disabled(showingVersionSheet)
       }
     }.onAppear {
-      if  "2.0" != lastSeenVersionNotes {
+      
+      if  "3.0" != lastSeenVersionNotes {
         showingVersionSheet = true
       }
       
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-        if "2.0" != lastSeenVersionNotes {
-          versionSheet = .Version2_0
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+        if "3.0" != lastSeenVersionNotes {
+          versionSheet = .Version3_0
         }
       }
+      
+//      DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+//        lastSeenVersionNotes = "0"
+//      }
+      
+      
     }
     .sheet(item: $versionSheet,
            content: { sheet in
@@ -53,9 +61,8 @@ struct MainRoutingView: View {
       case .Version2_0:
         Version_2_0(showContinueButton:true)
           .onDisappear {
-            
-            lastSeenVersionNotes = "2.0"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+          
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
               lastSeenVersionNotes = "2.0"
             }
             
@@ -63,8 +70,19 @@ struct MainRoutingView: View {
               showingVersionSheet = false
             }
           }
-      
         
+      case .Version3_0:
+        Version_3_0(showContinueButton:true)
+          .onDisappear {
+  
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+              lastSeenVersionNotes = "3.0"
+            }
+            
+            withAnimation {
+              showingVersionSheet = false
+            }
+          }
       }
     })
     

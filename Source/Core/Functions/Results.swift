@@ -152,10 +152,14 @@ public class Results {
       let key = fieldParts[0]
       if let value = item[key] as? String {
         return [value]
+      } else if let value = item[key] as? Int {
+        return [String(value)]
       } else if let value = item[key] as? Double {
         return [value.string]
       } else if let value = item[key] as? Array<String> {
         return value
+      } else if let value = item[key] as? Array<Int> {
+        return value.map { String($0) }
       } else if let value = item[key] as? Array<Double> {
         return value.compactMap { $0.string }
       }
@@ -222,10 +226,14 @@ public class Results {
       return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
     } else if let value = obj[key] as? String {
       return [value]
+    } else if let value = obj[key] as? Int {
+      return [String(value)]
     } else if let value = obj[key] as? Double {
       return [value.string]
     } else if let value = obj[key] as? Array<String> {
       return value
+    } else if let value = obj[key] as? Array<Int> {
+      return value.map { String($0) }
     } else if let value = obj[key] as? Array<Double> {
       return value.compactMap { $0.string }
     }
@@ -302,6 +310,7 @@ public class Results {
     
     if let json = JsonTools.serialiseJson(input) {
       
+      // Check for standard Elasticsearch error format
       if let errorMessage = json["error"] as? [String: Any] {
         
         if let errorItems = errorMessage["root_cause"] as? [[String: Any]] {
@@ -313,6 +322,16 @@ public class Results {
           }
         }
         
+        // Return early if there's an error to prevent processing error response fields
+        return result
+      }
+      
+      // Check for alternative error format with "message" and "ok" fields
+      if let message = json["message"] as? String,
+         let ok = json["ok"] as? Bool,
+         ok == false {
+        result.error = message
+        return result
       }
       
       for item in json {
