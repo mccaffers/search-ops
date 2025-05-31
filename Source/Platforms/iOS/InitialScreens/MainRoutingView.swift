@@ -38,11 +38,17 @@ struct MainRoutingView: View {
         showingVersionSheet = true
       }
       
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
         if "3.0" != lastSeenVersionNotes {
           versionSheet = .Version3_0
         }
       }
+      
+//      DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+//        lastSeenVersionNotes = "0"
+//      }
+      
+      
     }
     .sheet(item: $versionSheet,
            content: { sheet in
