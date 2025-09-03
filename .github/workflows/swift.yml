@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Select Xcode  
-      run: sudo xcode-select -switch /Applications/Xcode_16.app && /usr/bin/xcodebuild -version
+      run: sudo xcode-select -switch /Applications/Xcode_16.4.app && /usr/bin/xcodebuild -version
       # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md
     - name: Boot iOS Simulator
       run: >
