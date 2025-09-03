@@ -23,10 +23,16 @@ struct ReleaseNotesList: View {
     ScrollView{
       VStack(spacing:25) {
         
+        ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2025, month: 9, day: 5))!,
+                               buttonText: "Version 3.1",
+                               buttonDescription: "Fixing an issue with the date rendering",
+                               buttonAction: { showingRelease = "Version 3.0" },  activeButton: false, isLatest: true)
+        .padding(.top, 15)
+        
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 10))!,
                                buttonText: "Version 3",
                                buttonDescription: "Search Ops is now completely Open Source, entire application on Github, with a Convenience Pricing Model, a small one time fee for lifetime automated updates",
-                               buttonAction: { showingRelease = "Version 3.0" },  activeButton: true, isLatest: true)
+                               buttonAction: { showingRelease = "Version 3.0" },  activeButton: true, isLatest: false)
         .padding(.top, 15)
 
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2024, month: 9, day: 3))!,
