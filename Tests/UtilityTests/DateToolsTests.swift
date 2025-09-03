@@ -144,4 +144,116 @@ class DateToolsTests: XCTestCase {
     XCTAssertEqual(realmObj.period, filter.period, "Realm object period should match the filter's period.")
     XCTAssertEqual(realmObj.value, filter.value, "Realm object value should match the filter's value.")
   }
+
+     
+     // MARK: - ISO 8601 Format Tests
+     func testBuildDateLargeWithISO8601BasicFormat() {
+         let testDate = "2025-09-03T07:37:01"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "Sep 3, 2025 07:37:01")
+     }
+     
+     func testBuildDateLargeWithISO8601WithMilliseconds() {
+         let testDate = "2023-12-25T15:30:45.123"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "Dec 25, 2023 15:30:45")
+     }
+          
+     func testBuildDateLargeWithISO8601WithMicroseconds() {
+         let testDate = "2024-03-10T14:22:33.456789"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "Mar 10, 2024 14:22:33")
+     }
+     
+     // MARK: - Space-Separated Format Tests
+     func testBuildDateLargeWithSpaceSeparatedFormat() {
+         let testDate = "2024-08-20 11:15:30"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "Aug 20, 2024 11:15:30")
+     }
+     
+     func testBuildDateLargeWithSpaceSeparatedWithMilliseconds() {
+         let testDate = "2024-11-01 16:45:22.789"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "Nov 1, 2024 16:45:22")
+     }
+         
+     // MARK: - Date-Only Format Tests
+     func testBuildDateLargeWithDateOnly() {
+         let testDate = "2024-07-04"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "Jul 4, 2024 00:00:00")
+     }
+     
+     // MARK: - Human-Readable Format Tests
+     func testBuildDateLargeWithHumanReadableFormat() {
+         let testDate = "Mar 15, 2024 13:45:30"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "Mar 15, 2024 13:45:30")
+     }
+     
+     // MARK: - Edge Cases and Invalid Formats
+     func testBuildDateLargeWithInvalidDateReturnsEmptyString() {
+         let testDate = "invalid-date-format"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "")
+     }
+     
+     func testBuildDateLargeWithEmptyStringReturnsEmptyString() {
+         let testDate = ""
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "")
+     }
+     
+     func testBuildDateLargeWithPartialDateReturnsEmptyString() {
+         let testDate = "2024-13-45"  // Invalid month
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "")
+     }
+     
+     // MARK: - Date Object Input Tests
+     func testBuildDateLargeWithDateObject() {
+         let calendar = Calendar.current
+         let dateComponents = DateComponents(year: 2024, month: 5, day: 20, hour: 10, minute: 30, second: 45, nanosecond: 123456789)
+         let testDate = calendar.date(from: dateComponents)!
+         let result = DateTools.buildDateLarge(input: testDate)
+         XCTAssertTrue(result.contains("20 May 2024 10:30:45"))
+     }
+     
+     // MARK: - Boundary Tests
+     func testBuildDateLargeWithLeapYearDate() {
+         let testDate = "2024-02-29T12:00:00"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "Feb 29, 2024 12:00:00")
+     }
+     
+     func testBuildDateLargeWithNewYearDate() {
+         let testDate = "2024-01-01T00:00:01"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "Jan 1, 2024 00:00:01")
+     }
+     
+     func testBuildDateLargeWithEndOfYearDate() {
+         let testDate = "2024-12-31T23:59:59"
+         XCTAssertEqual(DateTools.buildDateLarge(input: testDate), "Dec 31, 2024 23:59:59")
+     }
+     
+     // MARK: - getDate Function Direct Tests
+     func testGetDateWithVariousFormats() {
+         let testCases = [
+             "2025-09-03T07:37:01",
+             "2024-12-25T15:30:45.123",
+             "2024-06-15 09:45:30",
+             "2024-07-04",
+             "2023-11-11T11:11:11.111Z"
+         ]
+         
+         for testCase in testCases {
+             let result = DateTools.getDate(input: testCase)
+             XCTAssertNotNil(result, "Failed to parse date: \(testCase)")
+         }
+     }
+     
+     func testGetDateWithInvalidFormatsReturnsNil() {
+         let invalidCases = [
+             "not-a-date",
+             "2024-13-01",  // Invalid month
+             "2024-02-30",  // Invalid day for February
+             "25:00:00",    // Invalid hour
+             ""
+         ]
+         
+         for testCase in invalidCases {
+             let result = DateTools.getDate(input: testCase)
+             XCTAssertNil(result, "Should return nil for invalid date: \(testCase)")
+         }
+     }
 }

@@ -26,7 +26,7 @@ struct ReleaseNotesList: View {
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2025, month: 9, day: 5))!,
                                buttonText: "Version 3.1",
                                buttonDescription: "Fixing an issue with the date rendering",
-                               buttonAction: { showingRelease = "Version 3.0" },  activeButton: false, isLatest: true)
+                               buttonAction: { },  activeButton: false, isLatest: true)
         .padding(.top, 15)
         
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 10))!,
