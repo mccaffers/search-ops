@@ -23,8 +23,10 @@ struct macosHostAddConnectionDetailsView: View {
   @State var selectedHostnameField = false
   @State var selectedPortField = false
   @State var selectedCloudIDField = false
-  
+  @State var schemaUpdate : HostScheme = HostScheme.HTTPS
   @Binding var isHostValid : Bool
+  
+  @State var showSelfSignedView : Bool = false
   
     var body: some View {
       VStack(spacing:10) {
@@ -134,10 +136,51 @@ struct macosHostAddConnectionDetailsView: View {
           }
         } else if connectionType == .URL {
           VStack (spacing:5) {
-            Text("Host URL and Port")
+            
+            macosHostsSchemePickerView(localScheme: $schemaUpdate)
+              .onChange(of: schemaUpdate)  { newValue in
+                if host.host == nil {
+                  host.host = HostURL()
+                }
+                host.host?.scheme = newValue
+                
+                if self.schemaUpdate == HostScheme.HTTPS {
+                  showSelfSignedView = true
+                } else {
+                  showSelfSignedView = false
+                  host.host?.selfSignedCertificate = false
+                }
+              }
+              .onAppear {
+                
+                if let item = item,
+                   let currentHost = item.host {
+                  if host.host == nil {
+                    host.host = HostURL()
+                  }
+                  host.host?.scheme = currentHost.scheme
+                  self.schemaUpdate = currentHost.scheme
+                  
+                } else if let scheme = host.host?.scheme {
+                  self.schemaUpdate = scheme
+                }
+                
+                if self.schemaUpdate == HostScheme.HTTPS {
+                  showSelfSignedView = true
+                } else {
+                  showSelfSignedView = false
+                  host.host?.selfSignedCertificate = false
+                }
+                
+              }
+          }
+          VStack (spacing:5) {
+            Text("URL & Port")
               .font(.system(size:12))
               .foregroundStyle(Color("TextSecondary"))
               .frame(maxWidth: .infinity, alignment: .leading)
+            
+           
             
             TextField("URL", text: $hostURL)
               .textFieldStyle(PlainTextFieldStyle())
@@ -213,37 +256,38 @@ struct macosHostAddConnectionDetailsView: View {
                   .stroke(selectedPortField ? Color("LabelBackgroundBorder") : Color("BackgroundAlt"), lineWidth: 1)
               )
             
-            Button {
-              
-              selfSignedCertificates.toggle()
-              host.host?.selfSignedCertificate = selfSignedCertificates
-            } label: {
-              HStack {
-                Spacer()
-                Text("Allow self signed certificates")
-                Image(systemName: selfSignedCertificates ? "checkmark.circle.fill" : "circle")
-                  .padding(10)
-                  .background(Color("Button"))
-                  .clipShape(.rect(cornerRadius: 5))
-              }
-            }.buttonStyle(PlainButtonStyle())
-              .frame(maxWidth: .infinity)
-              .onAppear {
-                if let item = item,
-                   let selfSigned = item.host?.selfSignedCertificate {
-                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    withAnimation {
-                      self.selfSignedCertificates = selfSigned
-                      if host.host == nil {
-                        host.host = HostURL()
-                      }
-                      self.host.host?.selfSignedCertificate = selfSigned
-                    }
-                  }
-                } else if let selfSignedCertificates =  host.host?.selfSignedCertificate {
-                  self.selfSignedCertificates = selfSignedCertificates
+            if showSelfSignedView {
+              Button {
+                selfSignedCertificates.toggle()
+                host.host?.selfSignedCertificate = selfSignedCertificates
+              } label: {
+                HStack {
+                  Spacer()
+                  Text("Allow self signed certificates")
+                  Image(systemName: selfSignedCertificates ? "checkmark.circle.fill" : "circle")
+                    .padding(10)
+                    .background(Color("Button"))
+                    .clipShape(.rect(cornerRadius: 5))
                 }
-              }
+              }.buttonStyle(PlainButtonStyle())
+                .frame(maxWidth: .infinity)
+                .onAppear {
+                  if let item = item,
+                     let selfSigned = item.host?.selfSignedCertificate {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                      withAnimation {
+                        self.selfSignedCertificates = selfSigned
+                        if host.host == nil {
+                          host.host = HostURL()
+                        }
+                        self.host.host?.selfSignedCertificate = selfSigned
+                      }
+                    }
+                  } else if let selfSignedCertificates =  host.host?.selfSignedCertificate {
+                    self.selfSignedCertificates = selfSignedCertificates
+                  }
+                }
+            }
           }
           .onChange(of: focusedField, perform: { newValue in
             // selected the textfield view, needs a negative check on selected
@@ -264,5 +308,6 @@ struct macosHostAddConnectionDetailsView: View {
           })
         }
       }
+
     }
 }
