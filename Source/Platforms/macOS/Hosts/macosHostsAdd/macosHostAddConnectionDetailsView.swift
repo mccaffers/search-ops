@@ -23,7 +23,7 @@ struct macosHostAddConnectionDetailsView: View {
   @State var selectedHostnameField = false
   @State var selectedPortField = false
   @State var selectedCloudIDField = false
-  @State var schemaUpdate : HostScheme = HostScheme.HTTPS
+  @State var schemeUpdate : HostScheme = HostScheme.HTTPS
   @Binding var isHostValid : Bool
   
   @State var showSelfSignedView : Bool = false
@@ -137,41 +137,39 @@ struct macosHostAddConnectionDetailsView: View {
         } else if connectionType == .URL {
           VStack (spacing:5) {
             
-            macosHostsSchemePickerView(localScheme: $schemaUpdate)
-              .onChange(of: schemaUpdate)  { newValue in
+            // updateScheme updates the scheme for the host and manages related UI state.
+            let updateScheme: (HostScheme) -> Void = { newValue in
+                
+                // Ensure host is initialized
                 if host.host == nil {
                   host.host = HostURL()
                 }
-                host.host?.scheme = newValue
                 
-                if self.schemaUpdate == HostScheme.HTTPS {
+                // Sets the scheme on host
+                host.host?.scheme = newValue
+                // Updates the local schemeUpdate state for state management
+                self.schemeUpdate = newValue
+
+                // Shows or hides the self-signed certificate option based on scheme
+                if newValue == HostScheme.HTTPS {
                   showSelfSignedView = true
                 } else {
                   showSelfSignedView = false
                   host.host?.selfSignedCertificate = false
                 }
+            }
+            
+            macosHostsSchemePickerView(localScheme: $schemeUpdate)
+              .onChange(of: schemeUpdate)  { newValue in
+                updateScheme(newValue)
               }
               .onAppear {
-                
                 if let item = item,
                    let currentHost = item.host {
-                  if host.host == nil {
-                    host.host = HostURL()
-                  }
-                  host.host?.scheme = currentHost.scheme
-                  self.schemaUpdate = currentHost.scheme
-                  
+                  updateScheme(currentHost.scheme)
                 } else if let scheme = host.host?.scheme {
-                  self.schemaUpdate = scheme
+                  updateScheme(scheme)
                 }
-                
-                if self.schemaUpdate == HostScheme.HTTPS {
-                  showSelfSignedView = true
-                } else {
-                  showSelfSignedView = false
-                  host.host?.selfSignedCertificate = false
-                }
-                
               }
           }
           VStack (spacing:5) {
@@ -179,10 +177,9 @@ struct macosHostAddConnectionDetailsView: View {
               .font(.system(size:12))
               .foregroundStyle(Color("TextSecondary"))
               .frame(maxWidth: .infinity, alignment: .leading)
-            
            
             
-            TextField("URL", text: $hostURL)
+            TextField("URL (eg. myhost.example.com)", text: $hostURL)
               .textFieldStyle(PlainTextFieldStyle())
               .padding(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 6))
               .frame(height: 36)
@@ -220,7 +217,7 @@ struct macosHostAddConnectionDetailsView: View {
                   .stroke(selectedHostnameField ? Color("LabelBackgroundBorder") : Color("BackgroundAlt"), lineWidth: 1)
               )
             
-            TextField("Port (defaults 443)", text: $port)
+            TextField("Port (defaults 9200)", text: $port)
               .textFieldStyle(PlainTextFieldStyle())
               .padding(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 6))
               .frame(height: 36)

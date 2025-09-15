@@ -2837,7 +2837,7 @@
 				CODE_SIGN_ENTITLEMENTS = Source/SearchOpsApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Source/Static/Preview.xcassets\"";
 				DEVELOPMENT_TEAM = "";
@@ -2886,7 +2886,7 @@
 				CODE_SIGN_ENTITLEMENTS = Source/SearchOpsApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Source/Static/Preview.xcassets\"";
 				DEVELOPMENT_TEAM = "";

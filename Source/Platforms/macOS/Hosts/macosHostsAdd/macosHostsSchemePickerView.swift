@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct macosHostsSchemePickerView: View {
-
+  
   @Binding var localScheme: HostScheme
   var body: some View {
     VStack (spacing:5) {
@@ -24,6 +24,7 @@ struct macosHostsSchemePickerView: View {
         } label: {
           Text("https")
             .padding(10)
+            .frame(width: 80)
             .background(localScheme == .HTTPS ? Color("ButtonHighlighted") : Color("Button"))
             .clipShape(.rect(cornerRadius: 5))
             .contentShape(Rectangle())
@@ -36,6 +37,7 @@ struct macosHostsSchemePickerView: View {
         } label: {
           Text("http")
             .padding(10)
+            .frame(width: 80)
             .background(localScheme == .HTTP ? Color("ButtonHighlighted") : Color("Button"))
             .clipShape(.rect(cornerRadius: 5))
             .contentShape(Rectangle())
@@ -46,4 +48,3 @@ struct macosHostsSchemePickerView: View {
     }
   }
 }
-
