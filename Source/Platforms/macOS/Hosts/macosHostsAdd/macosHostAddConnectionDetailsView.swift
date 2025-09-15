@@ -139,26 +139,26 @@ struct macosHostAddConnectionDetailsView: View {
             
             // updateScheme updates the scheme for the host and manages related UI state.
             let updateScheme: (HostScheme) -> Void = { newValue in
-                
-                // Ensure host is initialized
-                if host.host == nil {
-                  host.host = HostURL()
-                }
-                
-                // Sets the scheme on host
-                host.host?.scheme = newValue
-                // Updates the local schemeUpdate state for state management
+              
+              // Ensure host is initialized
+              if host.host == nil {
+                host.host = HostURL()
+              }
+              
+              // Sets the scheme on host
+              host.host?.scheme = newValue
+              // Updates the local schemeUpdate state for state management, checks to avoid circular dependency
               if self.schemeUpdate != newValue {
                 self.schemeUpdate = newValue
               }
-
-                // Shows or hides the self-signed certificate option based on scheme
-                if newValue == HostScheme.HTTPS {
-                  showSelfSignedView = true
-                } else {
-                  showSelfSignedView = false
-                  host.host?.selfSignedCertificate = false
-                }
+              
+              // Shows or hides the self-signed certificate option based on scheme
+              if newValue == HostScheme.HTTPS {
+                showSelfSignedView = true
+              } else {
+                showSelfSignedView = false
+                host.host?.selfSignedCertificate = false
+              }
             }
             
             macosHostsSchemePickerView(localScheme: $schemeUpdate)
