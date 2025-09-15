@@ -148,7 +148,9 @@ struct macosHostAddConnectionDetailsView: View {
                 // Sets the scheme on host
                 host.host?.scheme = newValue
                 // Updates the local schemeUpdate state for state management
+              if self.schemeUpdate != newValue {
                 self.schemeUpdate = newValue
+              }
 
                 // Shows or hides the self-signed certificate option based on scheme
                 if newValue == HostScheme.HTTPS {
