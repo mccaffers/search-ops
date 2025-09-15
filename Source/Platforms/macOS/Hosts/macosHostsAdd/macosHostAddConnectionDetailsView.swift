@@ -217,7 +217,7 @@ struct macosHostAddConnectionDetailsView: View {
                   .stroke(selectedHostnameField ? Color("LabelBackgroundBorder") : Color("BackgroundAlt"), lineWidth: 1)
               )
             
-            TextField("Port (defaults 9200)", text: $port)
+            TextField("Port (defaults 443)", text: $port)
               .textFieldStyle(PlainTextFieldStyle())
               .padding(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 6))
               .frame(height: 36)
