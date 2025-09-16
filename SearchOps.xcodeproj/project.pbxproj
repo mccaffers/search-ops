@@ -224,6 +224,7 @@
 		945FAB142C32929A0091003F /* macosDatePickerRefreshView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945FAB132C32929A0091003F /* macosDatePickerRefreshView.swift */; };
 		945FAB162C32932B0091003F /* macosDatePickerRelativeCustomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945FAB152C32932B0091003F /* macosDatePickerRelativeCustomView.swift */; };
 		946563E92C578902004D153D /* macosSearchHomeRelativeCustomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 946563E82C578902004D153D /* macosSearchHomeRelativeCustomView.swift */; };
+		946625CA2E774F9900B39CF8 /* macosHostsSchemePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 946625C92E774F9900B39CF8 /* macosHostsSchemePickerView.swift */; };
 		9467F3A32A71195300A0F80C /* SettingsAnalyticsMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9467F3A22A71195300A0F80C /* SettingsAnalyticsMessageView.swift */; };
 		946C94592C388114003C3EAB /* macosSearchHistoryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 946C94582C388114003C3EAB /* macosSearchHistoryButton.swift */; };
 		946C945B2C3881FA003C3EAB /* macosSearchHistoryButtonLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 946C945A2C3881FA003C3EAB /* macosSearchHistoryButtonLabel.swift */; };
@@ -645,6 +646,7 @@
 		94623E342DC8E2BD0092EE04 /* PRIVACY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = PRIVACY.md; sourceTree = "<group>"; };
 		94623E352DC8E2BD0092EE04 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		946563E82C578902004D153D /* macosSearchHomeRelativeCustomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSearchHomeRelativeCustomView.swift; sourceTree = "<group>"; };
+		946625C92E774F9900B39CF8 /* macosHostsSchemePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosHostsSchemePickerView.swift; sourceTree = "<group>"; };
 		9467F3A22A71195300A0F80C /* SettingsAnalyticsMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsAnalyticsMessageView.swift; sourceTree = "<group>"; };
 		946C94582C388114003C3EAB /* macosSearchHistoryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSearchHistoryButton.swift; sourceTree = "<group>"; };
 		946C945A2C3881FA003C3EAB /* macosSearchHistoryButtonLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSearchHistoryButtonLabel.swift; sourceTree = "<group>"; };
@@ -2082,6 +2084,7 @@
 				94A15C6A2C5B5CB90087F95A /* macosHostAddConnectionDetailsView.swift */,
 				94A15C6C2C5B5D020087F95A /* macosHostAddAuthenticationViews.swift */,
 				94BAAE742C6355A500C9E274 /* macosHostsTestConnectionView.swift */,
+				946625C92E774F9900B39CF8 /* macosHostsSchemePickerView.swift */,
 			);
 			path = macosHostsAdd;
 			sourceTree = "<group>";
@@ -2489,6 +2492,7 @@
 				944AD6872A66C259000E16E1 /* SearchQueryDatePopupRelative.swift in Sources */,
 				941325EA2BC8349F00AC438F /* KeyboardUtils.swift in Sources */,
 				940322482A4D8B4B00FC8BBE /* SearchResultsActionsView.swift in Sources */,
+				946625CA2E774F9900B39CF8 /* macosHostsSchemePickerView.swift in Sources */,
 				9403225B2A4D8B4B00FC8BBE /* SearchRangeSheetHeader.swift in Sources */,
 				940322852A4D8B4C00FC8BBE /* AddElasticKeyboardToolbarView.swift in Sources */,
 				9403226F2A4D8B4C00FC8BBE /* DateRangeSheetHeader.swift in Sources */,
@@ -2833,7 +2837,7 @@
 				CODE_SIGN_ENTITLEMENTS = Source/SearchOpsApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Source/Static/Preview.xcassets\"";
 				DEVELOPMENT_TEAM = "";
@@ -2858,7 +2862,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.5;
-				MARKETING_VERSION = 3.1;
+				MARKETING_VERSION = 3.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mccaffers.searchops.prod;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -2882,7 +2886,7 @@
 				CODE_SIGN_ENTITLEMENTS = Source/SearchOpsApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Source/Static/Preview.xcassets\"";
 				DEVELOPMENT_TEAM = "";
@@ -2907,7 +2911,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.5;
-				MARKETING_VERSION = 3.1;
+				MARKETING_VERSION = 3.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mccaffers.searchops.prod;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

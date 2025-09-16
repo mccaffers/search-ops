@@ -18,8 +18,6 @@ struct macosHostsTestConnectionView : View {
   @MainActor
   func queryElastic() async {
     
-//    guard let item = host else { return }
-    
     response = await Search.testHost(serverDetails: item)
     loading = false
     
