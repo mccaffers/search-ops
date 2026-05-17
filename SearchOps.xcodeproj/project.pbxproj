@@ -105,7 +105,6 @@
 		941325EE2BC834FB00AC438F /* ViewUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 941325ED2BC834FB00AC438F /* ViewUtils.swift */; };
 		941325F42BC837F000AC438F /* Version_1_94.swift in Sources */ = {isa = PBXBuildFile; fileRef = 941325F32BC837F000AC438F /* Version_1_94.swift */; };
 		9419F1AA2A6E6D8800DADB4C /* SettingsSourceCodeModalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9419F1A92A6E6D8800DADB4C /* SettingsSourceCodeModalView.swift */; };
-		941AADF12DC89AB800555527 /* RealmSwift in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 941AADEF2DC89AB800555527 /* RealmSwift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		941AAE522DC89B0C00555527 /* FilterHistoryDataManagerDeleteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 941AADF22DC89B0C00555527 /* FilterHistoryDataManagerDeleteTests.swift */; };
 		941AAE532DC89B0C00555527 /* FilterHistoryDataManagerQueryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 941AADF32DC89B0C00555527 /* FilterHistoryDataManagerQueryTests.swift */; };
 		941AAE542DC89B0C00555527 /* FilterHistoryDataManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 941AADF42DC89B0C00555527 /* FilterHistoryDataManagerTests.swift */; };
@@ -248,6 +247,8 @@
 		9488A6682C05E3EE007CC13C /* macosHostsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9488A6672C05E3EE007CC13C /* macosHostsView.swift */; };
 		9488A66C2C05E61A007CC13C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9488A66B2C05E61A007CC13C /* SettingsView.swift */; };
 		948C05D02FB9B8590054C6F3 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 948C05CF2FB9B8590054C6F3 /* RealmSwift */; };
+		948C05DE2FB9B9F80054C6F3 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 948C05DD2FB9B9F80054C6F3 /* RealmSwift */; };
+		948C05E22FB9BB270054C6F3 /* RealmSwift in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 948C05CF2FB9B8590054C6F3 /* RealmSwift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		948F54D12BEA284F0087A6E1 /* MyButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 948F54D02BEA284F0087A6E1 /* MyButtonStyle.swift */; };
 		9491B2322A6C6D8800DFC5EE /* DateSheetListButtonLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9491B2312A6C6D8800DFC5EE /* DateSheetListButtonLabel.swift */; };
 		9492D9062C39C8F400E8290B /* macosSearchHomeViewCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9492D9052C39C8F400E8290B /* macosSearchHomeViewCollection.swift */; };
@@ -402,7 +403,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				941AADF12DC89AB800555527 /* RealmSwift in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -413,6 +413,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				948C05E22FB9BB270054C6F3 /* RealmSwift in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -819,6 +820,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				948C05DE2FB9B9F80054C6F3 /* RealmSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2216,6 +2218,7 @@
 			);
 			name = SearchOpsUnitTests;
 			packageProductDependencies = (
+				948C05DD2FB9B9F80054C6F3 /* RealmSwift */,
 			);
 			productName = SearchOpsUnitTests;
 			productReference = 94CC67D02DC6266400D5C6E2 /* SearchOpsUnitTests.xctest */;
@@ -2229,7 +2232,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1630;
-				LastUpgradeCheck = 1630;
+				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					9403212A2A4D8B1D00FC8BBE = {
 						CreatedOnToolsVersion = 14.3.1;
@@ -2739,6 +2742,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = UQU25U46K6;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -2760,6 +2764,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -2801,6 +2806,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = UQU25U46K6;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -2815,6 +2821,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 			};
@@ -3014,14 +3021,6 @@
 				kind = branch;
 			};
 		};
-		94A7F3DD2DC12B1A006780BC /* XCRemoteSwiftPackageReference "realm-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/realm/realm-swift.git";
-			requirement = {
-				branch = master;
-				kind = branch;
-			};
-		};
 		94A7F3E22DC12ED7006780BC /* XCRemoteSwiftPackageReference "SwiftyJSON" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/SwiftyJSON/SwiftyJSON.git";
@@ -3041,12 +3040,12 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		941AADEF2DC89AB800555527 /* RealmSwift */ = {
+		948C05CF2FB9B8590054C6F3 /* RealmSwift */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 94A7F3DD2DC12B1A006780BC /* XCRemoteSwiftPackageReference "realm-swift" */;
+			package = 948C05CE2FB9B8590054C6F3 /* XCRemoteSwiftPackageReference "realm-swift" */;
 			productName = RealmSwift;
 		};
-		948C05CF2FB9B8590054C6F3 /* RealmSwift */ = {
+		948C05DD2FB9B9F80054C6F3 /* RealmSwift */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 948C05CE2FB9B8590054C6F3 /* XCRemoteSwiftPackageReference "realm-swift" */;
 			productName = RealmSwift;
