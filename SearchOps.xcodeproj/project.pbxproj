@@ -247,6 +247,7 @@
 		9488481E2C2177A90016944D /* macosAbsoluteCalendarWrapperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9488481D2C2177A90016944D /* macosAbsoluteCalendarWrapperView.swift */; };
 		9488A6682C05E3EE007CC13C /* macosHostsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9488A6672C05E3EE007CC13C /* macosHostsView.swift */; };
 		9488A66C2C05E61A007CC13C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9488A66B2C05E61A007CC13C /* SettingsView.swift */; };
+		948C05D02FB9B8590054C6F3 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 948C05CF2FB9B8590054C6F3 /* RealmSwift */; };
 		948F54D12BEA284F0087A6E1 /* MyButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 948F54D02BEA284F0087A6E1 /* MyButtonStyle.swift */; };
 		9491B2322A6C6D8800DFC5EE /* DateSheetListButtonLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9491B2312A6C6D8800DFC5EE /* DateSheetListButtonLabel.swift */; };
 		9492D9062C39C8F400E8290B /* macosSearchHomeViewCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9492D9052C39C8F400E8290B /* macosSearchHomeViewCollection.swift */; };
@@ -350,9 +351,6 @@
 		94B1BB882C396CAA00E270B1 /* macosHostsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B1BB872C396CAA00E270B1 /* macosHostsListView.swift */; };
 		94B1C0D32C09DBB800DEAC22 /* SearchInputFieldsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B1C0D22C09DBB800DEAC22 /* SearchInputFieldsView.swift */; };
 		94B241E72C2EBFF40036862F /* macosSidebarAutoSuggest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B241E62C2EBFF40036862F /* macosSidebarAutoSuggest.swift */; };
-		94B2924B2DEB10D500FE1053 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 94615F342DEB0E30007639BF /* RealmSwift */; };
-		94B2924D2DEB331800FE1053 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 94B2924C2DEB331800FE1053 /* RealmSwift */; };
-		94B2924E2DEB331800FE1053 /* RealmSwift in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 94B2924C2DEB331800FE1053 /* RealmSwift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		94B41E702C466625001C4F6E /* macosSearchHomeSort.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B41E6F2C466625001C4F6E /* macosSearchHomeSort.swift */; };
 		94B41E722C466656001C4F6E /* macosSearchHomeQueryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B41E712C466656001C4F6E /* macosSearchHomeQueryView.swift */; };
 		94B48C0C2DE7729700FF391B /* Version_3_0.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B48C0B2DE7729700FF391B /* Version_3_0.swift */; };
@@ -374,7 +372,6 @@
 		94D6C2012AECF1430039AA9D /* ContentViewMacOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94D6C2002AECF1430039AA9D /* ContentViewMacOS.swift */; };
 		94DCBF422A683112004B8C3F /* MainSheetSortCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94DCBF412A683112004B8C3F /* MainSheetSortCardView.swift */; };
 		94DD03702BE2236000EB86D3 /* MainRoutingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94DD036F2BE2236000EB86D3 /* MainRoutingView.swift */; };
-		94DF5E472DEB0F82003F6B68 /* RealmSwift in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 94615F342DEB0E30007639BF /* RealmSwift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		94E0D6E52BC47CA600D97BA4 /* macosHostAddView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94E0D6E42BC47CA600D97BA4 /* macosHostAddView.swift */; };
 		94EC856B2C3338960039D5F9 /* macosSideBarHostsButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EC856A2C3338960039D5F9 /* macosSideBarHostsButton.swift */; };
 		94EC856D2C333A6D0039D5F9 /* macosHostManagementHomeButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94EC856C2C333A6D0039D5F9 /* macosHostManagementHomeButton.swift */; };
@@ -405,7 +402,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				94B2924E2DEB331800FE1053 /* RealmSwift in Embed Frameworks */,
 				941AADF12DC89AB800555527 /* RealmSwift in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
@@ -417,7 +413,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				94DF5E472DEB0F82003F6B68 /* RealmSwift in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -814,7 +809,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				94B2924B2DEB10D500FE1053 /* RealmSwift in Frameworks */,
+				948C05D02FB9B8590054C6F3 /* RealmSwift in Frameworks */,
 				94FBEE542DEB0F0000950DAE /* SwiftyJSON in Frameworks */,
 				94A7F3E72DC12FED006780BC /* OrderedCollections in Frameworks */,
 			);
@@ -824,7 +819,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				94B2924D2DEB331800FE1053 /* RealmSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2200,7 +2194,7 @@
 			packageProductDependencies = (
 				94A7F3E32DC12ED7006780BC /* SwiftyJSON */,
 				94A7F3E62DC12FED006780BC /* OrderedCollections */,
-				94615F342DEB0E30007639BF /* RealmSwift */,
+				948C05CF2FB9B8590054C6F3 /* RealmSwift */,
 			);
 			productName = SearchOpsApp;
 			productReference = 9403212B2A4D8B1D00FC8BBE /* Search Ops.app */;
@@ -2222,7 +2216,6 @@
 			);
 			name = SearchOpsUnitTests;
 			packageProductDependencies = (
-				94B2924C2DEB331800FE1053 /* RealmSwift */,
 			);
 			productName = SearchOpsUnitTests;
 			productReference = 94CC67D02DC6266400D5C6E2 /* SearchOpsUnitTests.xctest */;
@@ -2259,7 +2252,7 @@
 			packageReferences = (
 				94A7F3E22DC12ED7006780BC /* XCRemoteSwiftPackageReference "SwiftyJSON" */,
 				94A7F3E52DC12FED006780BC /* XCRemoteSwiftPackageReference "swift-collections" */,
-				94615F312DEB0E30007639BF /* XCRemoteSwiftPackageReference "realm-swift" */,
+				948C05CE2FB9B8590054C6F3 /* XCRemoteSwiftPackageReference "realm-swift" */,
 			);
 			productRefGroup = 9403212C2A4D8B1D00FC8BBE /* Products */;
 			projectDirPath = "";
@@ -3013,11 +3006,11 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		94615F312DEB0E30007639BF /* XCRemoteSwiftPackageReference "realm-swift" */ = {
+		948C05CE2FB9B8590054C6F3 /* XCRemoteSwiftPackageReference "realm-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/realm/realm-swift.git";
 			requirement = {
-				branch = master;
+				branch = community;
 				kind = branch;
 			};
 		};
@@ -3053,9 +3046,9 @@
 			package = 94A7F3DD2DC12B1A006780BC /* XCRemoteSwiftPackageReference "realm-swift" */;
 			productName = RealmSwift;
 		};
-		94615F342DEB0E30007639BF /* RealmSwift */ = {
+		948C05CF2FB9B8590054C6F3 /* RealmSwift */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 94615F312DEB0E30007639BF /* XCRemoteSwiftPackageReference "realm-swift" */;
+			package = 948C05CE2FB9B8590054C6F3 /* XCRemoteSwiftPackageReference "realm-swift" */;
 			productName = RealmSwift;
 		};
 		94A7F3E32DC12ED7006780BC /* SwiftyJSON */ = {
@@ -3067,11 +3060,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 94A7F3E52DC12FED006780BC /* XCRemoteSwiftPackageReference "swift-collections" */;
 			productName = OrderedCollections;
-		};
-		94B2924C2DEB331800FE1053 /* RealmSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 94615F312DEB0E30007639BF /* XCRemoteSwiftPackageReference "realm-swift" */;
-			productName = RealmSwift;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
