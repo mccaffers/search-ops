@@ -28,22 +28,36 @@ struct macosSearchHomeIndicesView: View {
   var updateIndexArray : () async -> ()
   
   @State var hoveringActiveButton = false
+  @State private var indexFilterText: String = ""
+  
+  var trimmedFilter: String {
+    indexFilterText.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+  
+  var filteredIndices: [String] {
+    IndexFilterHelper.filter(indices: indexArray, query: indexFilterText)
+  }
+  
+  var showAllButton: Bool {
+    IndexFilterHelper.showAllButton(query: indexFilterText)
+  }
+  
   var body: some View {
     
     VStack (alignment:.leading, spacing:5){
       
       HStack {
-        Text("Indices")
-          .font(.subheadline)
-          .foregroundStyle(Color("TextSecondary"))
-          
-        //          Text("/aliases")
-        //            .font(.subheadline)
-        //            .foregroundStyle(Color("TextSecondary"))
-        //            .padding(.horizontal, 8)
-        //            .padding(.vertical, 2)
-        //            .background(Color("Background"))
-        //            .clipShape(.rect(cornerRadius: 5))
+        if !trimmedFilter.isEmpty && localSelectedIndex.isEmpty {
+          let count = filteredIndices.count + (showAllButton ? 1 : 0)
+          let total = IndexFilterHelper.totalCount(indices: indexArray)
+          Text("Indices (\(count) of \(total))")
+            .font(.subheadline)
+            .foregroundStyle(Color("TextSecondary"))
+        } else {
+          Text("Indices")
+            .font(.subheadline)
+            .foregroundStyle(Color("TextSecondary"))
+        }
         Spacer()
       }
       
@@ -92,6 +106,7 @@ struct macosSearchHomeIndicesView: View {
           Button(action: {
             withAnimation {
               localSelectedIndex = ""
+              indexFilterText = ""
               localFilterObject.clear()
               fields = []
             }
@@ -114,45 +129,139 @@ struct macosSearchHomeIndicesView: View {
           }
         }
       } else {
-        WrappingHStack(horizontalSpacing: 5) {
-          
-          Button(action: {
-            localSelectedIndex = "_all"
+        if !indexArray.isEmpty {
+          HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+              .foregroundColor(Color("TextSecondary"))
+              .font(.system(size: 11))
             
-          }) {
-            Text("_all")
-              .padding(10)
-              .background(Color("Button"))
-              .clipShape(.rect(cornerRadius: 5))
-              .contentShape(Rectangle())
-          }.buttonStyle(PlainButtonStyle())
-          
-          let sortedIndex = indexArray.sorted(by: <)
-          
-          ForEach(sortedIndex.indices, id: \.self) { index in
-            Button(action: {
-              withAnimation {
-                localSelectedIndex = sortedIndex[index]
+            TextField("Filter indices...", text: $indexFilterText)
+              .textFieldStyle(PlainTextFieldStyle())
+              .font(.system(size: 13))
+              .disableAutocorrection(true)
+              .onExitCommand {
+                indexFilterText = ""
               }
-              
-              Task {
-                
-                // mappings request
-                
-                await mappingsRequest()
-                
+            
+            if !indexFilterText.isEmpty {
+              Button(action: {
+                indexFilterText = ""
+              }) {
+                Image(systemName: "xmark.circle.fill")
+                  .foregroundColor(Color("TextSecondary"))
+                  .font(.system(size: 12))
               }
-            }) {
-              Text(sortedIndex[index])
-                .padding(10)
-                .background(localSelectedIndex == sortedIndex[index] ? Color("ButtonHighlighted") : Color("Button"))
-                .clipShape(.rect(cornerRadius: 5))
-                .contentShape(Rectangle())
-            }.buttonStyle(PlainButtonStyle())
+              .buttonStyle(PlainButtonStyle())
+              .help("Clear filter")
+            }
+          }
+          .padding(.horizontal, 8)
+          .frame(height: 32)
+          .frame(maxWidth: 320)
+          .background(Color("Button"))
+          .clipShape(RoundedRectangle(cornerRadius: 5))
+          .overlay(
+            RoundedRectangle(cornerRadius: 5)
+              .stroke(Color("BackgroundAlt"), lineWidth: 1)
+          )
+          .padding(.bottom, 4)
+        }
+        
+        if !showAllButton && filteredIndices.isEmpty {
+          HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+              .foregroundColor(Color("TextSecondary"))
+            Text("No indices matching \"\(trimmedFilter)\"")
+              .foregroundColor(Color("TextSecondary"))
+              .font(.subheadline)
+          }
+          .padding(.vertical, 8)
+        } else {
+          WrappingHStack(horizontalSpacing: 5) {
+            if showAllButton {
+              Button(action: {
+                indexFilterText = ""
+                withAnimation {
+                  localSelectedIndex = "_all"
+                }
+              }) {
+                Text("_all")
+                  .padding(10)
+                  .background(Color("Button"))
+                  .clipShape(.rect(cornerRadius: 5))
+                  .contentShape(Rectangle())
+              }.buttonStyle(PlainButtonStyle())
+            }
+            
+            ForEach(filteredIndices, id: \.self) { indexName in
+              Button(action: {
+                indexFilterText = ""
+                withAnimation {
+                  localSelectedIndex = indexName
+                }
+                
+                Task {
+                  // mappings request
+                  await mappingsRequest()
+                }
+              }) {
+                Text(indexName)
+                  .padding(10)
+                  .background(localSelectedIndex == indexName ? Color("ButtonHighlighted") : Color("Button"))
+                  .clipShape(.rect(cornerRadius: 5))
+                  .contentShape(Rectangle())
+              }.buttonStyle(PlainButtonStyle())
+            }
           }
         }
       }
     }
-    
+    .onChange(of: localSelectedHost?.id) { _ in
+      indexFilterText = ""
+    }
+    .onChange(of: indexArray) { _ in
+      indexFilterText = ""
+    }
+  }
+}
+
+public struct IndexFilterHelper {
+  public static func matches(indexName: String, query: String) -> Bool {
+    let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return true }
+    if trimmed.contains("*") || trimmed.contains("?") {
+      var sanitized = trimmed
+      while sanitized.contains("**") {
+        sanitized = sanitized.replacingOccurrences(of: "**", with: "*")
+      }
+      let pattern = "^" + NSRegularExpression.escapedPattern(for: sanitized)
+        .replacingOccurrences(of: "\\*", with: ".*")
+        .replacingOccurrences(of: "\\?", with: ".") + "$"
+      if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+        let range = NSRange(location: 0, length: indexName.utf16.count)
+        return regex.firstMatch(in: indexName, options: [], range: range) != nil
+      }
+    }
+    return indexName.localizedCaseInsensitiveContains(trimmed)
+  }
+  
+  public static func filter(indices: [String], query: String) -> [String] {
+    let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    let sorted = Array(Set(indices.filter { $0 != "_all" })).sorted(by: <)
+    guard !trimmed.isEmpty else {
+      return sorted
+    }
+    return sorted.filter { matches(indexName: $0, query: trimmed) }
+  }
+  
+  public static func showAllButton(query: String) -> Bool {
+    let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return true }
+    return matches(indexName: "_all", query: trimmed)
+  }
+  
+  public static func totalCount(indices: [String]) -> Int {
+    let uniqueIndices = Set(indices.filter { $0 != "_all" })
+    return uniqueIndices.count + 1
   }
 }

@@ -242,5 +242,54 @@ class ElasticDocumentBuilderTests: XCTestCase {
 //  }
   
   
-  // More tests following similar patterns
+  // Tests for DocumentDetail.formatDisplayValue
+  func testFormatDisplayValue_withMultipleStringArray() {
+    let input = ["0", "0"]
+    let result = DocumentDetail.formatDisplayValue(input)
+    XCTAssertEqual(result, "[\"0\", \"0\"]")
+  }
+
+  func testFormatDisplayValue_withSingleStringArray() {
+    let input = ["active"]
+    let result = DocumentDetail.formatDisplayValue(input)
+    XCTAssertEqual(result, "active")
+  }
+
+  func testFormatDisplayValue_withEmptyStringArray() {
+    let input = [""]
+    let result = DocumentDetail.formatDisplayValue(input)
+    XCTAssertNil(result)
+
+    let emptyArray: [String] = []
+    let resultEmpty = DocumentDetail.formatDisplayValue(emptyArray)
+    XCTAssertNil(resultEmpty)
+  }
+
+  func testFormatDisplayValue_withMultipleAnyArray() {
+    let input: [Any] = [1, 2]
+    let result = DocumentDetail.formatDisplayValue(input)
+    XCTAssertEqual(result, "[1, 2]")
+  }
+
+  func testFormatDisplayValue_withSingleAnyArray() {
+    let input: [Any] = [42]
+    let result = DocumentDetail.formatDisplayValue(input)
+    XCTAssertEqual(result, "42")
+  }
+
+  func testFormatDisplayValue_withScalarString() {
+    let input = "hello"
+    let result = DocumentDetail.formatDisplayValue(input)
+    XCTAssertEqual(result, "hello")
+
+    let emptyString = "   "
+    let resultEmpty = DocumentDetail.formatDisplayValue(emptyString)
+    XCTAssertNil(resultEmpty)
+  }
+
+  func testFormatDisplayValue_withNumber() {
+    let input: NSNumber = 42
+    let result = DocumentDetail.formatDisplayValue(input)
+    XCTAssertEqual(result, "42")
+  }
 }

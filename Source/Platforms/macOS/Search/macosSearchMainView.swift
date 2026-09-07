@@ -367,7 +367,10 @@ struct macosSearchMainView: View {
        
         if selection == .SearchDocumentView {
           VStack {
-            macosDocumentDetailView(itemDetail: itemDetail)
+            macosDocumentDetailView(itemDetail: itemDetail,
+                                    fields: $fields,
+                                    onlyVisibleFields: $onlyVisibleFields,
+                                    updatedFieldsNotification: $updatedFieldsNotification)
         
           }
           .frame(maxWidth: .infinity, alignment:.trailing)
