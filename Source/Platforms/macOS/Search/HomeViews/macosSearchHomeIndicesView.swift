@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+#if os(macOS)
 struct macosSearchHomeIndicesView: View {
   
   @Binding var localSelectedHost: HostDetails?
@@ -139,9 +140,11 @@ struct macosSearchHomeIndicesView: View {
               .textFieldStyle(PlainTextFieldStyle())
               .font(.system(size: 13))
               .disableAutocorrection(true)
+              #if os(macOS)
               .onExitCommand {
                 indexFilterText = ""
               }
+              #endif
             
             if !indexFilterText.isEmpty {
               Button(action: {
@@ -265,3 +268,4 @@ public struct IndexFilterHelper {
     return uniqueIndices.count + 1
   }
 }
+#endif
