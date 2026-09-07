@@ -6,6 +6,7 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
+import Foundation
 import SwiftUI
 
 #if os(macOS)
@@ -227,6 +228,7 @@ struct macosSearchHomeIndicesView: View {
     }
   }
 }
+#endif
 
 public struct IndexFilterHelper {
   public static func matches(indexName: String, query: String) -> Bool {
@@ -268,4 +270,4 @@ public struct IndexFilterHelper {
     return uniqueIndices.count + 1
   }
 }
-#endif
+
