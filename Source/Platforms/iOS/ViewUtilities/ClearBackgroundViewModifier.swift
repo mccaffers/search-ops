@@ -11,23 +11,9 @@ import SwiftUI
 #if os(iOS)
 struct ClearBackgroundView: UIViewRepresentable {
     
-    @AppStorage("appearanceSelection") private var appearanceSelection: Int = 2
-    
     func makeUIView(context: Context) -> some UIView {
         let view = UIView()
-            
-        var colorScheme : UIUserInterfaceStyle
-        
-        if appearanceSelection == 1 {
-            colorScheme = .light
-        }
-        else if appearanceSelection == 2 {
-            colorScheme = .dark
-        } else {
-            colorScheme = UIScreen.main.traitCollection.userInterfaceStyle
-        }
-        
-        let color = Color(UIColor(named: "Background")!.resolvedColor(with: UITraitCollection(userInterfaceStyle: colorScheme)))
+        let color = Color(UIColor(named: "Background")!.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark)))
         DispatchQueue.main.async {
             view.superview?.superview?.backgroundColor = UIColor(color)
         }

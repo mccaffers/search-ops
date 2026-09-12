@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+#if os(macOS)
 struct macosSearchHomeView: View {
   
   let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
@@ -160,6 +161,7 @@ struct macosSearchHomeView: View {
   }
   
 }
+#endif
 
 struct WrappingHStack: Layout {
     // inspired by: https://stackoverflow.com/a/75672314

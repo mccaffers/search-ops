@@ -195,6 +195,9 @@ struct macosSearchSideBar: View {
     .onChange(of: hostsUpdated.updated) { newValue in
       refresh = UUID()
     }
+    .onChange(of: updatedFieldsNotification) { _ in
+      refreshFields = UUID()
+    }
     .environmentObject(HostDetailsWrap(item: selectedHost))
   }
 }

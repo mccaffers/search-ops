@@ -22,6 +22,7 @@ struct macosSearchTopButtonsView: View {
         HStack (spacing: 5){
           
           Button {
+            selection = .None
             macosSearchRouterPath = .WelcomeScreen
           } label: {
             Image(systemName: "house")
@@ -34,7 +35,7 @@ struct macosSearchTopButtonsView: View {
           
           
           Button {
-            selection = .Hosts
+            selection = (selection == .Hosts ? .None : .Hosts)
           } label: {
             Group {
               if let name = hostName {
@@ -44,14 +45,14 @@ struct macosSearchTopButtonsView: View {
               }
             }
               .padding(6)
-              .background(Color("Button"))
+              .background(selection == .Hosts ? Color("BackgroundAlt") : Color("Button"))
               .clipShape(.rect(cornerRadius: 5))
               .contentShape(Rectangle())
           }.buttonStyle(PlainButtonStyle())
           
           
           Button {
-            selection = .Indices
+            selection = (selection == .Indices ? .None : .Indices)
           } label: {
             Group {
               if let index = index {
@@ -61,7 +62,7 @@ struct macosSearchTopButtonsView: View {
               }
             }
               .padding(6)
-              .background(Color("Button"))
+              .background(selection == .Indices ? Color("BackgroundAlt") : Color("Button"))
               .clipShape(.rect(cornerRadius: 5))
               .contentShape(Rectangle())
           }.buttonStyle(PlainButtonStyle())

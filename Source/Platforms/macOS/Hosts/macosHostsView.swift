@@ -78,7 +78,7 @@ struct macosHostsView: View {
                          serverObjects: serverObjects,
                          item: selectedHostToEdit,
                          deleteItem: deleteItem)
-        .frame(width: 600)
+        .frame(maxWidth: 600)
       }
       
     }

@@ -64,7 +64,7 @@ struct ServerItemViewActionsView: View {
       })
       .navigationDestination(isPresented: $editConnectionPressed, destination: {
         AddElasticView(item: item.generateCopy(),
-                       addServiceNavigationTitle: AddServiceNavigationTitle("ElasticSearch"))
+                       addServiceNavigationTitle: AddServiceNavigationTitle("Elasticsearch"))
         
       })
     

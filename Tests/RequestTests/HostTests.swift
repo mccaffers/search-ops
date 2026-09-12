@@ -17,7 +17,7 @@ final class HostTests: XCTestCase {
   // Test to verify that a valid HTTPS host URL is correctly formatted.
   @MainActor
   func testValidHost() throws {
-    // Sets up details for a hypothetical ElasticSearch host with HTTPS as the scheme.
+    // Sets up details for a hypothetical Elasticsearch host with HTTPS as the scheme.
     let esDetails = HostDetails()
     esDetails.host = HostURL()
     esDetails.host?.url = "example.com"

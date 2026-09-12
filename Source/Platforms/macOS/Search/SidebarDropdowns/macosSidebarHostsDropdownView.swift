@@ -15,62 +15,76 @@ struct macosSidebarHostsDropdownView: View {
   @Binding var selection: macosSearchViewEnum
   @Binding var fullScreen : Bool
   
+  var validItems: [HostDetails] {
+    items.filter { !$0.isInvalidated }
+  }
+  
+  var totalListHeight: CGFloat {
+    if validItems.isEmpty {
+      return 60
+    }
+    return CGFloat(validItems.count * 40)
+  }
+  
+  var maxPopupHeight: CGFloat {
+    #if os(macOS)
+    return (NSScreen.main?.visibleFrame.height ?? 800) * 0.5
+    #else
+    return 400
+    #endif
+  }
+  
+  var maxListHeight: CGFloat {
+    max(80, maxPopupHeight - 60)
+  }
+  
   var body: some View {
-    VStack {
+    VStack(alignment: .leading, spacing: 0) {
+      Text("Hosts")
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .font(.title2)
+        .bold()
+        .padding(.leading, 10)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .background(Color("Background"))
       
-      VStack (alignment: .leading, spacing:0) {
-
-
-        Text("Hosts")
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .font(.title2)
-          .padding(.leading, 10)
-          .padding(.top, 15)
-          .padding(.bottom, 10)
-          .background(Color("Background"))
-          .padding(.bottom, 5)
-        
-        
-        VStack(spacing:0){
-          ForEach(items.indices, id: \.self) {  index in
-            if !items[index].isInvalidated {
-              
+      if validItems.isEmpty {
+        Text("No hosts available")
+          .foregroundColor(Color("TextSecondary"))
+          .font(.subheadline)
+          .frame(maxWidth: .infinity)
+          .frame(height: 50)
+      } else {
+        ScrollView {
+          VStack(spacing: 0) {
+            ForEach(validItems, id: \.id) { item in
               HStack {
-                let item = items[index]
                 macosSideBarHostsButton(selectedHost: $selectedHost,
                                         selection: $selection,
                                         item: item)
               }
               .padding(.horizontal, 5)
               .padding(.bottom, 5)
-              
-//              if index != (items.count-1) {
-//                Rectangle().fill(Color("Background"))
-//                  .frame(maxWidth: .infinity)
-//                  .padding(.leading, 10)
-//                  .frame(height: 1).opacity(0.5)
-//              }
             }
           }
-          
+          .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity,alignment: .leading)
-        
-   
+        .frame(height: min(totalListHeight, maxListHeight))
+        .padding(.vertical, 5)
       }
-      .frame(maxWidth: .infinity,alignment: .leading)
-
-      .background(Color("Button"))
-      .clipShape(.rect(cornerRadius: 5))
-//      .shadow(color: Color("Background"), radius: 5, x: 0, y: 0)
-      .padding(.leading,10)
-      Spacer()
-      
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.top, 10)
-    
+    .frame(maxWidth: .infinity, alignment: .topLeading)
+    .background(Color("Button"))
+    .clipShape(RoundedRectangle(cornerRadius: 5))
+    .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
+    .padding(.leading, 8)
+    .padding(.top, 5)
+    #if os(macOS)
+    .onExitCommand {
+      selection = .None
+    }
+    #endif
   }
-  
 }
 

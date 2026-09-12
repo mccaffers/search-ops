@@ -72,7 +72,7 @@ struct Welcome: View {
         VStack(spacing:30) {
           
           
-          Text("Thank you for downloading Search Ops")
+          Text("Thank you for downloading SearchOps")
             .font(.system(size: 20))
           
           

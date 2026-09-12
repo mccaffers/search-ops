@@ -70,7 +70,7 @@ struct macosSidebarTimerView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .frame(maxWidth: 300)
-            .padding(.top, fullScreen ? 85 : 80)
+            .padding(.top, fullScreen ? 95 : 90)
             .padding(.trailing, showFilterSidebar ? 305 : 5)
             
             Spacer()

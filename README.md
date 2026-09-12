@@ -2,9 +2,9 @@
 
 **SearchOps is now completely Open Source!** 🎉
 
-This repository contains the complete open-source iOS and macOS applications for SearchOps. The entire application source code is available on GitHub, including all UI components, business logic, and features for authenticating and querying ElasticSearch & OpenSearch instances.
+This repository contains the complete open-source iOS and macOS applications for SearchOps. The entire application source code is available on GitHub, including all UI components, business logic, and features for authenticating and querying Elasticsearch & OpenSearch instances.
 
-I'm sharing Search Ops with a **Convenience Pricing Model** - the complete source code is freely available here, providing transparency, with pre-built versions are available on the App Store for those who prefer the convenience of automatic updates and easy installation. 
+I'm sharing SearchOps with a **Convenience Pricing Model** - the complete source code is freely available here, providing transparency, with pre-built versions are available on the App Store for those who prefer the convenience of automatic updates and easy installation. 
 
 <a href="https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone"><img width=20% src="./AppStore.svg"></a>
 
@@ -14,15 +14,28 @@ I'm sharing Search Ops with a **Convenience Pricing Model** - the complete sourc
 
 [![Build](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml/badge.svg)](https://github.com/mccaffers/SearchOps/actions/workflows/swift.yml) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=coverage)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=mccaffers_SearchOps&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=mccaffers_SearchOps)
 
+### Build Requirements
+- **Xcode**: 15.0+ with Swift 5.0+
+- **Current Version**: 3.1.1 (Build 4)
+- **Dependencies** (automatically resolved via Swift Package Manager):
+  - [Realm Swift](https://github.com/realm/realm-swift) (`community` branch)
+  - [SwiftyJSON](https://github.com/SwiftyJSON/SwiftyJSON) (`>= 5.0.2`)
+  - [Swift Collections](https://github.com/apple/swift-collections) (`>= 1.1.4`)
+
 ## Supports
 
-- ElasticSearch version 6.0 and above
-- Opensearch version 1.0 and above
+### Platforms
+- **iOS**: 16.6+ (iPhone & iPad)
+- **macOS**: 13.5+ (Ventura or later)
+- Native multiplatform SwiftUI (Universal binary)
+
+### Backends
+- **Elasticsearch**: version 6.0 and above
+- **OpenSearch**: version 1.0 and above
 
 ## Apple App Store
 
 Available on the Apple App Store for iOS and macOS platforms
-
 
 ## Screenshots
 
@@ -34,12 +47,12 @@ Available on the Apple App Store for iOS and macOS platforms
 
 ## Features
 
-Query ElasticSearch and OpenSearch clusters
+Query Elasticsearch and OpenSearch clusters
 * Free text strings, using compounds (AND/OR) and date ranges 
 * View results as documents or in a table
 * Easily switch between hosts, indexes and filter on mapped data types
 
-Support ElasticSearch (v5.0 and above) and OpenSearch (v1.0 and above)
+Support Elasticsearch (v6.0 and above) and OpenSearch (v1.0 and above)
 * /_mapping
 * /_search
 * /_aliases

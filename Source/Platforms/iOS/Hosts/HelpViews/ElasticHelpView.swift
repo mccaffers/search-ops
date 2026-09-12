@@ -22,7 +22,7 @@ struct ElasticHelpView: View {
           .padding(.top, 20)
           .frame(maxWidth: .infinity, alignment: .leading)
         
-        Text("The two local variables, `Name` and `Environment` are to help you identify your infrastructure throughout the Search Ops app. They can be any value.")
+        Text("The two local variables, `Name` and `Environment` are to help you identify your infrastructure throughout the SearchOps app. They can be any value.")
           .font(.system(size: 15))
         
         HostAddDivider()

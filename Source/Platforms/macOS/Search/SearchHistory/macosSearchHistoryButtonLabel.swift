@@ -15,12 +15,10 @@ struct macosSearchHistoryButtonLabel: View {
   var width : CGFloat
   
   var labelTextColor = Color("macosHomeLabels")
-  @State var onHover = false
+
   var body: some View {
     VStack (spacing:0){
       
-        //      let historySelectedHost = serverObjects.items.first(where: {$0.id == myList[index].host})
-        
         HStack(spacing:0) {
           
           HStack(spacing:0){
@@ -59,13 +57,10 @@ struct macosSearchHistoryButtonLabel: View {
           }
           
         }      
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: width, alignment: .leading)
         .padding(.vertical, 4)
-        .background(Color("BackgroundAlt").opacity(onHover ? 1 : 0.65))
+        .contentShape(Rectangle())
 
-    }
-    .onHover { hover in
-      onHover = hover
     }
 
   }
