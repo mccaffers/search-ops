@@ -312,6 +312,7 @@ struct macosSearchMainView: View {
           .onTapGesture {
             selection = .None
           }
+          .padding(.top, fullScreen ? 40 : 35)
         
         if selection == .DatePeriod {
           VStack {
@@ -331,9 +332,9 @@ struct macosSearchMainView: View {
           .padding(.top, fullScreen ? 5 : 0)
         }
         
-        VStack {
+        VStack(alignment: .leading, spacing: 0) {
           // Popups
-          VStack {
+          VStack(alignment: .leading, spacing: 0) {
             if selection == .Hosts {
               macosSidebarHostsDropdownView(items: items,
                                             selectedHost: $selectedHost,
@@ -355,14 +356,13 @@ struct macosSearchMainView: View {
                 }
               }
             }
-          }.frame(maxWidth: currentWidth, alignment:.leading)
+          }
+          .frame(width: 340, alignment: .topLeading)
           
-          
-         
-        
-          
-          
-        }.frame(maxWidth: .infinity, alignment:.leading)
+          Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.top, fullScreen ? 40 : 35)
         
        
         if selection == .SearchDocumentView {
