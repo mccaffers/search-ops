@@ -51,12 +51,13 @@ struct ApplicationMain: App {
           .edgesIgnoringSafeArea(.all)
 #elseif os(macOS)
         ContentViewMacOS()
-          .frame(minWidth: 1200, maxWidth: .infinity, minHeight: 800, maxHeight: .infinity)
+          .frame(minWidth: 700, idealWidth: 1200, maxWidth: .infinity, minHeight: 500, idealHeight: 800, maxHeight: .infinity)
 #endif
       }
     }
 #if os(macOS)
     .windowStyle(HiddenTitleBarWindowStyle()) // Apply the hidden title bar style
+    .defaultSize(width: 1200, height: 800)
 #endif
     
   }

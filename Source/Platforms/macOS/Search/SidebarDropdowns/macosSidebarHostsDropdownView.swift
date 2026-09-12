@@ -78,7 +78,7 @@ struct macosSidebarHostsDropdownView: View {
     .background(Color("Button"))
     .clipShape(RoundedRectangle(cornerRadius: 5))
     .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
-    .padding(.leading, 10)
+    .padding(.leading, 8)
     .padding(.top, 5)
     #if os(macOS)
     .onExitCommand {

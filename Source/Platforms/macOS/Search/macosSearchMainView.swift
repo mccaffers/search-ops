@@ -323,7 +323,7 @@ struct macosSearchMainView: View {
       if selection != .None {
         
         RoundedRectangle(cornerRadius: 5)
-          .fill(Color.black.opacity(0.4))
+          .fill(Color.black.opacity(0.3))
           .frame(maxWidth: .infinity, alignment: .leading)
           .frame(maxHeight: .infinity)
           .contentShape(RoundedRectangle(cornerRadius: 5))

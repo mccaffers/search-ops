@@ -31,8 +31,8 @@ struct CustomButtonView: View {
             .padding(.horizontal, 2)
             .background(buttonColor)
             .clipShape(RoundedRectangle(cornerRadius: 5))
-            .padding(.leading, 4)
-            .padding(.trailing, 2)
+            .padding(.leading, 3)
+            .padding(.trailing, 3)
         }
         .buttonStyle(PlainButtonStyle())
     }

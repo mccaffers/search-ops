@@ -154,19 +154,22 @@ struct macosAppHistory: View {
             if let myList = filteredByDate[el] {
               
               
+              let availableWidth = max(width - 35, 0)
               HStack(spacing:0) {
                 HStack(spacing:0){
                   Text("Host")
                     .padding(.leading, 5)
                 }
-                .frame(width: width*0.15, alignment:.leading)
+                .frame(width: availableWidth*0.15, alignment:.leading)
                 
                 Text("Index")
-                  .frame(width: width*0.15, alignment:.leading)
+                  .frame(width: availableWidth*0.15, alignment:.leading)
                 Text("Query String")
-                  .frame(width: width*0.4, alignment:.leading)
+                  .frame(width: availableWidth*0.4, alignment:.leading)
                 Text("Date Range")
-                  .frame(width: width*0.3, alignment:.leading)
+                  .frame(width: availableWidth*0.3, alignment:.leading)
+                Spacer()
+                  .frame(width: 35)
               }
               .padding(.vertical, 5)
               .foregroundColor(Color("LabelBackgroundBorder"))
@@ -176,16 +179,21 @@ struct macosAppHistory: View {
               
               let sortedList = myList.sorted { $0.date > $1.date }
               VStack(spacing:0) {
-                ForEach(sortedList.indices, id:\.self) { index in
+                ForEach(sortedList, id:\.id) { searchItem in
                   
-                  if let historySelectedHost = serverObjects.items.first(where: {$0.id == sortedList[index].host}) {
+                  if let historySelectedHost = serverObjects.items.first(where: {$0.id == searchItem.host}) {
                     
                     macosSearchHistoryButton(serverObjects:serverObjects,
-                                             item: sortedList[index],
+                                             item: searchItem,
                                              firstSearchAfterSelectingIndex: .constant(false),
                                              request: request,
                                              width: width,
-                                             host: historySelectedHost)
+                                             host: historySelectedHost,
+                                             onDelete: {
+                                               withAnimation {
+                                                 searchManager.deleteById(id: searchItem.id)
+                                               }
+                                             })
                     
                     
                     .padding(.bottom, 1)
@@ -233,7 +241,7 @@ struct DynamicPlaceholderRowsView: View {
   }
   
   var body: some View {
-    
+    let availableWidth = max(width - 35, 0)
     VStack(spacing: 0) {
       // Header
       HStack(spacing: 0) {
@@ -241,14 +249,16 @@ struct DynamicPlaceholderRowsView: View {
           Text("HostHost")
             .padding(.leading, 5)
         }
-        .frame(width: width * 0.15, alignment: .leading)
+        .frame(width: availableWidth * 0.15, alignment: .leading)
         
         Text("Index")
-          .frame(width: width * 0.15, alignment: .leading)
+          .frame(width: availableWidth * 0.15, alignment: .leading)
         Text("Query String")
-          .frame(width: width * 0.4, alignment: .leading)
+          .frame(width: availableWidth * 0.4, alignment: .leading)
         Text("Date Range")
-          .frame(width: width * 0.3, alignment: .leading)
+          .frame(width: availableWidth * 0.3, alignment: .leading)
+        Spacer()
+          .frame(width: 35)
       }
       .foregroundColor(Color("LabelBackgroundBorder"))
       .font(.system(size: 20))
@@ -265,16 +275,18 @@ struct DynamicPlaceholderRowsView: View {
             Text(randomString(length: Int.random(in: 5...20)))
               .padding(.leading, 5)
           }
-          .frame(width: width * 0.15, alignment: .leading)
+          .frame(width: availableWidth * 0.15, alignment: .leading)
           
           Text(randomString(length: Int.random(in: 4...20)))
-            .frame(width: width * 0.15, alignment: .leading)
+            .frame(width: availableWidth * 0.15, alignment: .leading)
           
           Text(randomString(length: Int.random(in: 10...55)))
-            .frame(width: width * 0.4, alignment: .leading)
+            .frame(width: availableWidth * 0.4, alignment: .leading)
           
           Text(randomString(length: Int.random(in: 2...25)))
-            .frame(width: width * 0.3, alignment: .leading)
+            .frame(width: availableWidth * 0.3, alignment: .leading)
+          Spacer()
+            .frame(width: 35)
         }
         .font(.system(size: 16))
         .frame(height: rowHeight)

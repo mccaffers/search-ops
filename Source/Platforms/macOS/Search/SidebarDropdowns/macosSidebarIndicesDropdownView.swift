@@ -47,7 +47,7 @@ struct macosSidebarIndicesDropdownView: View {
       )
     }
     .frame(maxWidth: .infinity, alignment: .topLeading)
-    .padding(.leading, 10)
+    .padding(.leading, 8)
     .padding(.top, 5)
     .onAppear {
       Task {
