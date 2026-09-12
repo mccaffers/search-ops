@@ -181,6 +181,22 @@ struct macosSearchMainView: View {
   @State var showFilterSidebar = true
   @Binding var showingTextFieldSuggestions : Bool
   
+  var topButtonsPadding: CGFloat {
+    fullScreen ? 5 : 0
+  }
+  
+  var dropdownTopPadding: CGFloat {
+    topButtonsPadding + 33
+  }
+  
+  var datePickerTopPadding: CGFloat {
+    topButtonsPadding + 80
+  }
+  
+  var suggestionsTopPadding: CGFloat {
+    topButtonsPadding + 85
+  }
+  
   var body: some View {
     ZStack {
       Color("Background")
@@ -193,7 +209,7 @@ struct macosSearchMainView: View {
                                     index: selectedIndex,
                                     currentWidth: $currentWidth)
           .padding(.bottom, 5)
-          .padding(.top, fullScreen ? 5: 0)
+          .padding(.top, topButtonsPadding)
 //          .border(.red)
         
         
@@ -239,7 +255,7 @@ struct macosSearchMainView: View {
                 .disabled(selectedHost == nil)
                 .opacity(selectedHost == nil ? 0.5 : 1)
                 .id(updatedFieldsNotification)
-              
+        
             }
             
           Rectangle().fill(.clear)
@@ -303,16 +319,20 @@ struct macosSearchMainView: View {
       
       
       
+      
       if selection != .None {
         
-        Rectangle().fill(Color.black).opacity(0.4)
+        RoundedRectangle(cornerRadius: 5)
+          .fill(Color.black.opacity(0.4))
           .frame(maxWidth: .infinity, alignment: .leading)
           .frame(maxHeight: .infinity)
-          .contentShape(Rectangle())
+          .contentShape(RoundedRectangle(cornerRadius: 5))
           .onTapGesture {
             selection = .None
           }
-          .padding(.top, fullScreen ? 40 : 35)
+          .padding(.top, dropdownTopPadding)
+          .padding(.leading, 2)
+          .padding(.trailing, 2)
         
         if selection == .DatePeriod {
           VStack {
@@ -328,8 +348,7 @@ struct macosSearchMainView: View {
             
           }
           .frame(maxWidth: .infinity, alignment: .trailing)
-          .padding(.top,80)
-          .padding(.top, fullScreen ? 5 : 0)
+          .padding(.top, datePickerTopPadding)
         }
         
         VStack(alignment: .leading, spacing: 0) {
@@ -362,7 +381,7 @@ struct macosSearchMainView: View {
           Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.top, fullScreen ? 40 : 35)
+        .padding(.top, dropdownTopPadding)
         
        
         if selection == .SearchDocumentView {
@@ -400,7 +419,7 @@ struct macosSearchMainView: View {
               .frame(maxWidth: textFieldWidth)
             Spacer()
           }
-          .padding(.top, 85)
+          .padding(.top, suggestionsTopPadding)
           .padding(.leading, 5)
           
         }.frame(maxWidth: .infinity, alignment:.leading)
