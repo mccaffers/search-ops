@@ -21,11 +21,11 @@ final class ResponseErrorTests: XCTestCase {
     _ = RealmManager().getRealm(inMemory: true)
   }
   
-  // Tests the system's response to a query shard exception, an error specific to ElasticSearch.
+  // Tests the system's response to a query shard exception, an error specific to Elasticsearch.
   func testQueryShardException() async throws {
     // Loads a mock response that simulates a query shard exception.
     let response = try SearchOpsTests().OpenFile(filename: "query_shard_exception")
-    // Processes the response to simulate fetching objects from an ElasticSearch server.
+    // Processes the response to simulate fetching objects from an Elasticsearch server.
     let output = Search.getObjects(input: response)
     
     // Asserts that no data objects are returned due to the error.
@@ -37,7 +37,7 @@ final class ResponseErrorTests: XCTestCase {
     XCTAssertEqual(errorMessage, "Failed to parse query [headers.accept:application/json]")
   }
   
-  // Tests handling of a simulated internal server error from ElasticSearch.
+  // Tests handling of a simulated internal server error from Elasticsearch.
   func testInternalError() async throws {
     // Loads a mock response simulating an internal server error.
     let response = try SearchOpsTests().OpenFile(filename: "internal_error")
@@ -89,7 +89,7 @@ final class ResponseErrorTests: XCTestCase {
     XCTAssertEqual(output.parsed?.trimmingCharacters(in: .whitespacesAndNewlines), "abc")
   }
   
-  // Tests indexing statistics retrieval from ElasticSearch.
+  // Tests indexing statistics retrieval from Elasticsearch.
   func testIndex() async throws {
     // Loads a JSON response that could represent indexing statistics.
     let jsonResponse = try SearchOpsTests().OpenFile(filename: "test")
@@ -102,7 +102,7 @@ final class ResponseErrorTests: XCTestCase {
     XCTAssertEqual(output, jsonResponse)
   }
   
-  // Tests handling when an error response is received from ElasticSearch.
+  // Tests handling when an error response is received from Elasticsearch.
   func testGetErrorResponse() async throws {
     // Loads a mock error response.
     let response = try SearchOpsTests().OpenFile(filename: "error")

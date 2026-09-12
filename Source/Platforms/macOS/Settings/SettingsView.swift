@@ -108,7 +108,7 @@ struct SettingsView: View {
       
       VStack(alignment: .leading, spacing:10 ) {
         
-        Text("Strictly no analytics, tracking or advertisements in Search Ops!")
+        Text("Strictly no analytics, tracking or advertisements in SearchOps!")
           .font(.system(size: 12))
       }.padding(.leading, 10)
       
@@ -143,7 +143,7 @@ struct SettingsView: View {
       
       VStack(alignment: .leading, spacing:10 ) {
         
-        Text("Thanks for purchasing Search Ops!")
+        Text("Thanks for purchasing SearchOps!")
         
         Link(destination: URL(string: "mailto:ryan@mccaffers.com")!) {
           

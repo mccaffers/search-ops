@@ -14,7 +14,7 @@ import SwiftyJSON
 @available(iOS 16, *)
 public class SearchRender {
   
-  // Asynchronously performs a search query against an ElasticSearch server using specified parameters.
+  // Asynchronously performs a search query against an Elasticsearch server using specified parameters.
   // Utilizes the `MainActor` to ensure any UI updates from the result are thread-safe.
   @MainActor
   public static func call(pageInput: Int,

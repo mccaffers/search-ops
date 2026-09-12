@@ -15,7 +15,6 @@ public class FireworkSettings: ObservableObject {
 #if os(iOS)
 struct SettingsHome: View {
   
-  @AppStorage("appearanceSelection") private var appearanceSelection: Int = 2
   @ObservedObject var fireworksSettings = FireworkSettings()
   //  @State var showFireworks = false
   @State private var isVisible = false
@@ -66,23 +65,6 @@ struct SettingsHome: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-          ToolbarItem(placement: .navigationBarTrailing) {
-            Button {
-              
-              if appearanceSelection == 2 {
-                appearanceSelection=1;
-              } else if appearanceSelection == 1 {
-                appearanceSelection=2;
-              }
-              
-            } label: {
-              Image(systemName: appearanceSelection == 2 ? "sun.max.fill" : "moon.fill")
-                .font(.system(size:24))
-            }
-          }
-          
-        }
         .background(Color("Background"))
         .frame(maxWidth: .infinity, alignment: .leading)
         .tint(Color("TextColor"))

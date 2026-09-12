@@ -17,7 +17,7 @@ struct SettingsSourceCodeModalView: View {
       
       
       VStack(spacing:20) {
-        Text("Search Ops app is Open Source, available on Github")
+        Text("SearchOps app is Open Source, available on GitHub")
           .frame(maxWidth: .infinity, alignment:.leading)
         
         Text("This repository contains the full application, the SwiftUI and Business logic for processing and querying of your infrastructure. The build hash aligns with the commit hash on Github")
