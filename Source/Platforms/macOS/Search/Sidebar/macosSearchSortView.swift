@@ -159,7 +159,8 @@ struct macosSearchSortView: View {
                         usingLocalField:true)
     })
     .onChange(of: selectedIndex) { newValue in
-        filterObject.sort = nil
+      sortField = nil
+      filterObject.resetIndexSpecificFilters()
     }
     .onChange(of: sortField) { newValue in
       if let newValue = newValue {

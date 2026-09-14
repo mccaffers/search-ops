@@ -287,6 +287,9 @@ struct macosSearchHomeViewCollection: View {
         }
       }
     }
+    .onChange(of: localSelectedIndex) { _ in
+      localFilterObject.resetIndexSpecificFilters()
+    }
   }
 }
 

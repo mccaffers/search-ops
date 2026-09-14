@@ -458,7 +458,11 @@ struct macosSearchMainView: View {
       }
     }
     .onChange(of: selectedIndex) { newValue in
-      filterObject.dateField = nil
+      filterObject.resetIndexSpecificFilters()
+    }
+    .onChange(of: selectedHost?.id) { _ in
+      selectedIndex = ""
+      filterObject.resetIndexSpecificFilters()
     }
     .onChange(of: shouldClearTextfield) { newValue in
       if newValue {

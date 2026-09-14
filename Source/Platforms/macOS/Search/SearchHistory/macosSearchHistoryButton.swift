@@ -41,6 +41,7 @@ struct macosSearchHistoryButton: View {
             filterObject.absoluteRange = absoluteRange
           }
           filterObject.query = item.filter?.query
+          filterObject.sort = item.filter?.sort
           //      firstSearchAfterSelectingIndex = false
           
           request(historySelectedHost, item.index, filterObject)

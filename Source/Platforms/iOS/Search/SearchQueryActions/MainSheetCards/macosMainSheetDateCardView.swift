@@ -42,7 +42,7 @@ struct macosMainSheetDateCardView: View {
           
           if filterObject.dateField != nil {
             Button {
-              filterObject.dateField = nil
+              filterObject.resetIndexSpecificFilters()
             } label: {
               VStack(
                 alignment: .leading,
@@ -143,8 +143,9 @@ struct macosMainSheetDateCardView: View {
                         
                         if filterObject.dateField == nil {
                           filterObject.dateField = item
+                          filterObject.sort = SortObject(order: .Descending, field: item)
                         } else {
-                          filterObject.dateField = nil
+                          filterObject.resetIndexSpecificFilters()
                         }
                         
                         //                                        dateObj.field = item.squashedString
@@ -206,7 +207,7 @@ struct macosMainSheetDateCardView: View {
     })
     .onChange(of: selectedIndex ) { newValue in
       
-      filterObject.dateField = nil
+      filterObject.resetIndexSpecificFilters()
       
 //      if newValue != "" {
 //        

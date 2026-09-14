@@ -37,6 +37,7 @@ I'm sharing SearchOps with a **Convenience Pricing Model** - the complete source
 
 Available on the Apple App Store for iOS and macOS platforms
 
+
 ## Screenshots
 
 <img align="left" width=25% src="./Screenshots/listview.png" style="padding:10px">

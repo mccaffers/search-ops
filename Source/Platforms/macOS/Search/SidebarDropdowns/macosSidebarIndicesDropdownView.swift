@@ -32,14 +32,13 @@ struct macosSidebarIndicesDropdownView: View {
         selectedIndex: $selectedIndex,
         indexArray: indexArray,
         searchAction: {
-          Task {
-            firstSearchAfterSelectingIndex = true
-            shouldClearTextfield = true
-            request()
-            showingScreen = SideBarWrapper(sender: .Flow, item: .Fields)
-            filterObject.dateField = nil
-            selection = .None
-          }
+          firstSearchAfterSelectingIndex = true
+          shouldClearTextfield = true
+          filterObject.resetIndexSpecificFilters()
+          filterObject.query = nil
+          showingScreen = SideBarWrapper(sender: .Flow, item: .Fields)
+          selection = .None
+          request()
         },
         hideAction: {
           selection = .None

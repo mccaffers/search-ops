@@ -63,7 +63,7 @@ struct macosSearchHomeDateTypePicker: View {
           } else if localFilterObject.dateField != nil {
             HStack {
               Button {
-                localFilterObject.dateField = nil
+                localFilterObject.resetIndexSpecificFilters()
               } label: {
                 Text(localFilterObject.dateField?.squashedString ?? "")
                   .padding(10)
@@ -87,10 +87,11 @@ struct macosSearchHomeDateTypePicker: View {
               ForEach(filteredFields, id: \.self) { item in
                 Button {
                   if localFilterObject.dateField == item {
-                    localFilterObject.dateField = nil
+                    localFilterObject.resetIndexSpecificFilters()
                   } else {
                     withAnimation {
                       localFilterObject.dateField = item
+                      localFilterObject.sort = SortObject(order: .Descending, field: item)
                     }
                     localFilterObject.relativeRange = nil
                     localFilterObject.absoluteRange = nil

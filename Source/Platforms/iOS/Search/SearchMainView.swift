@@ -161,6 +161,7 @@ struct SearchMainView: View {
 		validSearchResults = false
 		searchResults = nil
 		hitCount = 0
+		filterObject.resetIndexSpecificFilters()
 	}
 	
 	@State var errorMessage = [ResponseError]()
@@ -332,9 +333,7 @@ struct SearchMainView: View {
     validSearchResults = false
     searchResults = nil
     hitCount = 0
-    filterObject.dateField = nil
-    filterObject.absoluteRange = nil
-    filterObject.relativeRange = nil
+    filterObject.resetIndexSpecificFilters()
     
     if selectedIndex != "" {
       Task {
@@ -423,6 +422,7 @@ struct SearchMainView: View {
         hideBottomBar = true
       }
       
+      selectedIndex = ""
       ClearScreen()
       
     }

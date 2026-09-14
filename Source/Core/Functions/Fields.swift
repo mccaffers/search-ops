@@ -126,14 +126,16 @@ public class Fields {
     
     var sortBy : [String:String]? = nil
     if let sortObject = filterObject.sort {
-      var sortString = sortObject.field.squashedString
+      var sortString = sortObject.field.squashedString.trimmingCharacters(in: .whitespacesAndNewlines)
       
       // TODO, assuming dynamic fields has been made
       // need to come back to this asap
       if sortObject.field.type == "text" {
         sortString = sortString + ".keyword"
       }
-      sortBy = [sortString:sortObject.order.rawValue]
+      if !sortString.isEmpty {
+        sortBy = [sortString:sortObject.order.rawValue]
+      }
     }
     
     

@@ -185,6 +185,7 @@ struct macosSearchHomeIndicesView: View {
             if showAllButton {
               Button(action: {
                 indexFilterText = ""
+                localFilterObject.resetIndexSpecificFilters()
                 withAnimation {
                   localSelectedIndex = "_all"
                 }
@@ -200,6 +201,7 @@ struct macosSearchHomeIndicesView: View {
             ForEach(filteredIndices, id: \.self) { indexName in
               Button(action: {
                 indexFilterText = ""
+                localFilterObject.resetIndexSpecificFilters()
                 withAnimation {
                   localSelectedIndex = indexName
                 }
