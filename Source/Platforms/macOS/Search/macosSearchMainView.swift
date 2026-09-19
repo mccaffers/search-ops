@@ -25,6 +25,7 @@ struct macosSearchMainView: View {
   
   @State var fields = [SquashedFieldsArray]()
   @State var onlyVisibleFields = [SquashedFieldsArray]()
+  @State private var fieldsCacheKey: String = ""
   
   @State var updatedFieldsNotification : UUID = UUID()
 
@@ -77,7 +78,6 @@ struct macosSearchMainView: View {
     schedule = intervalObj
        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
           timeElapsed += 1
-         print(timeElapsed)
          Task {
            await Request()
          }
@@ -97,15 +97,27 @@ struct macosSearchMainView: View {
     if let selectedHost = selectedHost {
       
       searchIndicator = true
-      let mappedFields = await IndexMap.indexMappings(serverDetails: selectedHost, index: selectedIndex)
-      
-      let datefields = mappedFields.filter { $0.type == "date" }
+      let cacheKey = Self.computeCacheKey(hostId: selectedHost.id, index: selectedIndex)
+      var mappedFields: [SquashedFieldsArray]
+      let isCacheHit = Self.isCacheValid(fields: fields, fieldsCacheKey: fieldsCacheKey, currentKey: cacheKey)
+      let isSameHostAndIndex = fieldsCacheKey == cacheKey
+
+      if isCacheHit {
+        mappedFields = fields
+      } else {
+        mappedFields = await IndexMap.indexMappings(serverDetails: selectedHost, index: selectedIndex)
+      }
       
       let response = await SearchRender.call(pageInput: page,
                                              filterObject: filterObject,
                                              host: selectedHost,
                                              index: selectedIndex,
                                              limitObj: LimitObj())
+      
+      guard cacheKey == Self.computeCacheKey(hostId: self.selectedHost?.id, index: self.selectedIndex) else {
+        searchIndicator = false
+        return
+      }
       
       if let error = response.error {
         searchResponseError = error
@@ -130,6 +142,7 @@ struct macosSearchMainView: View {
         
         filteredFields = [SquashedFieldsArray]()
         viewableFields.fields = resultsFields.fields
+        let previousOnlyVisible = onlyVisibleFields
         onlyVisibleFields = viewableFields.fields
         //      var fieldsPlaceholder = mappedFields
         //
@@ -140,8 +153,23 @@ struct macosSearchMainView: View {
           }
         }
         
-        if page == 1 {
+        if isCacheHit {
+          var unusedTargetFields = [SquashedFieldsArray]()
+          Self.syncVisibility(
+            sourceFields: fields,
+            sourceOnlyVisible: [],
+            targetFields: &unusedTargetFields,
+            targetOnlyVisible: &onlyVisibleFields
+          )
+        } else {
+          Self.syncVisibility(
+            sourceFields: isSameHostAndIndex ? fields : [],
+            sourceOnlyVisible: isSameHostAndIndex ? previousOnlyVisible : [],
+            targetFields: &mappedFields,
+            targetOnlyVisible: &onlyVisibleFields
+          )
           fields = mappedFields.sorted(by: {$0.squashedString < $1.squashedString})
+          fieldsCacheKey = cacheKey
         }
         
         searchResultsUpdated = UUID()
@@ -471,6 +499,43 @@ struct macosSearchMainView: View {
       }
     }
     .environmentObject(filterObject)
+  }
+}
+
+extension macosSearchMainView {
+  public static func computeCacheKey(hostId: UUID?, index: String) -> String {
+    "\(hostId?.uuidString ?? "")|\(index)"
+  }
+
+  public static func isCacheValid(fields: [SquashedFieldsArray], fieldsCacheKey: String, currentKey: String) -> Bool {
+    !fields.isEmpty && fieldsCacheKey == currentKey
+  }
+
+  public static func syncVisibility(
+    sourceFields: [SquashedFieldsArray],
+    sourceOnlyVisible: [SquashedFieldsArray],
+    targetFields: inout [SquashedFieldsArray],
+    targetOnlyVisible: inout [SquashedFieldsArray]
+  ) {
+    let visibleKeys = Set((sourceFields + sourceOnlyVisible).filter { $0.visible }.map { $0.squashedString })
+
+    for field in targetFields {
+      if visibleKeys.contains(field.squashedString) {
+        field.visible = true
+      }
+    }
+
+    for field in targetOnlyVisible {
+      if visibleKeys.contains(field.squashedString) {
+        field.visible = true
+      }
+    }
+
+    var existingTargetKeys = Set(targetFields.map { $0.squashedString })
+    for field in sourceFields where field.visible && !existingTargetKeys.contains(field.squashedString) {
+      targetFields.append(field)
+      existingTargetKeys.insert(field.squashedString)
+    }
   }
 }
 

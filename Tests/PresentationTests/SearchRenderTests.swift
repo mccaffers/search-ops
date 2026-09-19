@@ -258,6 +258,207 @@ final class SearchRenderTests: XCTestCase  {
     XCTAssertEqual(fields[0].fieldParts, ["a", "b", "c", "d"])
     XCTAssertTrue(fields[0] === onlyVisibleFields[0])
   }
+
+  func testSyncVisibilityPreservesMappedFields() {
+    let source1 = SquashedFieldsArray(squashedString: "fieldA")
+    source1.visible = true
+    let source2 = SquashedFieldsArray(squashedString: "fieldB")
+    source2.visible = false
+    let sourceFields = [source1, source2]
+    let sourceOnlyVisible = [SquashedFieldsArray]()
+
+    let target1 = SquashedFieldsArray(squashedString: "fieldA")
+    target1.visible = false
+    let target2 = SquashedFieldsArray(squashedString: "fieldB")
+    target2.visible = false
+    let target3 = SquashedFieldsArray(squashedString: "fieldC")
+    target3.visible = false
+    var targetFields = [target1, target2, target3]
+    var targetOnlyVisible = [SquashedFieldsArray]()
+
+    macosSearchMainView.syncVisibility(
+      sourceFields: sourceFields,
+      sourceOnlyVisible: sourceOnlyVisible,
+      targetFields: &targetFields,
+      targetOnlyVisible: &targetOnlyVisible
+    )
+
+    XCTAssertTrue(target1.visible, "fieldA was visible in source and should be marked visible in target")
+    XCTAssertFalse(target2.visible, "fieldB was false in source and should remain false")
+    XCTAssertFalse(target3.visible, "fieldC was not in source and should remain false")
+  }
+
+  func testSyncVisibilityPreservesOnlyVisibleFields() {
+    let source1 = SquashedFieldsArray(squashedString: "fieldA")
+    source1.visible = true
+    let sourceFields = [source1]
+
+    let sourceVis1 = SquashedFieldsArray(squashedString: "fieldB")
+    sourceVis1.visible = true
+    let sourceVis2 = SquashedFieldsArray(squashedString: "fieldC")
+    sourceVis2.visible = false
+    let sourceOnlyVisible = [sourceVis1, sourceVis2]
+
+    var targetFields = [SquashedFieldsArray]()
+
+    let targetVis1 = SquashedFieldsArray(squashedString: "fieldA")
+    targetVis1.visible = false
+    let targetVis2 = SquashedFieldsArray(squashedString: "fieldB")
+    targetVis2.visible = false
+    let targetVis3 = SquashedFieldsArray(squashedString: "fieldC")
+    targetVis3.visible = false
+    let targetVis4 = SquashedFieldsArray(squashedString: "fieldD")
+    targetVis4.visible = false
+    var targetOnlyVisible = [targetVis1, targetVis2, targetVis3, targetVis4]
+
+    macosSearchMainView.syncVisibility(
+      sourceFields: sourceFields,
+      sourceOnlyVisible: sourceOnlyVisible,
+      targetFields: &targetFields,
+      targetOnlyVisible: &targetOnlyVisible
+    )
+
+    XCTAssertTrue(targetVis1.visible, "fieldA was visible in sourceFields, should be visible in targetOnlyVisible")
+    XCTAssertTrue(targetVis2.visible, "fieldB was visible in sourceOnlyVisible, should be visible in targetOnlyVisible")
+    XCTAssertFalse(targetVis3.visible, "fieldC was false in sourceOnlyVisible, should remain false")
+    XCTAssertFalse(targetVis4.visible, "fieldD was not in visibleKeys, should remain false")
+  }
+
+  func testSyncVisibilityRetainsUnmappedDynamicFields() {
+    let mappedField = SquashedFieldsArray(squashedString: "mapped.field")
+    mappedField.visible = true
+    let dynamicField = SquashedFieldsArray(squashedString: "dynamic.field", fieldParts: ["dynamic", "field"])
+    dynamicField.type = "keyword"
+    dynamicField.visible = true
+    let hiddenDynamicField = SquashedFieldsArray(squashedString: "hidden.field", fieldParts: ["hidden", "field"])
+    hiddenDynamicField.visible = false
+
+    let sourceFields = [mappedField, dynamicField, hiddenDynamicField]
+    let sourceOnlyVisible = [SquashedFieldsArray]()
+
+    let targetMapped = SquashedFieldsArray(squashedString: "mapped.field")
+    targetMapped.visible = false
+    let targetOther = SquashedFieldsArray(squashedString: "other.mapped")
+    targetOther.visible = false
+    var targetFields = [targetMapped, targetOther]
+    var targetOnlyVisible = [SquashedFieldsArray]()
+
+    macosSearchMainView.syncVisibility(
+      sourceFields: sourceFields,
+      sourceOnlyVisible: sourceOnlyVisible,
+      targetFields: &targetFields,
+      targetOnlyVisible: &targetOnlyVisible
+    )
+
+    XCTAssertEqual(targetFields.count, 3, "targetFields should retain the unmapped dynamic field that was visible")
+    XCTAssertTrue(targetMapped.visible, "mapped.field should be marked visible")
+    XCTAssertFalse(targetOther.visible, "other.mapped should remain false")
+    XCTAssertTrue(targetFields.contains(where: { $0.squashedString == "dynamic.field" && $0.visible }), "dynamic.field should be preserved with visible=true")
+    XCTAssertFalse(targetFields.contains(where: { $0.squashedString == "hidden.field" }), "hidden unmapped fields should not be added")
+  }
+
+  func testSyncVisibilityEmptySourcesDoesNotModifyTargets() {
+    let target1 = SquashedFieldsArray(squashedString: "fieldA")
+    target1.visible = false
+    var targetFields = [target1]
+
+    let targetVis1 = SquashedFieldsArray(squashedString: "fieldB")
+    targetVis1.visible = false
+    var targetOnlyVisible = [targetVis1]
+
+    macosSearchMainView.syncVisibility(
+      sourceFields: [],
+      sourceOnlyVisible: [],
+      targetFields: &targetFields,
+      targetOnlyVisible: &targetOnlyVisible
+    )
+
+    XCTAssertEqual(targetFields.count, 1)
+    XCTAssertFalse(target1.visible)
+    XCTAssertEqual(targetOnlyVisible.count, 1)
+    XCTAssertFalse(targetVis1.visible)
+  }
+
+  func testSyncVisibilityPreservesMultipleFieldsWithoutDuplicates() {
+    let dyn1 = SquashedFieldsArray(squashedString: "dyn1", fieldParts: ["dyn1"])
+    dyn1.visible = true
+    let dyn2 = SquashedFieldsArray(squashedString: "dyn1", fieldParts: ["dyn1"])
+    dyn2.visible = true
+    let sourceFields = [dyn1, dyn2]
+    let sourceOnlyVisible = [SquashedFieldsArray]()
+
+    var targetFields = [SquashedFieldsArray]()
+    var targetOnlyVisible = [SquashedFieldsArray]()
+
+    macosSearchMainView.syncVisibility(
+      sourceFields: sourceFields,
+      sourceOnlyVisible: sourceOnlyVisible,
+      targetFields: &targetFields,
+      targetOnlyVisible: &targetOnlyVisible
+    )
+
+    XCTAssertEqual(targetFields.count, 1, "Duplicate visible source fields should not create duplicates in targetFields")
+    XCTAssertEqual(targetFields[0].squashedString, "dyn1")
+    XCTAssertTrue(targetFields[0].visible)
+  }
+
+  func testKeyedCacheLogic() {
+    let hostId = UUID()
+    let otherHostId = UUID()
+    let index = "test-index"
+    let otherIndex = "other-index"
+
+    let currentKey = macosSearchMainView.computeCacheKey(hostId: hostId, index: index)
+    XCTAssertEqual(currentKey, "\(hostId.uuidString)|\(index)")
+
+    let field = SquashedFieldsArray(squashedString: "fieldA")
+    let fields = [field]
+
+    // Cache hit: same host, same index, non-empty fields
+    let hit = macosSearchMainView.isCacheValid(fields: fields, fieldsCacheKey: currentKey, currentKey: currentKey)
+    XCTAssertTrue(hit, "Cache should be valid when host, index, and non-empty fields match")
+
+    // Cache miss: empty fields
+    let emptyMiss = macosSearchMainView.isCacheValid(fields: [], fieldsCacheKey: currentKey, currentKey: currentKey)
+    XCTAssertFalse(emptyMiss, "Cache should be invalid when fields are empty")
+
+    // Cache miss: different index
+    let otherIndexKey = macosSearchMainView.computeCacheKey(hostId: hostId, index: otherIndex)
+    let indexMiss = macosSearchMainView.isCacheValid(fields: fields, fieldsCacheKey: currentKey, currentKey: otherIndexKey)
+    XCTAssertFalse(indexMiss, "Cache should be invalid when index changes")
+
+    // Cache miss: different host
+    let otherHostKey = macosSearchMainView.computeCacheKey(hostId: otherHostId, index: index)
+    let hostMiss = macosSearchMainView.isCacheValid(fields: fields, fieldsCacheKey: currentKey, currentKey: otherHostKey)
+    XCTAssertFalse(hostMiss, "Cache should be invalid when host changes")
+  }
+
+  func testSyncVisibilityOnReusePathDoesNotResurrectHiddenFields() {
+    let fieldA = SquashedFieldsArray(squashedString: "fieldA")
+    fieldA.visible = false
+    let fieldB = SquashedFieldsArray(squashedString: "fieldB")
+    fieldB.visible = true
+    let fields = [fieldA, fieldB]
+
+    let visA = SquashedFieldsArray(squashedString: "fieldA")
+    visA.visible = false
+    let visB = SquashedFieldsArray(squashedString: "fieldB")
+    visB.visible = false
+    var onlyVisibleFields = [visA, visB]
+
+    var unused = [SquashedFieldsArray]()
+    macosSearchMainView.syncVisibility(
+      sourceFields: fields,
+      sourceOnlyVisible: [],
+      targetFields: &unused,
+      targetOnlyVisible: &onlyVisibleFields
+    )
+
+    XCTAssertFalse(fieldA.visible, "Hidden field in fields must remain false")
+    XCTAssertTrue(fieldB.visible, "Visible field in fields must remain true")
+    XCTAssertFalse(visA.visible, "Hidden field must not be resurrected in onlyVisibleFields")
+    XCTAssertTrue(visB.visible, "Visible field must be marked visible in onlyVisibleFields")
+  }
 #endif
 
   override func tearDown() {
