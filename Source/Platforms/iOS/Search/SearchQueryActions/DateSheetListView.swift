@@ -69,9 +69,10 @@ struct DateSheetListView: View {
 									if let dateObj = filterObject.dateField,
 										 dateObj.index == item.index,
 										 dateObj.squashedString == item.squashedString {
-										filterObject.dateField = nil
+										filterObject.resetIndexSpecificFilters()
 									} else {
 										filterObject.dateField = item
+										filterObject.sort = SortObject(order: .Descending, field: item)
 									}
 								}
 								

@@ -36,6 +36,32 @@ class DocumentDetail: ObservableObject {
     return jsonString
     
   }
+
+  public static func formatDisplayValue(_ value: Any) -> String? {
+    if let stringArray = value as? [String] {
+      let joined = stringArray.joined()
+      guard !joined.isEmpty else { return nil }
+      if stringArray.count > 1 {
+        return stringArray.description
+      } else {
+        return stringArray.first
+      }
+    } else if let anyArray = value as? [Any] {
+      guard !anyArray.isEmpty else { return nil }
+      if anyArray.count > 1 {
+        return "\(anyArray)"
+      } else if let first = anyArray.first {
+        return "\(first)"
+      }
+      return nil
+    } else if let string = value as? String {
+      let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+      return trimmed.isEmpty ? nil : string
+    } else if let number = value as? NSNumber {
+      return number.stringValue
+    }
+    return nil
+  }
 }
 
 #if os(iOS)
@@ -135,6 +161,7 @@ struct SearchMainView: View {
 		validSearchResults = false
 		searchResults = nil
 		hitCount = 0
+		filterObject.resetIndexSpecificFilters()
 	}
 	
 	@State var errorMessage = [ResponseError]()
@@ -306,9 +333,7 @@ struct SearchMainView: View {
     validSearchResults = false
     searchResults = nil
     hitCount = 0
-    filterObject.dateField = nil
-    filterObject.absoluteRange = nil
-    filterObject.relativeRange = nil
+    filterObject.resetIndexSpecificFilters()
     
     if selectedIndex != "" {
       Task {
@@ -397,6 +422,7 @@ struct SearchMainView: View {
         hideBottomBar = true
       }
       
+      selectedIndex = ""
       ClearScreen()
       
     }

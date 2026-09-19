@@ -23,6 +23,7 @@ enum macosSearchPopoverSelection: Hashable {
 // Main view
 // New Search
 // Recent Searches
+#if os(macOS)
 struct macosSearchHomeViewCollection: View {
   
   @State var showing : macosSearchWelcomeScreenMainView = .All
@@ -286,6 +287,9 @@ struct macosSearchHomeViewCollection: View {
         }
       }
     }
+    .onChange(of: localSelectedIndex) { _ in
+      localFilterObject.resetIndexSpecificFilters()
+    }
   }
 }
 
@@ -306,3 +310,4 @@ struct macosSearchHomeRelativeCustomButton: View {
     .buttonStyle(PlainButtonStyle())
   }
 }
+#endif

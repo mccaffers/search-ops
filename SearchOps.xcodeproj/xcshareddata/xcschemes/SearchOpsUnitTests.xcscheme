@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1630"
+   LastUpgradeVersion = "2650"
    version = "2.2">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -13,8 +13,9 @@
             buildForProfiling = "NO"
             buildForArchiving = "NO"
             buildForAnalyzing = "NO">
-            <AutocreatedTestPlanReference>
-            </AutocreatedTestPlanReference>
+            <TestPlanReference
+               reference = "container:Tests/TestPlan.xctestplan">
+            </TestPlanReference>
          </BuildActionEntry>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -39,7 +40,8 @@
       shouldUseLaunchSchemeArgsEnv = "YES">
       <TestPlans>
          <TestPlanReference
-            reference = "container:Tests/TestPlan.xctestplan">
+            reference = "container:Tests/TestPlan.xctestplan"
+            default = "YES">
          </TestPlanReference>
       </TestPlans>
       <Testables>

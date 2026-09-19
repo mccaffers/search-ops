@@ -25,6 +25,7 @@ struct macosSearchMainView: View {
   
   @State var fields = [SquashedFieldsArray]()
   @State var onlyVisibleFields = [SquashedFieldsArray]()
+  @State private var fieldsCacheKey: String = ""
   
   @State var updatedFieldsNotification : UUID = UUID()
 
@@ -39,7 +40,6 @@ struct macosSearchMainView: View {
   @EnvironmentObject var hostsUpdated : HostUpdatedNotifier
  
   @State var selected = false
-  @State var textRefresh = UUID()
   @State var topBarDateButtonRefresh = UUID()
   @Binding var fullScreen : Bool
   
@@ -78,7 +78,6 @@ struct macosSearchMainView: View {
     schedule = intervalObj
        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
           timeElapsed += 1
-         print(timeElapsed)
          Task {
            await Request()
          }
@@ -93,25 +92,21 @@ struct macosSearchMainView: View {
   
   @MainActor
   func Request(page:Int = 1 ) async {
+    searchResponseError = nil
+    currentPage = page
     if let selectedHost = selectedHost {
       
-//      renderedObjects = nil
-      
       searchIndicator = true
-      let mappedFields = await IndexMap.indexMappings(serverDetails: selectedHost, index: selectedIndex)
-      
-      let datefields = mappedFields.filter { $0.type == "date" }
-      
-      
-      // TODO, should this go in the call above?
-        var searchEvent = RealmSearchEvent()
-        searchEvent.date = Date.now
-        searchEvent.host = selectedHost.id
-        searchEvent.index = selectedIndex
-        searchEvent.filter = filterObject.ejectRealmObject()
-        
-        SearchHistoryDataManager().addNew(item: searchEvent)
+      let cacheKey = Self.computeCacheKey(hostId: selectedHost.id, index: selectedIndex)
+      var mappedFields: [SquashedFieldsArray]
+      let isCacheHit = Self.isCacheValid(fields: fields, fieldsCacheKey: fieldsCacheKey, currentKey: cacheKey)
+      let isSameHostAndIndex = fieldsCacheKey == cacheKey
 
+      if isCacheHit {
+        mappedFields = fields
+      } else {
+        mappedFields = await IndexMap.indexMappings(serverDetails: selectedHost, index: selectedIndex)
+      }
       
       let response = await SearchRender.call(pageInput: page,
                                              filterObject: filterObject,
@@ -119,20 +114,35 @@ struct macosSearchMainView: View {
                                              index: selectedIndex,
                                              limitObj: LimitObj())
       
+      guard cacheKey == Self.computeCacheKey(hostId: self.selectedHost?.id, index: self.selectedIndex) else {
+        searchIndicator = false
+        return
+      }
+      
       if let error = response.error {
         searchResponseError = error
+        renderedObjects = nil
       } else {
+        searchResponseError = nil
+        
+        var searchEvent = RealmSearchEvent()
+        searchEvent.date = Date.now
+        searchEvent.host = selectedHost.id
+        searchEvent.index = selectedIndex
+        searchEvent.filter = filterObject.ejectRealmObject()
+        
+        SearchHistoryDataManager().addNew(item: searchEvent)
         
         let searchResults = response.results
         let hitCount = response.hits
         resultsFields.fields = response.fields ?? []
-        currentPage = page
         pageCount = response.pages
         
         itemDetail.showingView = false
         
         filteredFields = [SquashedFieldsArray]()
         viewableFields.fields = resultsFields.fields
+        let previousOnlyVisible = onlyVisibleFields
         onlyVisibleFields = viewableFields.fields
         //      var fieldsPlaceholder = mappedFields
         //
@@ -143,8 +153,23 @@ struct macosSearchMainView: View {
           }
         }
         
-        if page == 1 {
+        if isCacheHit {
+          var unusedTargetFields = [SquashedFieldsArray]()
+          Self.syncVisibility(
+            sourceFields: fields,
+            sourceOnlyVisible: [],
+            targetFields: &unusedTargetFields,
+            targetOnlyVisible: &onlyVisibleFields
+          )
+        } else {
+          Self.syncVisibility(
+            sourceFields: isSameHostAndIndex ? fields : [],
+            sourceOnlyVisible: isSameHostAndIndex ? previousOnlyVisible : [],
+            targetFields: &mappedFields,
+            targetOnlyVisible: &onlyVisibleFields
+          )
           fields = mappedFields.sorted(by: {$0.squashedString < $1.squashedString})
+          fieldsCacheKey = cacheKey
         }
         
         searchResultsUpdated = UUID()
@@ -171,7 +196,6 @@ struct macosSearchMainView: View {
       Task {
         await Request ()
       }
-    textRefresh=UUID()
     
   }
   
@@ -180,6 +204,22 @@ struct macosSearchMainView: View {
   @State var textFieldWidth : CGFloat = 0
   @State var showFilterSidebar = true
   @Binding var showingTextFieldSuggestions : Bool
+  
+  var topButtonsPadding: CGFloat {
+    fullScreen ? 5 : 0
+  }
+  
+  var dropdownTopPadding: CGFloat {
+    topButtonsPadding + 33
+  }
+  
+  var datePickerTopPadding: CGFloat {
+    topButtonsPadding + 80
+  }
+  
+  var suggestionsTopPadding: CGFloat {
+    topButtonsPadding + 85
+  }
   
   var body: some View {
     ZStack {
@@ -193,7 +233,7 @@ struct macosSearchMainView: View {
                                     index: selectedIndex,
                                     currentWidth: $currentWidth)
           .padding(.bottom, 5)
-          .padding(.top, fullScreen ? 5: 0)
+          .padding(.top, topButtonsPadding)
 //          .border(.red)
         
         
@@ -239,7 +279,7 @@ struct macosSearchMainView: View {
                 .disabled(selectedHost == nil)
                 .opacity(selectedHost == nil ? 0.5 : 1)
                 .id(updatedFieldsNotification)
-              
+        
             }
             
           Rectangle().fill(.clear)
@@ -303,15 +343,20 @@ struct macosSearchMainView: View {
       
       
       
+      
       if selection != .None {
         
-        Rectangle().fill(Color.black).opacity(0.4)
+        RoundedRectangle(cornerRadius: 5)
+          .fill(Color.black.opacity(0.3))
           .frame(maxWidth: .infinity, alignment: .leading)
           .frame(maxHeight: .infinity)
-          .contentShape(Rectangle())
+          .contentShape(RoundedRectangle(cornerRadius: 5))
           .onTapGesture {
             selection = .None
           }
+          .padding(.top, dropdownTopPadding)
+          .padding(.leading, 2)
+          .padding(.trailing, 2)
         
         if selection == .DatePeriod {
           VStack {
@@ -327,13 +372,12 @@ struct macosSearchMainView: View {
             
           }
           .frame(maxWidth: .infinity, alignment: .trailing)
-          .padding(.top,80)
-          .padding(.top, fullScreen ? 5 : 0)
+          .padding(.top, datePickerTopPadding)
         }
         
-        VStack {
+        VStack(alignment: .leading, spacing: 0) {
           // Popups
-          VStack {
+          VStack(alignment: .leading, spacing: 0) {
             if selection == .Hosts {
               macosSidebarHostsDropdownView(items: items,
                                             selectedHost: $selectedHost,
@@ -355,19 +399,21 @@ struct macosSearchMainView: View {
                 }
               }
             }
-          }.frame(maxWidth: currentWidth, alignment:.leading)
+          }
+          .frame(width: 340, alignment: .topLeading)
           
-          
-         
-        
-          
-          
-        }.frame(maxWidth: .infinity, alignment:.leading)
+          Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.top, dropdownTopPadding)
         
        
         if selection == .SearchDocumentView {
           VStack {
-            macosDocumentDetailView(itemDetail: itemDetail)
+            macosDocumentDetailView(itemDetail: itemDetail,
+                                    fields: $fields,
+                                    onlyVisibleFields: $onlyVisibleFields,
+                                    updatedFieldsNotification: $updatedFieldsNotification)
         
           }
           .frame(maxWidth: .infinity, alignment:.trailing)
@@ -397,7 +443,7 @@ struct macosSearchMainView: View {
               .frame(maxWidth: textFieldWidth)
             Spacer()
           }
-          .padding(.top, 85)
+          .padding(.top, suggestionsTopPadding)
           .padding(.leading, 5)
           
         }.frame(maxWidth: .infinity, alignment:.leading)
@@ -427,16 +473,22 @@ struct macosSearchMainView: View {
         selection = .SearchDocumentView
       }
     }
-    .onChange(of: filterObject.id) { newValue in
-      
-      if filterObject.query?.values.first?.string != searchText {
-        lastValue = filterObject.query?.values.first?.string ?? ""
+    .onChange(of: filterObject.query?.values.first?.string) { newValue in
+      if newValue != searchText {
+        lastValue = newValue ?? ""
         searchText = lastValue
-        
       }
     }
     .onChange(of: selectedIndex) { newValue in
-      filterObject.dateField = nil
+      searchResponseError = nil
+      currentPage = 0
+      filterObject.resetIndexSpecificFilters()
+    }
+    .onChange(of: selectedHost?.id) { _ in
+      searchResponseError = nil
+      selectedIndex = ""
+      currentPage = 0
+      filterObject.resetIndexSpecificFilters()
     }
     .onChange(of: shouldClearTextfield) { newValue in
       if newValue {
@@ -447,6 +499,43 @@ struct macosSearchMainView: View {
       }
     }
     .environmentObject(filterObject)
+  }
+}
+
+extension macosSearchMainView {
+  public static func computeCacheKey(hostId: UUID?, index: String) -> String {
+    "\(hostId?.uuidString ?? "")|\(index)"
+  }
+
+  public static func isCacheValid(fields: [SquashedFieldsArray], fieldsCacheKey: String, currentKey: String) -> Bool {
+    !fields.isEmpty && fieldsCacheKey == currentKey
+  }
+
+  public static func syncVisibility(
+    sourceFields: [SquashedFieldsArray],
+    sourceOnlyVisible: [SquashedFieldsArray],
+    targetFields: inout [SquashedFieldsArray],
+    targetOnlyVisible: inout [SquashedFieldsArray]
+  ) {
+    let visibleKeys = Set((sourceFields + sourceOnlyVisible).filter { $0.visible }.map { $0.squashedString })
+
+    for field in targetFields {
+      if visibleKeys.contains(field.squashedString) {
+        field.visible = true
+      }
+    }
+
+    for field in targetOnlyVisible {
+      if visibleKeys.contains(field.squashedString) {
+        field.visible = true
+      }
+    }
+
+    var existingTargetKeys = Set(targetFields.map { $0.squashedString })
+    for field in sourceFields where field.visible && !existingTargetKeys.contains(field.squashedString) {
+      targetFields.append(field)
+      existingTargetKeys.insert(field.squashedString)
+    }
   }
 }
 

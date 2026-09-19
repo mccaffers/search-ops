@@ -15,13 +15,64 @@ public enum macosDocumentView {
   case Document
 }
 
+struct DocumentFieldHeaderView: View {
+  let key: String
+  let isVisible: Bool
+  let onToggle: () -> Void
+  @State private var isHovered = false
+
+  var body: some View {
+    HStack(alignment: .center, spacing: 6) {
+      Text(key)
+        .foregroundColor(Color("LabelBackgroundFocus"))
+
+      Button(action: onToggle) {
+        Image(systemName: isVisible ? "list.bullet.circle.fill" : "list.bullet.circle")
+          .font(.system(size: 13))
+          .foregroundColor(
+            isVisible
+              ? Color.accentColor
+              : (isHovered ? Color("LabelBackgroundFocus") : Color("TextSecondary"))
+          )
+          .frame(width: 16, height: 16)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(PlainButtonStyle())
+      .help(isVisible ? "Hide field from results list" : "Show field in results list")
+      .accessibilityLabel(isVisible ? "Hide \(key) from results list" : "Show \(key) in results list")
+      .onHover { hovering in
+        isHovered = hovering
+        if hovering {
+          NSCursor.pointingHand.push()
+        } else {
+          NSCursor.pop()
+        }
+      }
+    }
+  }
+}
+
 struct macosDocumentDetailView: View {
   
   @ObservedObject var itemDetail: DocumentDetail
+  @Binding var fields: [SquashedFieldsArray]
+  @Binding var onlyVisibleFields: [SquashedFieldsArray]
+  @Binding var updatedFieldsNotification: UUID
   @State private var offset: CGFloat = 300
   @State private var view : macosDocumentView = .Document
   @State private var jsonDocument = ""
+  @State private var refreshId = UUID()
   
+  func isFieldVisible(_ key: String) -> Bool {
+    Self.isFieldVisible(key, in: fields, onlyVisibleFields: onlyVisibleFields)
+  }
+
+  func toggleFieldVisibility(_ key: String) {
+    _ = Self.toggleFieldVisibility(key, fields: &fields, onlyVisibleFields: &onlyVisibleFields)
+    updatedFieldsNotification = UUID()
+    refreshId = UUID()
+  }
+
   func containsCharacters(_ values: [String]) -> Bool {
       let joinedString = values.joined()
       return !joinedString.isEmpty
@@ -73,16 +124,19 @@ struct macosDocumentDetailView: View {
           ScrollView {
             VStack(alignment: .leading, spacing:0) {
               ForEach(document.keys.sorted(), id: \.self) { key in
-                if let values = document[key] as? [String],
-                   containsCharacters(values) {
-                  Text(key)
-                    .foregroundColor(Color("LabelBackgroundFocus"))
+                if let rawValue = document[key],
+                   let displayValue = DocumentDetail.formatDisplayValue(rawValue) {
+                  DocumentFieldHeaderView(
+                    key: key,
+                    isVisible: isFieldVisible(key),
+                    onToggle: {
+                      toggleFieldVisibility(key)
+                    }
+                  )
                   
-                  ForEach(values, id: \.self) { value in
-                    Text(value)
-                      .padding(.leading, 10)
-                      .padding(.bottom, 10)
-                  }
+                  Text(displayValue)
+                    .padding(.leading, 10)
+                    .padding(.bottom, 10)
                 }
               }
             }
@@ -91,6 +145,7 @@ struct macosDocumentDetailView: View {
             .padding(.horizontal, 15)
             
           }
+          .id(refreshId)
         } else if view == .JSON {
           BetterTextEditor(text: .constant(jsonDocument), onClick:{})
           .textFieldStyle(PlainTextFieldStyle())
@@ -121,6 +176,65 @@ struct macosDocumentDetailView: View {
       itemDetail.showingView = false
       itemDetail.item = nil
     }
+  }
+}
+
+extension macosDocumentDetailView {
+  public static func isFieldVisible(
+    _ key: String,
+    in fields: [SquashedFieldsArray],
+    onlyVisibleFields: [SquashedFieldsArray] = []
+  ) -> Bool {
+    if let field = fields.first(where: { $0.squashedString == key }) {
+      return field.visible
+    }
+    return onlyVisibleFields.first(where: { $0.squashedString == key })?.visible ?? false
+  }
+
+  @discardableResult
+  public static func toggleFieldVisibility(
+    _ key: String,
+    fields: inout [SquashedFieldsArray],
+    onlyVisibleFields: inout [SquashedFieldsArray]
+  ) -> Bool {
+    let fieldInFields = fields.first(where: { $0.squashedString == key })
+    let fieldInVisible = onlyVisibleFields.first(where: { $0.squashedString == key })
+
+    let newVisible: Bool
+    if let field = fieldInFields {
+      field.visible.toggle()
+      newVisible = field.visible
+    } else if let visibleField = fieldInVisible {
+      visibleField.visible.toggle()
+      newVisible = visibleField.visible
+    } else {
+      newVisible = true
+    }
+
+    // Synchronize fields
+    if let field = fieldInFields {
+      field.visible = newVisible
+    } else {
+      let targetField: SquashedFieldsArray
+      if let existingVisible = fieldInVisible {
+        targetField = existingVisible
+      } else {
+        let parts = key.components(separatedBy: ".")
+        targetField = SquashedFieldsArray(squashedString: key, fieldParts: parts)
+      }
+      targetField.visible = newVisible
+      fields.append(targetField)
+    }
+
+    // Synchronize onlyVisibleFields using the exact same instance
+    if let visibleField = fieldInVisible {
+      visibleField.visible = newVisible
+    } else if newVisible {
+      let fieldToAdd = fieldInFields ?? fields.first(where: { $0.squashedString == key })!
+      onlyVisibleFields.append(fieldToAdd)
+    }
+
+    return newVisible
   }
 }
 

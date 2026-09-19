@@ -45,7 +45,7 @@ struct MainSheetDateCardView: View {
           
           if filterObject.dateField != nil {
             Button {
-              filterObject.dateField = nil
+              filterObject.resetIndexSpecificFilters()
             } label: {
               VStack(
                 alignment: .leading,
@@ -140,8 +140,9 @@ struct MainSheetDateCardView: View {
                           
                           if filterObject.dateField == nil {
                             filterObject.dateField = item
+                            filterObject.sort = SortObject(order: .Descending, field: item)
                           } else {
-                            filterObject.dateField = nil
+                            filterObject.resetIndexSpecificFilters()
                           }
                           
                           //                                        dateObj.field = item.squashedString

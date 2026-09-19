@@ -43,7 +43,7 @@ struct macosSearchDatePicker: View {
         
         if filterObject.dateField != nil {
           Button {
-            filterObject.dateField = nil
+            filterObject.resetIndexSpecificFilters()
           } label: {
             VStack(
               alignment: .leading,
@@ -96,7 +96,7 @@ struct macosSearchDatePicker: View {
             } else if filterObject.dateField != nil {
               List {
                 Button {
-                  filterObject.dateField = nil
+                  filterObject.resetIndexSpecificFilters()
                 } label: {
                   Text(filterObject.dateField?.squashedString ?? "")
                 }.niceButton(
@@ -176,7 +176,7 @@ struct macosSearchDatePicker: View {
     .frame(maxWidth: .infinity,alignment: .leading)
     .onChange(of: selectedIndex ) { newValue in
       
-      filterObject.dateField = nil
+      filterObject.resetIndexSpecificFilters()
 
     }
 

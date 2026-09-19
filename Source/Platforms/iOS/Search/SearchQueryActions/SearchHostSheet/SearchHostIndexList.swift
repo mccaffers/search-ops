@@ -13,6 +13,7 @@ struct SearchHostIndexList: View {
     
     @Binding var selectedIndex: String
     @Binding var indexArray : [String]
+    var changingIndex: (() -> ())? = nil
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var selectedHost: HostDetailsWrap
     
@@ -24,6 +25,7 @@ struct SearchHostIndexList: View {
                 
                 Button {
                     selectedIndex="_all"
+                    changingIndex?()
                     dismiss()
                 } label: {
                     VStack(
@@ -50,6 +52,7 @@ struct SearchHostIndexList: View {
                     ForEach(indexArray.sorted(by: <), id: \.self) {  index in
                         Button {
                             selectedIndex=index
+                            changingIndex?()
                             dismiss()
                         } label: {
                             VStack(

@@ -21,11 +21,11 @@ final class ResponseErrorTests: XCTestCase {
     _ = RealmManager().getRealm(inMemory: true)
   }
   
-  // Tests the system's response to a query shard exception, an error specific to ElasticSearch.
+  // Tests the system's response to a query shard exception, an error specific to Elasticsearch.
   func testQueryShardException() async throws {
     // Loads a mock response that simulates a query shard exception.
     let response = try SearchOpsTests().OpenFile(filename: "query_shard_exception")
-    // Processes the response to simulate fetching objects from an ElasticSearch server.
+    // Processes the response to simulate fetching objects from an Elasticsearch server.
     let output = Search.getObjects(input: response)
     
     // Asserts that no data objects are returned due to the error.
@@ -35,9 +35,91 @@ final class ResponseErrorTests: XCTestCase {
     // Asserts that the error message is as expected, checking the error handling correctness.
     let errorMessage = output.error
     XCTAssertEqual(errorMessage, "Failed to parse query [headers.accept:application/json]")
+    XCTAssertEqual(output.errorTitle, "query_shard_exception")
   }
   
-  // Tests handling of a simulated internal server error from ElasticSearch.
+  func testParsingExceptionTypeExtraction() async throws {
+    let mockJson = """
+    {
+      "error": {
+        "root_cause": [
+          {
+            "type": "parsing_exception",
+            "reason": "line 1: unexpected token"
+          }
+        ],
+        "type": "parsing_exception",
+        "reason": "line 1: unexpected token"
+      },
+      "status": 400
+    }
+    """
+    let output = Search.getObjects(input: mockJson)
+    XCTAssertEqual(output.data.count, 0)
+    XCTAssertEqual(output.error, "line 1: unexpected token")
+    XCTAssertEqual(output.errorTitle, "parsing_exception")
+  }
+  
+  func testEmptyRootCauseFallback() async throws {
+    let mockJson = """
+    {
+      "error": {
+        "root_cause": [],
+        "type": "parsing_exception",
+        "reason": "line 1: unexpected token"
+      },
+      "status": 400
+    }
+    """
+    let output = Search.getObjects(input: mockJson)
+    XCTAssertEqual(output.data.count, 0)
+    XCTAssertEqual(output.error, "line 1: unexpected token")
+    XCTAssertEqual(output.errorTitle, "parsing_exception")
+  }
+
+  func testMissingRootCauseFallback() async throws {
+    let mockJson = """
+    {
+      "error": {
+        "type": "illegal_argument_exception",
+        "reason": "Field data cannot be parsed"
+      },
+      "status": 400
+    }
+    """
+    let output = Search.getObjects(input: mockJson)
+    XCTAssertEqual(output.data.count, 0)
+    XCTAssertEqual(output.error, "Field data cannot be parsed")
+    XCTAssertEqual(output.errorTitle, "illegal_argument_exception")
+  }
+
+  func testStringErrorFallback() async throws {
+    let mockJson = """
+    {
+      "error": "Unauthorized"
+    }
+    """
+    let output = Search.getObjects(input: mockJson)
+    XCTAssertEqual(output.data.count, 0)
+    XCTAssertEqual(output.error, "Unauthorized")
+    XCTAssertEqual(output.errorTitle, "Error")
+  }
+
+  func testTypeOnlyErrorFallback() async throws {
+    let mockJson = """
+    {
+      "error": {
+        "type": "index_not_found_exception"
+      }
+    }
+    """
+    let output = Search.getObjects(input: mockJson)
+    XCTAssertEqual(output.data.count, 0)
+    XCTAssertEqual(output.error, "index_not_found_exception")
+    XCTAssertEqual(output.errorTitle, "index_not_found_exception")
+  }
+  
+  // Tests handling of a simulated internal server error from Elasticsearch.
   func testInternalError() async throws {
     // Loads a mock response simulating an internal server error.
     let response = try SearchOpsTests().OpenFile(filename: "internal_error")
@@ -89,7 +171,7 @@ final class ResponseErrorTests: XCTestCase {
     XCTAssertEqual(output.parsed?.trimmingCharacters(in: .whitespacesAndNewlines), "abc")
   }
   
-  // Tests indexing statistics retrieval from ElasticSearch.
+  // Tests indexing statistics retrieval from Elasticsearch.
   func testIndex() async throws {
     // Loads a JSON response that could represent indexing statistics.
     let jsonResponse = try SearchOpsTests().OpenFile(filename: "test")
@@ -102,7 +184,7 @@ final class ResponseErrorTests: XCTestCase {
     XCTAssertEqual(output, jsonResponse)
   }
   
-  // Tests handling when an error response is received from ElasticSearch.
+  // Tests handling when an error response is received from Elasticsearch.
   func testGetErrorResponse() async throws {
     // Loads a mock error response.
     let response = try SearchOpsTests().OpenFile(filename: "error")

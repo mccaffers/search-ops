@@ -29,6 +29,12 @@ public class SortObject : ObservableObject {
   }
 }
 
+extension SortObject: Equatable {
+  public static func == (lhs: SortObject, rhs: SortObject) -> Bool {
+    return lhs.order == rhs.order && lhs.field == rhs.field
+  }
+}
+
 @available(macOS 10.15, *)
 @available(iOS 15.0, *)
 public class RealmSortObject : EmbeddedObject {

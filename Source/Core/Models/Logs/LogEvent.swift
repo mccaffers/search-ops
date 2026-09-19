@@ -63,7 +63,9 @@ public class RealmSearchEvent : Object {
 
 @available(macOS 13, *)
 @available(iOS 13.0, *)
-public class SearchEvent : ObservableObject {
+public class SearchEvent : ObservableObject, Identifiable {
+
+  public var id: UUID = UUID()
 
   // Metadata
   public var date : Date = Date.now

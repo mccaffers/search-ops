@@ -12,13 +12,13 @@ struct ElasticSearchButton: View {
     
     var body: some View {
         VStack {
-            NavigationLink(destination: AddElasticView(addServiceNavigationTitle: AddServiceNavigationTitle("ElasticSearch"))){
+            NavigationLink(destination: AddElasticView(addServiceNavigationTitle: AddServiceNavigationTitle("Elasticsearch"))){
                 VStack  {
                     Image("elasticsearch")
                         .resizable()
                         .frame(width: 50, height: 50, alignment: .center)
                         
-                    Text("ElasticSearch")
+                    Text("Elasticsearch")
                         .padding(.top, 5)
                 }
             }

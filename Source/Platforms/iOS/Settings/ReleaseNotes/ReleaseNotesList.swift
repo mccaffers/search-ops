@@ -31,7 +31,7 @@ struct ReleaseNotesList: View {
         
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 10))!,
                                buttonText: "Version 3",
-                               buttonDescription: "Search Ops is now completely Open Source, entire application on Github, with a Convenience Pricing Model, a small one time fee for lifetime automated updates",
+                               buttonDescription: "SearchOps is now completely Open Source, entire application on Github, with a Convenience Pricing Model, a small one time fee for lifetime automated updates",
                                buttonAction: { showingRelease = "Version 3.0" },  activeButton: true, isLatest: false)
         .padding(.top, 15)
 
@@ -117,7 +117,7 @@ struct ReleaseNotesList: View {
 
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2023, month: 7, day: 27))!,
                                buttonText: "Version 1",
-                               buttonDescription: "Released Search Ops App 🎉",
+                               buttonDescription: "Released SearchOps App 🎉",
                                buttonAction: {  })
         
         Spacer()

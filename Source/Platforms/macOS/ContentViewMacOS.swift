@@ -34,6 +34,43 @@ enum macosSearchViewEnum: Hashable {
 
 #if os(macOS)
 
+private class WindowConfiguringNSView: NSView {
+  var minFullScreenContentSize: NSSize = NSSize(width: 400, height: 300)
+
+  override func viewDidMoveToWindow() {
+    super.viewDidMoveToWindow()
+    if let window = self.window {
+      window.minFullScreenContentSize = minFullScreenContentSize
+    }
+  }
+}
+
+struct WindowConfigurator: NSViewRepresentable {
+  var minFullScreenContentSize: NSSize = NSSize(width: 400, height: 300)
+
+  func makeNSView(context: Context) -> NSView {
+    let view = WindowConfiguringNSView()
+    view.minFullScreenContentSize = minFullScreenContentSize
+    DispatchQueue.main.async {
+      if let window = view.window {
+        window.minFullScreenContentSize = minFullScreenContentSize
+      }
+    }
+    return view
+  }
+
+  func updateNSView(_ nsView: NSView, context: Context) {
+    if let configView = nsView as? WindowConfiguringNSView {
+      configView.minFullScreenContentSize = minFullScreenContentSize
+    }
+    DispatchQueue.main.async {
+      if let window = nsView.window {
+        window.minFullScreenContentSize = minFullScreenContentSize
+      }
+    }
+  }
+}
+
 class FullScreenObserver: ObservableObject {
   @Published var isFullScreen: Bool = false
   
@@ -86,19 +123,21 @@ struct ContentViewMacOS: View {
           ZStack {
             macosMainMenu(sidebar: $sidebar,
                           fullScreen: $fullScreen,
-                          backgroundColor: selection != .None ? Color("BackgroundFixedShadow") : Color("Background"),
+                          backgroundColor:  Color("Background"),
                           serverObjects: serverObjects,
                           searchHistoryManager: searchHistoryManager)
             .disabled(selection != .None)
             
             if selection != .None {
-              Rectangle().fill(Color.clear)
+              RoundedRectangle(cornerRadius: 5)
+                .fill(Color.black.opacity(0.1))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .onTapGesture {
                   selection = .None
                 }
+         
             }
           }
           
@@ -143,13 +182,17 @@ struct ContentViewMacOS: View {
       
       
     }
-    .onReceive(fullScreenNotification, perform: { _ in
+    .onReceive(fullScreenNotification, perform: { notification in
       fullScreen = true
+      if let window = (notification as Notification).object as? NSWindow {
+        window.minFullScreenContentSize = NSSize(width: 400, height: 300)
+      }
     })
     .onReceive(fullScreenExitNotification, perform: { _ in
       fullScreen = false
     })
-    .background(selection == .None ? Color("Background") : Color("BackgroundFixedShadow"))
+    .background(Color("Background") )
+    .background(WindowConfigurator(minFullScreenContentSize: NSSize(width: 400, height: 300)))
     
   }
 }

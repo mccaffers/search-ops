@@ -34,8 +34,6 @@ struct macosTextFieldClearButton: ViewModifier {
     }
 }
 
-
-
 extension View {
     func showClearButton(_ text: Binding<String>) -> some View {
         self.modifier(macosTextFieldClearButton(fieldText: text))
@@ -95,7 +93,6 @@ struct SearchInputFieldsView: View {
   
   var body: some View {
     HStack(spacing:5) {
-      
       
       CustomNSTextField(text: $searchText, onSubmit: handleSubmit)
         .focused($focusedField, equals: identifer)

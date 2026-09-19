@@ -115,14 +115,30 @@ public class Search {
       } else if let errorMessage = jsonObj["error"] as? [String: Any] {
         
         if let errorItems = errorMessage["root_cause"] as? [[String: Any]] {
-          
           for error in errorItems {
             if let reasonString = error["reason"] as? String {
-              parsedObject = SearchResult(error:reasonString)
+              let errorType = error["type"] as? String
+              parsedObject = SearchResult(error: reasonString, errorTitle: errorType)
+              break
             }
           }
         }
         
+        if parsedObject.error == nil {
+          if let reasonString = errorMessage["reason"] as? String {
+            let errorType = errorMessage["type"] as? String
+            parsedObject = SearchResult(error: reasonString, errorTitle: errorType)
+          } else if let errorType = errorMessage["type"] as? String {
+            parsedObject = SearchResult(error: errorType, errorTitle: errorType)
+          } else {
+            let removeNewLines = JsonTools.tidyUpString(input)
+            let firstHundred = String(removeNewLines.prefix(100))
+            parsedObject = SearchResult(error: firstHundred, errorTitle: "Query Error")
+          }
+        }
+        
+      } else if let errorString = jsonObj["error"] as? String {
+        parsedObject = SearchResult(error: errorString, errorTitle: "Error")
       } else {
         
         // Something has gone wrong, lets return the response to the user

@@ -173,8 +173,12 @@ struct MainSheetSortCardView: View {
 												usingLocalField:true, title: "Fields for Sort")
 		})
 		.onChange(of: selectedIndex) { newValue in
-          if filterObject.sort != nil {
-            filterObject.sort = nil
+          sortField = nil
+          filterObject.resetIndexSpecificFilters()
+		}
+		.onChange(of: filterObject.sort) { newValue in
+          if newValue == nil {
+            sortField = nil
           }
 		}
 		.onChange(of: sortField) { newValue in

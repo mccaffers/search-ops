@@ -108,15 +108,8 @@ struct SettingsView: View {
       
       VStack(alignment: .leading, spacing:10 ) {
         
-        Text("Strictly no analytics, tracking or advertisements in Search Ops!")
-          .font(.system(size: 16))
-        
-        Text("In addition, to increase transparency and build trust for the application, the business logic for Search Ops is available on Github.")
-          .frame(maxWidth: .infinity, alignment:.leading)
-        
-        Text("The repository contains the logic for how the application stores and queries your infrastructure. The build hash aligns with the commit hash on Github")
-          .frame(maxWidth: .infinity, alignment:.leading)
-        
+        Text("Strictly no analytics, tracking or advertisements in SearchOps!")
+          .font(.system(size: 12))
       }.padding(.leading, 10)
       
       HStack {
@@ -127,7 +120,7 @@ struct SettingsView: View {
       .padding(.vertical, 10)
       
       VStack(alignment: .leading, spacing:10 ) {
-        Text("Business Logic Codebase on Github https://github.com/mccaffers/search-ops")
+        Text("Opensource codebase on Github https://github.com/mccaffers/search-ops")
 
           .frame(maxWidth: .infinity, alignment:.leading)
      
@@ -150,7 +143,7 @@ struct SettingsView: View {
       
       VStack(alignment: .leading, spacing:10 ) {
         
-        Text("Thanks for purchasing Search Ops!")
+        Text("Thanks for purchasing SearchOps!")
         
         Link(destination: URL(string: "mailto:ryan@mccaffers.com")!) {
           

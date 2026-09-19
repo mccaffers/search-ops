@@ -92,7 +92,7 @@ struct MainSheetIndexCardView: View {
             Button {
               changingIndex()
               selectedIndex = ""
-              filterObject.dateField = nil
+              filterObject.resetIndexSpecificFilters()
               if indexArray.count == 0 {
                 Task {
                   await UpdateIndexArray()
@@ -188,7 +188,8 @@ struct MainSheetIndexCardView: View {
     .padding(.horizontal, 10)
     .navigationDestination(isPresented:$showingHost, destination: {
       SearchHostIndexList(selectedIndex: $selectedIndex,
-                          indexArray: $indexArray)
+                          indexArray: $indexArray,
+                          changingIndex: changingIndex)
     })
     .onChange(of: selectedHost.item) { newValue in
       
@@ -198,6 +199,7 @@ struct MainSheetIndexCardView: View {
         }
       } else {
         selectedIndex = ""
+        changingIndex()
       }
     }
     .onAppear {

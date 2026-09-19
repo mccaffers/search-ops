@@ -42,6 +42,7 @@ public class SearchHistoryDataManager: ObservableObject {
         filterHistory.sort = SortObject(order: sortObject.order, field: fields)
       }
       
+      event.id = item.id
       event.filter = filterHistory
       event.host = item.host
       event.index = item.index
@@ -102,7 +103,29 @@ public class SearchHistoryDataManager: ObservableObject {
           realm.delete(host)
         }
       }
+      refresh()
     }
+  }
+
+  /// Deletes a specific search history item by ID
+  /// - Parameter id: UUID of the search event to delete
+  public func deleteById(id: UUID) {
+    if let realm = RealmManager().getRealm() {
+      let item = realm.object(ofType: RealmSearchEvent.self, forPrimaryKey: id)
+        ?? items.first { !$0.isInvalidated && $0.id == id }
+      if let item = item {
+        try? realm.write {
+          realm.delete(item)
+        }
+        refresh()
+      }
+    }
+  }
+
+  /// Deletes a specific search history item
+  /// - Parameter item: The SearchEvent to delete
+  public func deleteItem(item: SearchEvent) {
+    deleteById(id: item.id)
   }
   
   /// Groups search events by date

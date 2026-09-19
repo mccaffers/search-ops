@@ -30,9 +30,7 @@ struct macosDatePickerFieldsView: View {
             
             if filterObject.dateField != nil {
               Button {
-                filterObject.dateField = nil
-                filterObject.relativeRange = nil
-                filterObject.absoluteRange = nil
+                filterObject.resetIndexSpecificFilters()
                 selection = .None
               } label: {
                 Text("Clear")
@@ -55,6 +53,7 @@ struct macosDatePickerFieldsView: View {
               ForEach(filteredFields, id: \.self) { item in
                 Button {
                   filterObject.dateField = item
+                  filterObject.sort = SortObject(order: .Descending, field: item)
                   showingMappedDateFields = false
                 } label: {
                   Text(item.squashedString)

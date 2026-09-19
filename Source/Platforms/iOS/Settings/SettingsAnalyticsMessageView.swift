@@ -19,7 +19,7 @@ struct SettingsAnalyticsMessageView: View {
     VStack (spacing:0) {
       
       VStack(spacing:20) {
-        Text("Privacy and trust is important! There are no analytics or tracking in Search Ops.")
+        Text("Privacy and trust is important! There are no analytics or tracking in SearchOps.")
           .frame(maxWidth: .infinity, alignment:.leading)
         
         

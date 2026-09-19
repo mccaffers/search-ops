@@ -88,4 +88,11 @@ public class FilterObject: ObservableObject {
     absoluteRange = nil
   }
   
+  public func resetIndexSpecificFilters() {
+    dateField = nil
+    sort = nil
+    relativeRange = nil
+    absoluteRange = nil
+  }
+  
 }

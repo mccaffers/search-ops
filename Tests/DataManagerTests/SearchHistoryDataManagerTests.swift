@@ -50,8 +50,10 @@ class SearchHistoryDataManagerTests: XCTestCase {
     
     // Then
     XCTAssertEqual(result.count, 2)
+    XCTAssertEqual(result[0].id, realmEvent1.id)
     XCTAssertEqual(result[0].index, "index1")
     XCTAssertEqual(result[0].date, Date(timeIntervalSince1970: 1000))
+    XCTAssertEqual(result[1].id, realmEvent2.id)
     XCTAssertEqual(result[1].index, "index2")
     XCTAssertEqual(result[1].date, Date(timeIntervalSince1970: 2000))
   }
@@ -443,5 +445,40 @@ class SearchHistoryDataManagerTests: XCTestCase {
     // Test 8: Different index
     let nonMatchingEntry5 = createFullSearchEvent(host: host2, index: "index3", query: "query4")
     XCTAssertNil(dataManager.checkIfEntryExists(newEntry: nonMatchingEntry5))
+  }
+
+  @MainActor
+  func testDeleteById() {
+    let entry = RealmSearchEvent()
+    entry.host = UUID()
+    entry.index = "test-delete-index"
+    dataManager.addNew(item: entry)
+    dataManager.refresh()
+    
+    let targetId = entry.id
+    XCTAssertTrue(dataManager.items.contains { !$0.isInvalidated && $0.id == targetId })
+    
+    dataManager.deleteById(id: targetId)
+    
+    XCTAssertFalse(dataManager.items.contains { !$0.isInvalidated && $0.id == targetId })
+  }
+
+  @MainActor
+  func testDeleteItem() {
+    let entry = RealmSearchEvent()
+    entry.host = UUID()
+    entry.index = "test-delete-item"
+    dataManager.addNew(item: entry)
+    dataManager.refresh()
+    
+    let targetId = entry.id
+    guard let searchEvent = dataManager.staticList().first(where: { $0.id == targetId }) else {
+      XCTFail("SearchEvent not found in staticList")
+      return
+    }
+    
+    dataManager.deleteItem(item: searchEvent)
+    
+    XCTAssertFalse(dataManager.items.contains { !$0.isInvalidated && $0.id == targetId })
   }
 }

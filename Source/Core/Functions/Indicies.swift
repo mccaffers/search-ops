@@ -9,14 +9,14 @@
 import Foundation
 import SwiftyJSON
 
-// Defines functions related to ElasticSearch index operations for use within an iOS app,
+// Defines functions related to Elasticsearch index operations for use within an iOS app,
 // compatible with macOS 13.0 and iOS 16.0 or later.
 @available(macOS 13.0, *)
 @available(iOS 16.0.0, *)
 public class Indicies {
   
-  /// Fetches a list of all indices from the specified ElasticSearch server.
-  /// Allows specifying a custom endpoint to target different ElasticSearch functionalities.
+  /// Fetches a list of all indices from the specified Elasticsearch server.
+  /// Allows specifying a custom endpoint to target different Elasticsearch functionalities.
   /// Default endpoint fetches aliases in a pretty JSON format.
   /// - Parameters:
   ///   - serverDetails: Contains the details about the server (e.g., credentials, URL).
