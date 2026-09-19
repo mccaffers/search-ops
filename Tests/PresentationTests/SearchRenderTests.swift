@@ -73,6 +73,67 @@ final class SearchRenderTests: XCTestCase  {
     XCTAssertNotNil(result, "Result should not be nil")
     // Add more specific assertions here based on the properties of RenderResult
   }
+
+  func testCallWithQueryShardException() async throws {
+    let mockResponse = """
+    {
+      "error": {
+        "root_cause": [
+          {
+            "type": "query_shard_exception",
+            "reason": "Failed to parse query [test]"
+          }
+        ]
+      },
+      "status": 400
+    }
+    """
+    Request.mockedSession = MockURLSession(response: mockResponse)
+    let result = await SearchRender.call(pageInput: 1, filterObject: filterObject, host: hostDetails, index: "testIndex", limitObj: limitObj)
+    
+    XCTAssertNotNil(result.error)
+    XCTAssertEqual(result.error?.title, "query_shard_exception")
+    XCTAssertEqual(result.error?.message, "Failed to parse query [test]")
+  }
+
+  func testCallWithParsingException() async throws {
+    let mockResponse = """
+    {
+      "error": {
+        "root_cause": [
+          {
+            "type": "parsing_exception",
+            "reason": "Unknown query type"
+          }
+        ]
+      },
+      "status": 400
+    }
+    """
+    Request.mockedSession = MockURLSession(response: mockResponse)
+    let result = await SearchRender.call(pageInput: 1, filterObject: filterObject, host: hostDetails, index: "testIndex", limitObj: limitObj)
+    
+    XCTAssertNotNil(result.error)
+    XCTAssertEqual(result.error?.title, "parsing_exception")
+    XCTAssertEqual(result.error?.message, "Unknown query type")
+  }
+
+  func testCallWithUnknownExceptionFallback() async throws {
+    let mockResponse = """
+    {
+      "error": {
+        "reason": "Something broke"
+      },
+      "status": 500
+    }
+    """
+    Request.mockedSession = MockURLSession(response: mockResponse)
+    let result = await SearchRender.call(pageInput: 1, filterObject: filterObject, host: hostDetails, index: "testIndex", limitObj: limitObj)
+    
+    XCTAssertNotNil(result.error)
+    XCTAssertEqual(result.error?.title, "Query Error")
+    XCTAssertEqual(result.error?.message, "Something broke")
+  }
   
   func testSortObjectProperties() {
     // Test the properties of SortObject
@@ -200,6 +261,7 @@ final class SearchRenderTests: XCTestCase  {
 #endif
 
   override func tearDown() {
+    Request.mockedSession = nil
     searchRender = nil
     super.tearDown()
   }

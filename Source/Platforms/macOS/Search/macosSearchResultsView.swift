@@ -45,19 +45,46 @@ struct macosSearchResultsView: View {
               .frame(maxWidth: .infinity, alignment: .leading)
             Text(error.message)
               .frame(maxWidth: .infinity, alignment: .leading)
+            
+            HStack(spacing: 10) {
+              Button {
+                searchResponseError = nil
+              } label: {
+                Text("Dismiss")
+                  .padding(8)
+                  .background(Color("Button"))
+                  .clipShape(.rect(cornerRadius: 5))
+                  .contentShape(Rectangle())
+              }
+              .buttonStyle(PlainButtonStyle())
+              
+              Button {
+                Request(currentPage > 0 ? currentPage : 1)
+              } label: {
+                Text("Retry")
+                  .padding(8)
+                  .background(Color("Button"))
+                  .clipShape(.rect(cornerRadius: 5))
+                  .contentShape(Rectangle())
+              }
+              .buttonStyle(PlainButtonStyle())
+              
+              Spacer()
+            }
+            
             Spacer()
           }.frame(maxWidth: 500)
             .padding(.top, 20)
           Spacer()
         }
         
-      } else if renderedObjects == nil {
+      } else if searchIndicator && renderedObjects == nil {
         VStack {
           ProgressView().scaleEffect(1.2)
             .padding(.top, 40)
           Spacer()
         }
-      }  else if renderedObjects?.results.count == 0 {
+      } else if renderedObjects == nil || renderedObjects?.results.count == 0 {
         VStack {
           Text("No results. Try adjusting the query string or date range.")
             .padding(.top, 30)

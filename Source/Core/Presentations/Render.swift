@@ -45,7 +45,7 @@ public class SearchRender {
       
       // Check and handle errors from data parsing.
       if let error = parsedResponse.error {
-        let generatedError = ResponseError(title: "query_shard_exception",
+        let generatedError = ResponseError(title: parsedResponse.errorTitle ?? "Query Error",
                                            message: error,
                                            type: .critical)
         renderResult.error = generatedError

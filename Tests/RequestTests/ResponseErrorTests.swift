@@ -35,6 +35,88 @@ final class ResponseErrorTests: XCTestCase {
     // Asserts that the error message is as expected, checking the error handling correctness.
     let errorMessage = output.error
     XCTAssertEqual(errorMessage, "Failed to parse query [headers.accept:application/json]")
+    XCTAssertEqual(output.errorTitle, "query_shard_exception")
+  }
+  
+  func testParsingExceptionTypeExtraction() async throws {
+    let mockJson = """
+    {
+      "error": {
+        "root_cause": [
+          {
+            "type": "parsing_exception",
+            "reason": "line 1: unexpected token"
+          }
+        ],
+        "type": "parsing_exception",
+        "reason": "line 1: unexpected token"
+      },
+      "status": 400
+    }
+    """
+    let output = Search.getObjects(input: mockJson)
+    XCTAssertEqual(output.data.count, 0)
+    XCTAssertEqual(output.error, "line 1: unexpected token")
+    XCTAssertEqual(output.errorTitle, "parsing_exception")
+  }
+  
+  func testEmptyRootCauseFallback() async throws {
+    let mockJson = """
+    {
+      "error": {
+        "root_cause": [],
+        "type": "parsing_exception",
+        "reason": "line 1: unexpected token"
+      },
+      "status": 400
+    }
+    """
+    let output = Search.getObjects(input: mockJson)
+    XCTAssertEqual(output.data.count, 0)
+    XCTAssertEqual(output.error, "line 1: unexpected token")
+    XCTAssertEqual(output.errorTitle, "parsing_exception")
+  }
+
+  func testMissingRootCauseFallback() async throws {
+    let mockJson = """
+    {
+      "error": {
+        "type": "illegal_argument_exception",
+        "reason": "Field data cannot be parsed"
+      },
+      "status": 400
+    }
+    """
+    let output = Search.getObjects(input: mockJson)
+    XCTAssertEqual(output.data.count, 0)
+    XCTAssertEqual(output.error, "Field data cannot be parsed")
+    XCTAssertEqual(output.errorTitle, "illegal_argument_exception")
+  }
+
+  func testStringErrorFallback() async throws {
+    let mockJson = """
+    {
+      "error": "Unauthorized"
+    }
+    """
+    let output = Search.getObjects(input: mockJson)
+    XCTAssertEqual(output.data.count, 0)
+    XCTAssertEqual(output.error, "Unauthorized")
+    XCTAssertEqual(output.errorTitle, "Error")
+  }
+
+  func testTypeOnlyErrorFallback() async throws {
+    let mockJson = """
+    {
+      "error": {
+        "type": "index_not_found_exception"
+      }
+    }
+    """
+    let output = Search.getObjects(input: mockJson)
+    XCTAssertEqual(output.data.count, 0)
+    XCTAssertEqual(output.error, "index_not_found_exception")
+    XCTAssertEqual(output.errorTitle, "index_not_found_exception")
   }
   
   // Tests handling of a simulated internal server error from Elasticsearch.

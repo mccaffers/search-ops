@@ -39,7 +39,6 @@ struct macosSearchMainView: View {
   @EnvironmentObject var hostsUpdated : HostUpdatedNotifier
  
   @State var selected = false
-  @State var textRefresh = UUID()
   @State var topBarDateButtonRefresh = UUID()
   @Binding var fullScreen : Bool
   
@@ -93,25 +92,14 @@ struct macosSearchMainView: View {
   
   @MainActor
   func Request(page:Int = 1 ) async {
+    searchResponseError = nil
+    currentPage = page
     if let selectedHost = selectedHost {
-      
-//      renderedObjects = nil
       
       searchIndicator = true
       let mappedFields = await IndexMap.indexMappings(serverDetails: selectedHost, index: selectedIndex)
       
       let datefields = mappedFields.filter { $0.type == "date" }
-      
-      
-      // TODO, should this go in the call above?
-        var searchEvent = RealmSearchEvent()
-        searchEvent.date = Date.now
-        searchEvent.host = selectedHost.id
-        searchEvent.index = selectedIndex
-        searchEvent.filter = filterObject.ejectRealmObject()
-        
-        SearchHistoryDataManager().addNew(item: searchEvent)
-
       
       let response = await SearchRender.call(pageInput: page,
                                              filterObject: filterObject,
@@ -121,12 +109,21 @@ struct macosSearchMainView: View {
       
       if let error = response.error {
         searchResponseError = error
+        renderedObjects = nil
       } else {
+        searchResponseError = nil
+        
+        var searchEvent = RealmSearchEvent()
+        searchEvent.date = Date.now
+        searchEvent.host = selectedHost.id
+        searchEvent.index = selectedIndex
+        searchEvent.filter = filterObject.ejectRealmObject()
+        
+        SearchHistoryDataManager().addNew(item: searchEvent)
         
         let searchResults = response.results
         let hitCount = response.hits
         resultsFields.fields = response.fields ?? []
-        currentPage = page
         pageCount = response.pages
         
         itemDetail.showingView = false
@@ -171,7 +168,6 @@ struct macosSearchMainView: View {
       Task {
         await Request ()
       }
-    textRefresh=UUID()
     
   }
   
@@ -449,19 +445,21 @@ struct macosSearchMainView: View {
         selection = .SearchDocumentView
       }
     }
-    .onChange(of: filterObject.id) { newValue in
-      
-      if filterObject.query?.values.first?.string != searchText {
-        lastValue = filterObject.query?.values.first?.string ?? ""
+    .onChange(of: filterObject.query?.values.first?.string) { newValue in
+      if newValue != searchText {
+        lastValue = newValue ?? ""
         searchText = lastValue
-        
       }
     }
     .onChange(of: selectedIndex) { newValue in
+      searchResponseError = nil
+      currentPage = 0
       filterObject.resetIndexSpecificFilters()
     }
     .onChange(of: selectedHost?.id) { _ in
+      searchResponseError = nil
       selectedIndex = ""
+      currentPage = 0
       filterObject.resetIndexSpecificFilters()
     }
     .onChange(of: shouldClearTextfield) { newValue in
