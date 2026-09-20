@@ -15,6 +15,7 @@ public enum sideBar {
   case settings
   case hidden
   case develop
+  case manage
 }
 
 enum macosSearchViewEnum: Hashable {
@@ -175,6 +176,10 @@ struct ContentViewMacOS: View {
                              selection: $selection)
             } else if sidebar == .develop {
               macosDevelopView(fullScreen: $fullScreen)
+            } else if sidebar == .manage {
+              macosManageHostsView(fullScreen: $fullScreen,
+                                   serverObjects: serverObjects,
+                                   hostsUpdated: hostsUpdated)
             }
           }
           .environmentObject(hostsUpdated)

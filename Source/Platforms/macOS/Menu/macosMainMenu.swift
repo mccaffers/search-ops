@@ -77,6 +77,17 @@ struct macosMainMenu: View {
             buttonColor : sidebar == .hosts ? Color("ButtonHighlighted") : Color("Button")
         )
         
+        CustomButtonView(
+            action: {
+              sidebar = .manage
+              sidebarHistory = nil
+              serverObjects.refresh()
+              searchHistoryManager.refresh()
+            },
+            iconName: "slider.horizontal.3",
+            text: "Manage",
+            buttonColor : sidebar == .manage ? Color("ButtonHighlighted") : Color("Button")
+        )
         
 //        CustomButtonView(
 //            action: {
