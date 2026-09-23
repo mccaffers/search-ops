@@ -14,6 +14,7 @@ struct macosSearchResultsView: View {
   @EnvironmentObject var filterObject: FilterObject
   
   var fields : [SquashedFieldsArray]
+  var showDateHeader: Bool
   @Binding var selectedHost: HostDetails?
   @Binding var selectedIndex: String
   @State var loadingFields : String = ""
@@ -98,7 +99,8 @@ struct macosSearchResultsView: View {
           macOSDocumentSearchView(renderedObjects: $renderedObjects,
                                   resultsFields: viewableFields,
                                   itemDetail: itemDetail,
-                                  filteredFields: fields)
+                                  filteredFields: fields,
+                                  showDateHeader: showDateHeader)
           
           
           if searchIndicator {

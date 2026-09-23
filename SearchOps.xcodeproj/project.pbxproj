@@ -362,6 +362,14 @@
 		94B91B2C2C4283430010C411 /* macosSearchHomeDateValuesAbsolute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B91B2B2C4283430010C411 /* macosSearchHomeDateValuesAbsolute.swift */; };
 		94B96F2F2A51D9FB001F41BB /* ElasticDocumentBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B96F2E2A51D9FB001F41BB /* ElasticDocumentBuilder.swift */; };
 		94BAAE752C6355A500C9E274 /* macosHostsTestConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94BAAE742C6355A500C9E274 /* macosHostsTestConnectionView.swift */; };
+		94C0A1012DC130AA006780BC /* IndexActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0A1022DC12A62006780BC /* IndexActivityService.swift */; };
+		94C0A2012DC130AA006780BC /* macosManageHostsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0A2022DC12A62006780BC /* macosManageHostsView.swift */; };
+		94C0A2032DC130AA006780BC /* macosManageHostOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0A2042DC12A62006780BC /* macosManageHostOptionsView.swift */; };
+		94C0A2052DC130AA006780BC /* macosManageIndexesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0A2062DC12A62006780BC /* macosManageIndexesView.swift */; };
+		94C0B1022DC130AA006780BC /* IndexManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0B1012DC12A62006780BC /* IndexManagementService.swift */; };
+		94C0B1042DC130AA006780BC /* macosManageIndexDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0B1032DC12A62006780BC /* macosManageIndexDetailView.swift */; };
+		94C0B1062DC130AA006780BC /* macosIndexMappingTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0B1052DC12A62006780BC /* macosIndexMappingTabView.swift */; };
+		94C0B1082DC130AA006780BC /* macosIndexManageOperationsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0B1072DC12A62006780BC /* macosIndexManageOperationsTabView.swift */; };
 		94C63C4B2A5F457900739E7A /* SettingsDetailHostInformationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C63C4A2A5F457900739E7A /* SettingsDetailHostInformationView.swift */; };
 		94C63C4D2A5F468000739E7A /* SettingsDetailHTTPResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C63C4C2A5F468000739E7A /* SettingsDetailHTTPResponse.swift */; };
 		94CF93A82A5B074200BDF7B5 /* SearchMainStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CF93A72A5B074200BDF7B5 /* SearchMainStatusView.swift */; };
@@ -777,6 +785,14 @@
 		94B91B2B2C4283430010C411 /* macosSearchHomeDateValuesAbsolute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSearchHomeDateValuesAbsolute.swift; sourceTree = "<group>"; };
 		94B96F2E2A51D9FB001F41BB /* ElasticDocumentBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElasticDocumentBuilder.swift; sourceTree = "<group>"; };
 		94BAAE742C6355A500C9E274 /* macosHostsTestConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosHostsTestConnectionView.swift; sourceTree = "<group>"; };
+		94C0A1022DC12A62006780BC /* IndexActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexActivityService.swift; sourceTree = "<group>"; };
+		94C0A2022DC12A62006780BC /* macosManageHostsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosManageHostsView.swift; sourceTree = "<group>"; };
+		94C0A2042DC12A62006780BC /* macosManageHostOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosManageHostOptionsView.swift; sourceTree = "<group>"; };
+		94C0A2062DC12A62006780BC /* macosManageIndexesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosManageIndexesView.swift; sourceTree = "<group>"; };
+		94C0B1012DC12A62006780BC /* IndexManagementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexManagementService.swift; sourceTree = "<group>"; };
+		94C0B1032DC12A62006780BC /* macosManageIndexDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosManageIndexDetailView.swift; sourceTree = "<group>"; };
+		94C0B1052DC12A62006780BC /* macosIndexMappingTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosIndexMappingTabView.swift; sourceTree = "<group>"; };
+		94C0B1072DC12A62006780BC /* macosIndexManageOperationsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosIndexManageOperationsTabView.swift; sourceTree = "<group>"; };
 		94C63C4A2A5F457900739E7A /* SettingsDetailHostInformationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDetailHostInformationView.swift; sourceTree = "<group>"; };
 		94C63C4C2A5F468000739E7A /* SettingsDetailHTTPResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDetailHTTPResponse.swift; sourceTree = "<group>"; };
 		94CC67C32DC6257000D5C6E2 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Platforms/MacOSX.platform/Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
@@ -1581,9 +1597,13 @@
 			isa = PBXGroup;
 			children = (
 				9488A6672C05E3EE007CC13C /* macosHostsView.swift */,
+				94C0A2022DC12A62006780BC /* macosManageHostsView.swift */,
+				94C0A2042DC12A62006780BC /* macosManageHostOptionsView.swift */,
+				94C0A2062DC12A62006780BC /* macosManageIndexesView.swift */,
 				94B1BB872C396CAA00E270B1 /* macosHostsListView.swift */,
 				94EC856C2C333A6D0039D5F9 /* macosHostManagementHomeButton.swift */,
 				94B1BB852C396C7400E270B1 /* macosHostsAdd */,
+				94C0B1002DC12A62006780BC /* ManageIndexDetail */,
 			);
 			path = Hosts;
 			sourceTree = "<group>";
@@ -1833,6 +1853,8 @@
 			children = (
 				94A7F3882DC12A62006780BC /* Fields.swift */,
 				94A7F3892DC12A62006780BC /* IndexMap.swift */,
+				94C0A1022DC12A62006780BC /* IndexActivityService.swift */,
+				94C0B1012DC12A62006780BC /* IndexManagementService.swift */,
 				94A7F38A2DC12A62006780BC /* Indicies.swift */,
 				94A7F38B2DC12A62006780BC /* Logger.swift */,
 				94A7F38C2DC12A62006780BC /* Request.swift */,
@@ -2091,6 +2113,16 @@
 				94B91B2B2C4283430010C411 /* macosSearchHomeDateValuesAbsolute.swift */,
 			);
 			path = Absolute;
+			sourceTree = "<group>";
+		};
+		94C0B1002DC12A62006780BC /* ManageIndexDetail */ = {
+			isa = PBXGroup;
+			children = (
+				94C0B1032DC12A62006780BC /* macosManageIndexDetailView.swift */,
+				94C0B1052DC12A62006780BC /* macosIndexMappingTabView.swift */,
+				94C0B1072DC12A62006780BC /* macosIndexManageOperationsTabView.swift */,
+			);
+			path = ManageIndexDetail;
 			sourceTree = "<group>";
 		};
 		94D3E33B2BEFE2740083B3F7 /* Test Plans */ = {
@@ -2469,6 +2501,12 @@
 				944AD67E2A65CDBB000E16E1 /* SettingDetailJsonViewer.swift in Sources */,
 				940322702A4D8B4C00FC8BBE /* SearchQueryDateSheetTimePicker.swift in Sources */,
 				9488A6682C05E3EE007CC13C /* macosHostsView.swift in Sources */,
+				94C0A2012DC130AA006780BC /* macosManageHostsView.swift in Sources */,
+				94C0A2032DC130AA006780BC /* macosManageHostOptionsView.swift in Sources */,
+				94C0A2052DC130AA006780BC /* macosManageIndexesView.swift in Sources */,
+				94C0B1042DC130AA006780BC /* macosManageIndexDetailView.swift in Sources */,
+				94C0B1062DC130AA006780BC /* macosIndexMappingTabView.swift in Sources */,
+				94C0B1082DC130AA006780BC /* macosIndexManageOperationsTabView.swift in Sources */,
 				94B41E702C466625001C4F6E /* macosSearchHomeSort.swift in Sources */,
 				9403223B2A4D8B4B00FC8BBE /* TextFieldClearButton.swift in Sources */,
 				94815F042C0B6465007E618C /* macosSidebarHostsDropdownView.swift in Sources */,
@@ -2607,6 +2645,8 @@
 				94A7F4022DC130AA006780BC /* Indicies.swift in Sources */,
 				94A7F4032DC130AA006780BC /* Fields.swift in Sources */,
 				94A7F4042DC130AA006780BC /* IndexMap.swift in Sources */,
+				94C0A1012DC130AA006780BC /* IndexActivityService.swift in Sources */,
+				94C0B1022DC130AA006780BC /* IndexManagementService.swift in Sources */,
 				94A7F4052DC130AA006780BC /* Search.swift in Sources */,
 				94A7F3F82DC1309C006780BC /* SortOrderEnum.swift in Sources */,
 				94A7F3F92DC1309C006780BC /* ErrorResponseType.swift in Sources */,

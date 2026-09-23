@@ -16,6 +16,7 @@ struct macOSDocumentSearchView: View {
   @ObservedObject var itemDetail: DocumentDetail
   
   var filteredFields: [SquashedFieldsArray]
+  var showDateHeader: Bool
   
   var gridItemLayout = [GridItem(.flexible()), GridItem(.flexible())]
   
@@ -32,6 +33,21 @@ struct macOSDocumentSearchView: View {
     return (key: dateField, value: dateValue)
   }
   
+  func processRow(item: OrderedDictionary<String, Any>, dateField: SquashedFieldsArray?) -> (item: OrderedDictionary<String, Any>, myDic: [TextModel], dateValue: String, shouldShowRow: Bool) {
+    var itemWithoutDate = item
+    if let dateKey = dateField?.squashedString {
+      itemWithoutDate.removeValue(forKey: dateKey)
+    }
+    let myDic = ElasticDocumentBuilder.exportFlatValues(input: itemWithoutDate, filteredFields: filteredFields)
+    let dateValue = getDateValue(from: item)
+    let shouldShow = Self.shouldDisplayRow(
+      hasBodyContent: !myDic.isEmpty,
+      showDateHeader: showDateHeader,
+      hasDateValue: !dateValue.isEmpty,
+      isBodyFiltered: !filteredFields.isEmpty
+    )
+    return (item, myDic, dateValue, shouldShow)
+  }
   
   var body: some View {
     VStack {
@@ -42,16 +58,14 @@ struct macOSDocumentSearchView: View {
                verticalSpacing: 0) {
             if let flatArray = renderedObjects.flat {
               ForEach(flatArray.indices, id: \.self) { index in
-                let item = flatArray[index]
-                let myDic = ElasticDocumentBuilder.exportFlatValues(input: item, filteredFields: filteredFields)
-                let dateValue = getDateValue(from: flatArray[index])
+                let row = processRow(item: flatArray[index], dateField: renderedObjects.dateField)
                 
-                if !myDic.isEmpty {
+                if row.shouldShowRow {
                   macosGridRowView(
                     itemDetail: itemDetail,
-                    item:item,
-                    dateField: buildDateObject(from: renderedObjects.dateField, dateValue: dateValue),
-                    textArray: myDic.map { Text($0.attributedString + " ") }.reduce(Text(""), +)
+                    item: row.item,
+                    dateField: showDateHeader ? buildDateObject(from: renderedObjects.dateField, dateValue: row.dateValue) : nil,
+                    textArray: row.myDic.map { Text($0.attributedString + " ") }.reduce(Text(""), +)
                   )
                 }
               }
@@ -69,5 +83,23 @@ struct macOSDocumentSearchView: View {
       }
     }
     .padding(.top, 0.1)
+  }
+}
+
+extension macOSDocumentSearchView {
+  /// Determines whether a document row should be rendered in the search results.
+  /// When body fields are filtered (`isBodyFiltered == true`), documents must contain at least one of the selected
+  /// body fields (`hasBodyContent == true`) to prevent rendering ghost cards with only a date header.
+  /// When body fields are unfiltered (`isBodyFiltered == false`), documents are displayed if they have body content
+  /// or an active date header with a valid date.
+  public static func shouldDisplayRow(
+    hasBodyContent: Bool,
+    showDateHeader: Bool,
+    hasDateValue: Bool,
+    isBodyFiltered: Bool
+  ) -> Bool {
+    isBodyFiltered
+      ? hasBodyContent
+      : (hasBodyContent || (showDateHeader && hasDateValue))
   }
 }

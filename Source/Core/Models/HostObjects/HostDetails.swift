@@ -86,12 +86,23 @@ public class HostDetails : Object  {
   }
   
   public func generateCopy() -> HostDetails {
-    
+    guard !self.isInvalidated else {
+      return HostDetails()
+    }
+
     let copy = HostDetails()
     copy.detachedID = self.id
     copy.name = self.name.string
     copy.cloudid = self.cloudid
-    copy.host = self.host
+    if let h = self.host, !h.isInvalidated {
+      let hostCopy = HostURL()
+      hostCopy.scheme = h.scheme
+      hostCopy.url = h.url
+      hostCopy.path = h.path
+      hostCopy.port = h.port
+      hostCopy.selfSignedCertificate = h.selfSignedCertificate
+      copy.host = hostCopy
+    }
     copy.env = self.env
     copy.username = self.username
     copy.password = self.password
@@ -99,13 +110,25 @@ public class HostDetails : Object  {
     copy.apiToken = self.apiToken
     copy.apiKey = self.apiKey
     copy.version = self.version
-    copy.customHeaders = self.customHeaders
+    let headersCopy = List<Headers>()
+    for item in self.customHeaders {
+      if !item.isInvalidated {
+        let realmHeader = Headers()
+        realmHeader.id = item.id
+        realmHeader.header = item.header
+        realmHeader.value = item.value
+        realmHeader.focusedIndexValue = item.focusedIndexValue
+        realmHeader.focusedIndexHeader = item.focusedIndexHeader
+        headersCopy.append(realmHeader)
+      }
+    }
+    copy.customHeaders = headersCopy
     copy.createdDate = self.createdDate
     copy.updatedDate = Date.now
     copy.draft = self.draft
     copy.connectionType = self.connectionType
     copy.authenticationType = self.authenticationType
-    
+
     return copy
   }
   

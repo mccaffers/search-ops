@@ -26,6 +26,7 @@ struct macosSearchMainView: View {
   @State var fields = [SquashedFieldsArray]()
   @State var onlyVisibleFields = [SquashedFieldsArray]()
   @State private var fieldsCacheKey: String = ""
+  @State private var currentActiveDateField: String? = nil
   
   @State var updatedFieldsNotification : UUID = UUID()
 
@@ -172,6 +173,17 @@ struct macosSearchMainView: View {
           fieldsCacheKey = cacheKey
         }
         
+        if !isSameHostAndIndex {
+          if let dateField = filterObject.dateField {
+            fields.first { $0.squashedString == dateField.squashedString }?.visible = true
+            onlyVisibleFields.first { $0.squashedString == dateField.squashedString }?.visible = true
+            dateField.visible = true
+            currentActiveDateField = dateField.squashedString
+          } else {
+            currentActiveDateField = nil
+          }
+        }
+        
         searchResultsUpdated = UUID()
         
         
@@ -220,6 +232,14 @@ struct macosSearchMainView: View {
   var suggestionsTopPadding: CGFloat {
     topButtonsPadding + 85
   }
+
+  var bodyFilteredFields: [SquashedFieldsArray] {
+    Self.computeBodyFilteredFields(fields: fields, activeDateField: filterObject.dateField)
+  }
+
+  var showDateHeader: Bool {
+    Self.shouldShowDateHeader(fields: fields, activeDateField: filterObject.dateField)
+  }
   
   var body: some View {
     ZStack {
@@ -262,7 +282,8 @@ struct macosSearchMainView: View {
                 
                 macosSearchResultsView(renderedObjects: $renderedObjects,
                                        viewableFields: resultsFields,
-                                       fields: fields.filter {$0.visible},
+                                       fields: bodyFilteredFields,
+                                       showDateHeader: showDateHeader,
                                        selectedHost:$selectedHost,
                                        selectedIndex: $selectedIndex,
                                        itemDetail: itemDetail,
@@ -455,9 +476,21 @@ struct macosSearchMainView: View {
     .onAppear {
       Task {
         items = serverObjects.items
+        currentActiveDateField = filterObject.dateField?.squashedString
         await Request()
       }
       
+    }
+    .onChange(of: filterObject.dateField?.squashedString) { _ in
+      if Self.switchDateField(
+        newDateField: filterObject.dateField,
+        currentActiveDateField: &currentActiveDateField,
+        fields: &fields,
+        onlyVisibleFields: &onlyVisibleFields,
+        renderedObjects: &renderedObjects
+      ) {
+        updatedFieldsNotification = UUID()
+      }
     }
     .onChange(of: hostsUpdated.updated) { _ in
       Task {
@@ -536,6 +569,50 @@ extension macosSearchMainView {
       targetFields.append(field)
       existingTargetKeys.insert(field.squashedString)
     }
+  }
+
+  /// Computes the list of active body filters by excluding the active date field from visible fields.
+  /// The active date field is presented separately in the card header, not in the body textArray.
+  /// When no body fields are explicitly selected by the user (even if the date field is active by default),
+  /// the body displays all document fields unfiltered. Once one or more body fields are selected,
+  /// the body is filtered strictly to those selected fields.
+  public static func computeBodyFilteredFields(
+    fields: [SquashedFieldsArray],
+    activeDateField: SquashedFieldsArray?
+  ) -> [SquashedFieldsArray] {
+    fields.filter { $0.visible && $0.squashedString != activeDateField?.squashedString }
+  }
+
+  public static func shouldShowDateHeader(
+    fields: [SquashedFieldsArray],
+    activeDateField: SquashedFieldsArray?
+  ) -> Bool {
+    guard let dateField = activeDateField else { return false }
+    return fields.contains { $0.squashedString == dateField.squashedString && $0.visible }
+  }
+
+  @discardableResult
+  public static func switchDateField(
+    newDateField: SquashedFieldsArray?,
+    currentActiveDateField: inout String?,
+    fields: inout [SquashedFieldsArray],
+    onlyVisibleFields: inout [SquashedFieldsArray],
+    renderedObjects: inout RenderObject?
+  ) -> Bool {
+    let newSquashed = newDateField?.squashedString
+    guard newSquashed != currentActiveDateField else { return false }
+    if let oldDateField = currentActiveDateField {
+      fields.first { $0.squashedString == oldDateField }?.visible = false
+      onlyVisibleFields.first { $0.squashedString == oldDateField }?.visible = false
+    }
+    if let newSquashed = newSquashed {
+      fields.first { $0.squashedString == newSquashed }?.visible = true
+      onlyVisibleFields.first { $0.squashedString == newSquashed }?.visible = true
+      newDateField?.visible = true
+    }
+    renderedObjects?.dateField = newDateField
+    currentActiveDateField = newSquashed
+    return true
   }
 }
 
