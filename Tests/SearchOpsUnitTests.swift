@@ -804,4 +804,469 @@ struct SearchOpsUnitTests {
     let noMatches = IndexFilterHelper.filter(indices: hiddenIndices, query: "logs")
     XCTAssertTrue(noMatches.isEmpty)
   }
+
+  // MARK: - ManageIndexes Sorting Tests
+
+  @Test func testManageIndexesSortOption_properties() {
+    let options = ManageIndexesSortOption.allCases
+    XCTAssertEqual(options.count, 4)
+    XCTAssertEqual(options, [.name, .recent, .size, .docCount])
+
+    XCTAssertEqual(ManageIndexesSortOption.name.id, "Name")
+    XCTAssertEqual(ManageIndexesSortOption.name.iconName, "textformat")
+    XCTAssertTrue(ManageIndexesSortOption.name.defaultAscending)
+    XCTAssertFalse(ManageIndexesSortOption.recent.defaultAscending)
+    XCTAssertFalse(ManageIndexesSortOption.size.defaultAscending)
+    XCTAssertFalse(ManageIndexesSortOption.docCount.defaultAscending)
+
+    XCTAssertTrue(ManageIndexesSortOption.name.tooltip(isAscending: true).contains("A to Z"))
+    XCTAssertTrue(ManageIndexesSortOption.name.tooltip(isAscending: false).contains("Z to A"))
+    XCTAssertTrue(ManageIndexesSortOption.recent.tooltip(isAscending: false).contains("newest first"))
+    XCTAssertTrue(ManageIndexesSortOption.recent.tooltip(isAscending: true).contains("oldest first"))
+    XCTAssertTrue(ManageIndexesSortOption.size.tooltip(isAscending: false).contains("largest first"))
+    XCTAssertTrue(ManageIndexesSortOption.size.tooltip(isAscending: true).contains("smallest first"))
+    XCTAssertTrue(ManageIndexesSortOption.docCount.tooltip(isAscending: false).contains("highest first"))
+    XCTAssertTrue(ManageIndexesSortOption.docCount.tooltip(isAscending: true).contains("lowest first"))
+
+    XCTAssertFalse(ManageIndexesSortOption.name.inactiveTooltip.isEmpty)
+    XCTAssertFalse(ManageIndexesSortOption.recent.inactiveTooltip.isEmpty)
+    XCTAssertFalse(ManageIndexesSortOption.size.inactiveTooltip.isEmpty)
+    XCTAssertFalse(ManageIndexesSortOption.docCount.inactiveTooltip.isEmpty)
+  }
+
+  @Test func testManageIndexesSortHelper_sortByName() {
+    let indices = ["users", "audit-2025", "logs-app", "billing", "audit-2024"]
+
+    let ascending = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .name,
+      ascending: true
+    )
+    XCTAssertEqual(ascending, ["audit-2024", "audit-2025", "billing", "logs-app", "users"])
+
+    let descending = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .name,
+      ascending: false
+    )
+    XCTAssertEqual(descending, ["users", "logs-app", "billing", "audit-2025", "audit-2024"])
+
+    // Deduplication & empty
+    let withDupes = ["logs", "billing", "logs", "billing", "analytics"]
+    let sortedDupes = ManageIndexesSortHelper.sortIndices(
+      indices: withDupes,
+      sortOption: .name,
+      ascending: true
+    )
+    XCTAssertEqual(sortedDupes, ["analytics", "billing", "logs"])
+
+    let empty = ManageIndexesSortHelper.sortIndices(
+      indices: [],
+      sortOption: .name,
+      ascending: true
+    )
+    XCTAssertEqual(empty, [])
+  }
+
+  @Test func testManageIndexesSortHelper_sortBySize() {
+    let indices = ["small", "huge", "medium", "unknown", "equal-b", "equal-a"]
+    let stats: [String: IndexStatsItem] = [
+      "small": IndexStatsItem(storageBytes: 1024),
+      "huge": IndexStatsItem(storageBytes: 104_857_600),
+      "medium": IndexStatsItem(storageBytes: 52_428_800),
+      "equal-a": IndexStatsItem(storageBytes: 2048),
+      "equal-b": IndexStatsItem(storageBytes: 2048),
+      "unknown": IndexStatsItem(storageBytes: nil)
+    ]
+
+    // Descending: largest to smallest, nil stats at bottom, tie broken alphabetically
+    let descending = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .size,
+      ascending: false,
+      stats: stats
+    )
+    XCTAssertEqual(descending, ["huge", "medium", "equal-a", "equal-b", "small", "unknown"])
+
+    // Ascending: smallest to largest, nil stats at bottom, tie broken alphabetically
+    let ascending = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .size,
+      ascending: true,
+      stats: stats
+    )
+    XCTAssertEqual(ascending, ["small", "equal-a", "equal-b", "medium", "huge", "unknown"])
+  }
+
+  @Test func testManageIndexesSortHelper_sortByDocCount() {
+    let indices = ["ten", "million", "zero", "missing-stats", "hundred-b", "hundred-a"]
+    let stats: [String: IndexStatsItem] = [
+      "ten": IndexStatsItem(docCount: 10),
+      "million": IndexStatsItem(docCount: 1_000_000),
+      "zero": IndexStatsItem(docCount: 0),
+      "hundred-a": IndexStatsItem(docCount: 100),
+      "hundred-b": IndexStatsItem(docCount: 100)
+    ]
+
+    // Descending: most docs to least, nil stats at bottom, tie broken alphabetically
+    let descending = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .docCount,
+      ascending: false,
+      stats: stats
+    )
+    XCTAssertEqual(descending, ["million", "hundred-a", "hundred-b", "ten", "zero", "missing-stats"])
+
+    // Ascending: least docs to most, nil stats at bottom, tie broken alphabetically
+    let ascending = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .docCount,
+      ascending: true,
+      stats: stats
+    )
+    XCTAssertEqual(ascending, ["zero", "ten", "hundred-a", "hundred-b", "million", "missing-stats"])
+  }
+
+  @Test func testManageIndexesSortHelper_sortByRecent() {
+    let indices = ["yesterday", "now", "last-week", "no-activity", "same-b", "same-a"]
+    let timestamps: [String: Double] = [
+      "now": 1_726_800_000_000,
+      "yesterday": 1_726_713_600_000,
+      "last-week": 1_726_195_200_000,
+      "same-a": 1_726_500_000_000,
+      "same-b": 1_726_500_000_000
+    ]
+
+    // Descending: newest activity first, nil activity at bottom, tie broken alphabetically
+    let descending = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .recent,
+      ascending: false,
+      timestamps: timestamps
+    )
+    XCTAssertEqual(descending, ["now", "yesterday", "same-a", "same-b", "last-week", "no-activity"])
+
+    // Ascending: oldest activity first, nil activity at bottom, tie broken alphabetically
+    let ascending = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .recent,
+      ascending: true,
+      timestamps: timestamps
+    )
+    XCTAssertEqual(ascending, ["last-week", "same-a", "same-b", "yesterday", "now", "no-activity"])
+  }
+
+  @Test func testManageIndexesSortHelper_formatters() {
+    let referenceTime = Date(timeIntervalSince1970: 1_726_800_000) // 1726800000 seconds
+    let oneHourAgoMs = (1_726_800_000.0 - 3600.0) * 1000.0
+
+    let relString = ManageIndexesSortHelper.formatRelativeActivity(timestamp: oneHourAgoMs, relativeTo: referenceTime, locale: Locale(identifier: "en_US"))
+    XCTAssertFalse(relString.isEmpty)
+    XCTAssertTrue(relString.contains("hr") || relString.contains("hour") || relString.contains("1"))
+
+    let fullString = ManageIndexesSortHelper.formatFullActivity(timestamp: oneHourAgoMs, locale: Locale(identifier: "en_US"))
+    XCTAssertFalse(fullString.isEmpty)
+
+    // Invalid timestamps
+    XCTAssertEqual(ManageIndexesSortHelper.formatRelativeActivity(timestamp: 0), "Unknown")
+    XCTAssertEqual(ManageIndexesSortHelper.formatRelativeActivity(timestamp: -100), "Unknown")
+    XCTAssertEqual(ManageIndexesSortHelper.formatRelativeActivity(timestamp: Double.nan), "Unknown")
+    XCTAssertEqual(ManageIndexesSortHelper.formatRelativeActivity(timestamp: 1e15), "Unknown")
+    XCTAssertEqual(ManageIndexesSortHelper.formatFullActivity(timestamp: 0), "Unknown")
+    XCTAssertEqual(ManageIndexesSortHelper.formatFullActivity(timestamp: -500), "Unknown")
+    XCTAssertEqual(ManageIndexesSortHelper.formatFullActivity(timestamp: Double.infinity), "Unknown")
+    XCTAssertEqual(ManageIndexesSortHelper.formatFullActivity(timestamp: Double.greatestFiniteMagnitude), "Unknown")
+  }
+
+  @Test func testManageIndexesSortHelper_negativeAndCorruptStats() {
+    let indices = ["negative-docs", "negative-size", "valid-zero", "valid-positive", "corrupt-both"]
+    let stats: [String: IndexStatsItem] = [
+      "negative-docs": IndexStatsItem(docCount: -10, storageBytes: 5000),
+      "negative-size": IndexStatsItem(docCount: 50, storageBytes: -200),
+      "valid-zero": IndexStatsItem(docCount: 0, storageBytes: 0),
+      "valid-positive": IndexStatsItem(docCount: 100, storageBytes: 10000),
+      "corrupt-both": IndexStatsItem(docCount: -1, storageBytes: -1)
+    ]
+
+    // DocCount Ascending: valid 0, valid 50 (negative-size), valid 100, then negative/corrupt at bottom alphabetically
+    let docAscending = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .docCount,
+      ascending: true,
+      stats: stats
+    )
+    XCTAssertEqual(docAscending, ["valid-zero", "negative-size", "valid-positive", "corrupt-both", "negative-docs"])
+
+    // Size Ascending: valid 0, valid 5000, valid 10000, then negative/corrupt at bottom alphabetically
+    let sizeAscending = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .size,
+      ascending: true,
+      stats: stats
+    )
+    XCTAssertEqual(sizeAscending, ["valid-zero", "negative-docs", "valid-positive", "corrupt-both", "negative-size"])
+
+    // Recent with corrupt timestamps
+    let timestamps: [String: Double] = [
+      "valid-positive": 1_726_800_000_000,
+      "valid-zero": 0, // invalid
+      "negative-docs": -100_000, // invalid
+      "negative-size": Double.nan, // invalid
+      "corrupt-both": 1e16 // out-of-range
+    ]
+    let recentDesc = ManageIndexesSortHelper.sortIndices(
+      indices: indices,
+      sortOption: .recent,
+      ascending: false,
+      timestamps: timestamps
+    )
+    // Only valid-positive is valid, others are placed at bottom ordered alphabetically
+    XCTAssertEqual(recentDesc.first, "valid-positive")
+    XCTAssertEqual(Set(recentDesc.dropFirst()), Set(["corrupt-both", "negative-docs", "negative-size", "valid-zero"]))
+  }
+
+#if os(macOS)
+  @Test @MainActor func testManageNavigationCoordinator_indexDetailNavigation() {
+    let coordinator = ManageNavigationCoordinator()
+    let host = HostDetails()
+    host.name = "Prod Cluster"
+    coordinator.selectHost(host)
+    coordinator.navigateToListIndexes()
+    XCTAssertEqual(coordinator.screen, .indexList)
+
+    let stats = IndexStatsItem(docCount: 500, storageBytes: 1024)
+    coordinator.selectIndex("logs-2026", stats: stats)
+    XCTAssertEqual(coordinator.screen, .indexDetail)
+    XCTAssertEqual(coordinator.selectedIndex, "logs-2026")
+    XCTAssertEqual(coordinator.selectedIndexStats?.docCount, 500)
+
+    // goBack from indexDetail returns to indexList and clears index selection
+    coordinator.goBack()
+    XCTAssertEqual(coordinator.screen, .indexList)
+    XCTAssertNil(coordinator.selectedIndex)
+    XCTAssertNil(coordinator.selectedIndexStats)
+    XCTAssertEqual(coordinator.selectedHost?.name, "Prod Cluster")
+
+    // Selecting again, then reset clears everything
+    coordinator.selectIndex("logs-2026", stats: stats)
+    XCTAssertEqual(coordinator.screen, .indexDetail)
+    coordinator.reset()
+    XCTAssertEqual(coordinator.screen, .hostList)
+    XCTAssertNil(coordinator.selectedHost)
+    XCTAssertNil(coordinator.selectedIndex)
+    XCTAssertNil(coordinator.selectedIndexStats)
+  }
+#endif
+
+  @Test func testIndexAgeHelperDateMath() {
+    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 30, period: .Days), "now-30d")
+    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 12, period: .Hours), "now-12h")
+    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 5, period: .Minutes), "now-5m")
+    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 2, period: .Weeks), "now-2w")
+    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 6, period: .Months), "now-6M")
+    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 1, period: .Years), "now-1y")
+    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 45, period: .Seconds), "now-45s")
+  }
+
+  @Test func testIndexAgeHelperApproximateCutoffDate() {
+    let referenceDate = Date(timeIntervalSince1970: 1_700_000_000)
+    let calendar = Calendar.current
+
+    let cutoffDays = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 10, period: .Days)
+    let expectedDays = calendar.date(byAdding: .day, value: -10, to: referenceDate)!
+    XCTAssertEqual(cutoffDays, expectedDays)
+
+    let cutoffHours = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 5, period: .Hours)
+    let expectedHours = calendar.date(byAdding: .hour, value: -5, to: referenceDate)!
+    XCTAssertEqual(cutoffHours, expectedHours)
+
+    let cutoffWeeks = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 2, period: .Weeks)
+    let expectedWeeks = calendar.date(byAdding: .day, value: -14, to: referenceDate)!
+    XCTAssertEqual(cutoffWeeks, expectedWeeks)
+
+    let cutoffMonths = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 3, period: .Months)
+    let expectedMonths = calendar.date(byAdding: .month, value: -3, to: referenceDate)!
+    XCTAssertEqual(cutoffMonths, expectedMonths)
+
+    let cutoffYears = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 1, period: .Years)
+    let expectedYears = calendar.date(byAdding: .year, value: -1, to: referenceDate)!
+    XCTAssertEqual(cutoffYears, expectedYears)
+  }
+
+  @Test func testIndexAgeHelperQueryBuilders() {
+    let matchAll = IndexAgeHelper.buildMatchAllDeleteQuery()
+    XCTAssertTrue(matchAll.contains("\"match_all\""))
+
+    let rangeQuery = IndexAgeHelper.buildRangeDeleteQuery(dateField: "@timestamp", dateMathExpression: "now-30d")
+    XCTAssertTrue(rangeQuery.contains("@timestamp"))
+    XCTAssertTrue(rangeQuery.contains("now-30d"))
+    XCTAssertTrue(rangeQuery.contains("lt"))
+  }
+
+  @Test func testDeleteByQuerySuccessResponseParsing() {
+    let jsonString = """
+    {
+      "took": 128,
+      "timed_out": false,
+      "total": 4200,
+      "deleted": 4200,
+      "batches": 5,
+      "version_conflicts": 0,
+      "noops": 0,
+      "failures": []
+    }
+    """
+    let data = Data(jsonString.utf8)
+    let result = IndexManagementService.parseDeleteResponse(data, httpStatus: 200)
+
+    XCTAssertTrue(result.isSuccess)
+    XCTAssertEqual(result.took, 128)
+    XCTAssertEqual(result.timedOut, false)
+    XCTAssertEqual(result.total, 4200)
+    XCTAssertEqual(result.deleted, 4200)
+    XCTAssertEqual(result.batches, 5)
+    XCTAssertEqual(result.versionConflicts, 0)
+    XCTAssertEqual(result.noops, 0)
+    XCTAssertEqual(result.failures, [])
+    XCTAssertNil(result.errorMessage)
+  }
+
+  @Test func testDeleteByQueryFailureResponseParsing() {
+    let failureJson = """
+    {
+      "took": 45,
+      "timed_out": false,
+      "total": 10,
+      "deleted": 2,
+      "batches": 1,
+      "version_conflicts": 8,
+      "noops": 0,
+      "failures": [
+        {
+          "index": "test-index",
+          "type": "_doc",
+          "id": "abc",
+          "cause": {
+            "type": "version_conflict_engine_exception",
+            "reason": "[abc]: version conflict, required seqNo [1], primary term [1]"
+          },
+          "status": 409
+        }
+      ]
+    }
+    """
+    let result1 = IndexManagementService.parseDeleteResponse(Data(failureJson.utf8), httpStatus: 200)
+    XCTAssertFalse(result1.isSuccess)
+    XCTAssertEqual(result1.deleted, 2)
+    XCTAssertEqual(result1.failures.count, 1)
+    XCTAssertEqual(result1.errorMessage, "[abc]: version conflict, required seqNo [1], primary term [1]")
+
+    let rootCauseJson = """
+    {
+      "error": {
+        "root_cause": [
+          {
+            "type": "index_not_found_exception",
+            "reason": "no such index [unknown-index]",
+            "resource.type": "index_or_alias",
+            "resource.id": "unknown-index",
+            "index_uuid": "_na_",
+            "index": "unknown-index"
+          }
+        ],
+        "type": "index_not_found_exception",
+        "reason": "no such index [unknown-index]"
+      },
+      "status": 404
+    }
+    """
+    let result2 = IndexManagementService.parseDeleteResponse(Data(rootCauseJson.utf8), httpStatus: 404)
+    XCTAssertFalse(result2.isSuccess)
+    XCTAssertEqual(result2.errorMessage, "no such index [unknown-index]")
+
+    let networkError = ResponseError(title: "Request Error", message: "Connection refused", type: .critical)
+    let result3 = IndexManagementService.parseDeleteResponse(nil, httpStatus: nil, requestError: networkError)
+    XCTAssertFalse(result3.isSuccess)
+    XCTAssertEqual(result3.errorMessage, "Connection refused")
+  }
+
+  @Test func testDateFieldRanking() {
+    let field1 = DateFieldInfo(name: "created_at", isNanos: false, isSeconds: false)
+    let field2 = DateFieldInfo(name: "@timestamp", isNanos: false, isSeconds: false)
+    let field3 = DateFieldInfo(name: "timestamp", isNanos: false, isSeconds: false)
+    let field4 = DateFieldInfo(name: "meta.updated_at", isNanos: false, isSeconds: false)
+
+    let best = IndexActivityService.selectBestDateField(from: [field1, field4, field2, field3])
+    XCTAssertEqual(best?.name, "@timestamp")
+
+    let bestWithoutAtTimestamp = IndexActivityService.selectBestDateField(from: [field1, field4, field3])
+    XCTAssertEqual(bestWithoutAtTimestamp?.name, "timestamp")
+  }
+
+  @Test func testIndexAgeHelper_zeroAndNegativeBoundary() {
+    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 0, period: .Days), "now-1d")
+    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: -10, period: .Hours), "now-1h")
+
+    let referenceDate = Date(timeIntervalSince1970: 1_700_000_000)
+    let calendar = Calendar.current
+    let cutoffZero = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 0, period: .Days)
+    let expectedOneDayAgo = calendar.date(byAdding: .day, value: -1, to: referenceDate)!
+    XCTAssertEqual(cutoffZero, expectedOneDayAgo)
+
+    let cutoffNegative = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: -5, period: .Weeks)
+    let expectedOneWeekAgo = calendar.date(byAdding: .day, value: -7, to: referenceDate)!
+    XCTAssertEqual(cutoffNegative, expectedOneWeekAgo)
+  }
+
+  @Test func testParseErrorMessage_htmlAndHttpErrorHandling() {
+    let htmlData = Data("<html><head><title>502 Bad Gateway</title></head><body>502 Bad Gateway</body></html>".utf8)
+    let err502 = IndexManagementService.parseErrorMessage(from: htmlData, httpStatus: 502)
+    XCTAssertNotNil(err502)
+    XCTAssertEqual(err502?.title, "HTTP Error 502")
+    XCTAssertEqual(err502?.message, "Server returned HTTP 502")
+
+    let err500 = IndexManagementService.parseErrorMessage(from: nil, httpStatus: 500)
+    XCTAssertNotNil(err500)
+    XCTAssertEqual(err500?.title, "HTTP Error 500")
+    XCTAssertEqual(err500?.message, "Request failed with HTTP status 500")
+
+    let plainData = Data("Service Unavailable".utf8)
+    let err503 = IndexManagementService.parseErrorMessage(from: plainData, httpStatus: 503)
+    XCTAssertNotNil(err503)
+    XCTAssertEqual(err503?.message, "Service Unavailable")
+
+    let deleteResult502 = IndexManagementService.parseDeleteResponse(htmlData, httpStatus: 502)
+    XCTAssertFalse(deleteResult502.isSuccess)
+    XCTAssertEqual(deleteResult502.errorMessage, "Server returned HTTP 502")
+
+    let deleteResult500 = IndexManagementService.parseDeleteResponse(nil, httpStatus: 500)
+    XCTAssertFalse(deleteResult500.isSuccess)
+    XCTAssertEqual(deleteResult500.errorMessage, "Request failed with HTTP status 500")
+  }
+
+  @Test func testExtractIndexStats_aliasAndConcreteResolution() {
+    let stats: [String: IndexStatsItem] = [
+      "logs-2026-01": IndexStatsItem(docCount: 100, storageBytes: 1000, totalDocCount: 200, totalStorageBytes: 2000, deletedDocCount: 5),
+      "logs-2026-02": IndexStatsItem(docCount: 300, storageBytes: 3000, totalDocCount: 600, totalStorageBytes: 6000, deletedDocCount: 15)
+    ]
+
+    let exact = IndexManagementService.extractIndexStats(from: stats, for: "logs-2026-01")
+    XCTAssertEqual(exact?.docCount, 100)
+    XCTAssertEqual(exact?.storageBytes, 1000)
+
+    let aliasMulti = IndexManagementService.extractIndexStats(from: stats, for: "logs-alias")
+    XCTAssertEqual(aliasMulti?.docCount, 400)
+    XCTAssertEqual(aliasMulti?.storageBytes, 4000)
+    XCTAssertEqual(aliasMulti?.totalDocCount, 800)
+    XCTAssertEqual(aliasMulti?.totalStorageBytes, 8000)
+    XCTAssertEqual(aliasMulti?.deletedDocCount, 20)
+
+    let singleMap = ["backing-idx": IndexStatsItem(docCount: 50, storageBytes: 500)]
+    let aliasSingle = IndexManagementService.extractIndexStats(from: singleMap, for: "my-alias")
+    XCTAssertEqual(aliasSingle?.docCount, 50)
+    XCTAssertEqual(aliasSingle?.storageBytes, 500)
+
+    let empty = IndexManagementService.extractIndexStats(from: [:], for: "any")
+    XCTAssertNil(empty)
+  }
 }

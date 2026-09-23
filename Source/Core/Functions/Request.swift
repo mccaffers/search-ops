@@ -77,15 +77,19 @@ class Request {
     return urlBuilder
   }
   
+  @MainActor
   private func buildRequest(url: URL,
                     method: String,
                     authorisationString: String,
-                    additionalHeader: [String:String] ) -> URLRequest {
+                    additionalHeader: [String:String],
+                    timeoutInterval: TimeInterval? = nil) -> URLRequest {
     
     var request = URLRequest(
       url: url,
       cachePolicy: .reloadIgnoringLocalCacheData
     )
+    let settingsManager = SettingsDataManager()
+    request.timeoutInterval = timeoutInterval ?? TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.defaultRequestTimeout))
     
     request.httpMethod = method
     request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -105,15 +109,14 @@ class Request {
   @MainActor
   func invoke(serverDetails: HostDetails,
               endpoint: String,
-              json : String? = nil) async -> ServerResponse {
+              json : String? = nil,
+              timeoutInterval: TimeInterval? = nil) async -> ServerResponse {
     
     var request: URLRequest;
     
     if let host = serverDetails.host, host.selfSignedCertificate {
       self.localSession = InsecureConnection.session()
     }
-    
-    let settingsManager = SettingsDataManager()
     
     let resObject = ServerResponse()
     
@@ -129,12 +132,6 @@ class Request {
       if let url = URL(string: urlBuilder) {
         
         resObject.url = url
-        
-        request = URLRequest(
-          url: url,
-          cachePolicy: .reloadIgnoringLocalCacheData,
-          timeoutInterval: TimeInterval(settingsManager.settings?.requestTimeout ?? Int(Constants.defaultRequestTimeout))
-        )
         
         var authorisationString : String = ""
         var additionalHeaders : [String:String] =  [:]
@@ -160,7 +157,8 @@ class Request {
         request = buildRequest(url: url,
                                method: resObject.method ?? "GET",
                                authorisationString: authorisationString,
-                               additionalHeader: additionalHeaders)
+                               additionalHeader: additionalHeaders,
+                               timeoutInterval: timeoutInterval)
         
         if let jsonData = json?.data {
           request.httpBody = jsonData // try json.rawData()

@@ -13,15 +13,25 @@ public enum ManageScreen: Equatable {
   case hostList
   case hostOptions
   case indexList
+  case indexDetail
 }
 
 @MainActor public class ManageNavigationCoordinator: ObservableObject {
   @Published public var screen: ManageScreen = .hostList
   @Published public var selectedHost: HostDetails? = nil
+  @Published public var selectedIndex: String? = nil
+  @Published public var selectedIndexStats: IndexStatsItem? = nil
 
-  public init(screen: ManageScreen = .hostList, selectedHost: HostDetails? = nil) {
+  public init(
+    screen: ManageScreen = .hostList,
+    selectedHost: HostDetails? = nil,
+    selectedIndex: String? = nil,
+    selectedIndexStats: IndexStatsItem? = nil
+  ) {
     self.screen = screen
     self.selectedHost = selectedHost
+    self.selectedIndex = selectedIndex
+    self.selectedIndexStats = selectedIndexStats
   }
 
   public func selectHost(_ host: HostDetails) {
@@ -34,8 +44,18 @@ public enum ManageScreen: Equatable {
     screen = .indexList
   }
 
+  public func selectIndex(_ indexName: String, stats: IndexStatsItem? = nil) {
+    selectedIndex = indexName
+    selectedIndexStats = stats
+    screen = .indexDetail
+  }
+
   public func goBack() {
     switch screen {
+    case .indexDetail:
+      screen = .indexList
+      selectedIndex = nil
+      selectedIndexStats = nil
     case .indexList:
       screen = .hostOptions
     case .hostOptions:
@@ -48,6 +68,8 @@ public enum ManageScreen: Equatable {
 
   public func reset() {
     selectedHost = nil
+    selectedIndex = nil
+    selectedIndexStats = nil
     screen = .hostList
   }
 
@@ -55,12 +77,16 @@ public enum ManageScreen: Equatable {
     guard let currentHost = selectedHost else {
       if screen != .hostList {
         screen = .hostList
+        selectedIndex = nil
+        selectedIndexStats = nil
       }
       return
     }
 
     if currentHost.isInvalidated {
       selectedHost = nil
+      selectedIndex = nil
+      selectedIndexStats = nil
       screen = .hostList
       return
     }
@@ -68,6 +94,8 @@ public enum ManageScreen: Equatable {
     let currentId = currentHost.id
     if !hosts.contains(where: { !$0.isInvalidated && $0.id == currentId }) {
       selectedHost = nil
+      selectedIndex = nil
+      selectedIndexStats = nil
       screen = .hostList
     }
   }
@@ -155,6 +183,23 @@ struct macosManageHostsView: View {
         if let host = coordinator.selectedHost, !host.isInvalidated {
           macosManageIndexesView(
             host: host,
+            onBack: { coordinator.goBack() },
+            onSelectIndex: { indexName, stats in
+              coordinator.selectIndex(indexName, stats: stats)
+            }
+          )
+        } else {
+          hostListView
+            .onAppear {
+              coordinator.reset()
+            }
+        }
+      case .indexDetail:
+        if let host = coordinator.selectedHost, !host.isInvalidated, let indexName = coordinator.selectedIndex {
+          macosManageIndexDetailView(
+            host: host,
+            indexName: indexName,
+            initialStats: coordinator.selectedIndexStats,
             onBack: { coordinator.goBack() }
           )
         } else {

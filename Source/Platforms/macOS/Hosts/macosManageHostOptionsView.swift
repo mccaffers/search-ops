@@ -23,8 +23,8 @@ struct macosManageHostOptionsView: View {
       HStack(spacing: 8) {
         Button(action: onBack) {
           Image(systemName: "chevron.left")
-            .font(.system(size: 14, weight: .semibold))
-            .padding(6)
+            .font(.system(size: 20, weight: .semibold))
+            .padding(8)
             .background(isBackHovered ? Color("ButtonHighlighted") : Color.clear)
             .clipShape(.rect(cornerRadius: 4))
             .contentShape(Rectangle())
