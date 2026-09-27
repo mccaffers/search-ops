@@ -13,8 +13,8 @@ import SwiftyJSON
 // Using the latest available iOS version for compatibility
 @available(iOS 16.0.0, *)
 
-// Defines a test class for ElasticSearch V5 mappings within the SearchOps package.
-// This class is designed to test the parsing and handling of ElasticSearch V5 mapping responses.
+// Defines a test class for Elasticsearch V5 mappings within the SearchOps package.
+// This class is designed to test the parsing and handling of Elasticsearch V5 mapping responses.
 final class ElasticSearchV5MappingTests: XCTestCase {
     
     // Setup method executed before each test in this class.
@@ -27,12 +27,12 @@ final class ElasticSearchV5MappingTests: XCTestCase {
         _ = RealmManager().getRealm(inMemory: true)
     }
     
-    // Test method to verify if the ElasticSearch V5 mapping data parsing works as expected.
+    // Test method to verify if the Elasticsearch V5 mapping data parsing works as expected.
     // This is an asynchronous test, reflecting the needs of network-based data retrieval.
     @MainActor
     func testObjectsElasticv5() async throws {
         // Simulating file retrieval which might mimic retrieving a response from a local test bundle
-        // or a configuration file that mimics the ElasticSearch mapping format.
+        // or a configuration file that mimics the Elasticsearch mapping format.
         let response = try! SearchOpsTests().OpenFile(filename: "v5_mapping")
         
         // Setting up a mocked network session to simulate network interactions.

@@ -30,6 +30,10 @@ public struct macosManageIndexDetailView: View {
   @State private var isBackHovered: Bool = false
   @State private var isRefreshHovered: Bool = false
   @State private var loadTask: Task<Void, Never>? = nil
+  @State private var targetIndexCount: Int = 1
+  @ObservedObject private var deleteTracker = IndexDeleteTaskTracker.shared
+  // Captured once so an invalidated Realm host is never read during a later render
+  private let deleteOperationKey: DeleteOperationKey
 
   public init(
     host: HostDetails,
@@ -41,6 +45,7 @@ public struct macosManageIndexDetailView: View {
     self.indexName = indexName
     self.initialStats = initialStats
     self.onBack = onBack
+    self.deleteOperationKey = IndexDeleteTaskTracker.key(host: host, index: indexName)
   }
 
   private var isHidden: Bool {
@@ -69,11 +74,7 @@ public struct macosManageIndexDetailView: View {
             indexName: indexName,
             dateFields: dateFields,
             currentDocCount: stats?.docCount,
-            onStatsUpdated: {
-              Task {
-                await reloadStats()
-              }
-            }
+            targetIndexCount: targetIndexCount
           )
         }
       }
@@ -86,6 +87,12 @@ public struct macosManageIndexDetailView: View {
     .onDisappear {
       loadTask?.cancel()
       loadTask = nil
+    }
+    .onChange(of: deleteTracker.completions[deleteOperationKey]) { _ in
+      // A delete for this index finished, possibly while this view was gone
+      Task {
+        await reloadStats()
+      }
     }
   }
 
@@ -305,6 +312,9 @@ public struct macosManageIndexDetailView: View {
         if let data = statsResponse.data,
            let statsString = String(data: data, encoding: .utf8) {
           let parsedStats = Results.parseIndexStats(statsString)
+          if !parsedStats.isEmpty {
+            self.targetIndexCount = parsedStats.count
+          }
           if let item = IndexManagementService.extractIndexStats(from: parsedStats, for: indexName) {
             self.stats = item
           }
@@ -324,6 +334,11 @@ public struct macosManageIndexDetailView: View {
     }
 
     let parsedStats = Results.parseIndexStats(statsString)
+    if !parsedStats.isEmpty {
+      await MainActor.run {
+        self.targetIndexCount = parsedStats.count
+      }
+    }
     if let item = IndexManagementService.extractIndexStats(from: parsedStats, for: indexName) {
       await MainActor.run {
         self.stats = item

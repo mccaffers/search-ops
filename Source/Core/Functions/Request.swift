@@ -99,7 +99,7 @@ class Request {
     }
     
     for headers in additionalHeader {
-      request.addValue(headers.key, forHTTPHeaderField: headers.value)
+      request.addValue(headers.value, forHTTPHeaderField: headers.key)
     }
     
     return request
@@ -110,6 +110,7 @@ class Request {
   func invoke(serverDetails: HostDetails,
               endpoint: String,
               json : String? = nil,
+              method: String? = nil,
               timeoutInterval: TimeInterval? = nil) async -> ServerResponse {
     
     var request: URLRequest;
@@ -120,10 +121,8 @@ class Request {
     
     let resObject = ServerResponse()
     
-    resObject.method = "GET" // default
-    if json != nil {
-      resObject.method = "POST"
-    }
+    // Explicit method takes precedence over the body-based default
+    resObject.method = method ?? (json != nil ? "POST" : "GET")
     
     do {
       
@@ -133,35 +132,31 @@ class Request {
         
         resObject.url = url
         
-        var authorisationString : String = ""
-        var additionalHeaders : [String:String] =  [:]
+        let authorisation = Request.authorisation(for: serverDetails)
+        var additionalHeaders = authorisation.headers
         
-        if !serverDetails.authToken.isEmpty {
-          authorisationString = "Basic " + serverDetails.authToken
-        }
-        else if !serverDetails.username.isEmpty {
-          authorisationString = "Basic " + AuthBuilder.MakeBearer(username: serverDetails.username,
-                                                                  password: serverDetails.password)
-        } else if !serverDetails.apiToken.isEmpty {
-          authorisationString = "Bearer " + serverDetails.apiToken
-        } else if !serverDetails.apiKey.isEmpty {
-          authorisationString = "ApiKey " + serverDetails.apiKey
-          additionalHeaders = ["kbn-xsrf": "true"]
-        }
-        
-        if serverDetails.customHeaders.count > 0 {
-          for header in serverDetails.customHeaders {
-            additionalHeaders[header.header] = header.value
+        for header in serverDetails.customHeaders {
+          if serverDetails.authenticationType == .AWSSigV4,
+             Request.isReservedForSigV4(header: header.header) {
+            continue
           }
+          additionalHeaders[header.header] = header.value
         }
+        
         request = buildRequest(url: url,
                                method: resObject.method ?? "GET",
-                               authorisationString: authorisationString,
+                               authorisationString: authorisation.value,
                                additionalHeader: additionalHeaders,
                                timeoutInterval: timeoutInterval)
         
         if let jsonData = json?.data {
           request.httpBody = jsonData // try json.rawData()
+        }
+        
+        // Sign last, so every retry is signed with the current time
+        let signer = Request.signer(for: serverDetails)
+        if let signer = signer {
+          request = signer.sign(request)
         }
         
         let response = try await localSession.data(for: request)
@@ -171,6 +166,10 @@ class Request {
         
         if let httpResponse = response.1 as? HTTPURLResponse {
           resObject.httpStatus = httpResponse.statusCode
+        }
+        
+        if let signer = signer {
+          Request.handleSigV4Response(resObject, sessionToken: signer.credentials.sessionToken)
         }
         
         
@@ -199,6 +198,94 @@ class Request {
     return resObject
   }
   
+  
+  // The static Authorization header, picked by authentication type.
+  // SigV4 has none, its header is computed per request by the signer.
+  // Hosts left on None keep the old behaviour of using whichever field is filled in.
+  static func authorisation(for serverDetails: HostDetails) -> (value: String, headers: [String:String]) {
+    switch serverDetails.authenticationType {
+    case .AWSSigV4:
+      return ("", [:])
+    case .AuthToken:
+      return (serverDetails.authToken.isEmpty ? "" : "Basic " + serverDetails.authToken, [:])
+    case .UsernamePassword:
+      return (serverDetails.username.isEmpty ? "" : "Basic " + AuthBuilder.MakeBearer(username: serverDetails.username,
+                                                                                         password: serverDetails.password), [:])
+    case .APIToken:
+      return (serverDetails.apiToken.isEmpty ? "" : "Bearer " + serverDetails.apiToken, [:])
+    case .APIKey:
+      return (serverDetails.apiKey.isEmpty ? "" : "ApiKey " + serverDetails.apiKey,
+              serverDetails.apiKey.isEmpty ? [:] : ["kbn-xsrf": "true"])
+    case .None:
+      if !serverDetails.authToken.isEmpty {
+        return ("Basic " + serverDetails.authToken, [:])
+      } else if !serverDetails.username.isEmpty {
+        return ("Basic " + AuthBuilder.MakeBearer(username: serverDetails.username,
+                                                  password: serverDetails.password), [:])
+      } else if !serverDetails.apiToken.isEmpty {
+        return ("Bearer " + serverDetails.apiToken, [:])
+      } else if !serverDetails.apiKey.isEmpty {
+        return ("ApiKey " + serverDetails.apiKey, ["kbn-xsrf": "true"])
+      }
+      return ("", [:])
+    }
+  }
+  
+  // Custom headers that would collide with the signed ones. addValue appends
+  // to an existing header, which breaks the signature, so they aren't sent.
+  static func isReservedForSigV4(header: String) -> Bool {
+    let name = header.trimmingCharacters(in: .whitespaces).lowercased()
+    return name == "authorization" || name == "host" || name == "content-type" || name.hasPrefix("x-amz-")
+  }
+  
+  // A signer for SigV4 hosts. The region falls back to the one in the endpoint hostname.
+  static func signer(for serverDetails: HostDetails) -> AWSSigV4Signer? {
+    guard serverDetails.authenticationType == .AWSSigV4 else {
+      return nil
+    }
+    
+    let token = serverDetails.awsSessionToken.trimmingCharacters(in: .whitespacesAndNewlines)
+    var region = serverDetails.awsRegion.trimmingCharacters(in: .whitespacesAndNewlines)
+    if region.isEmpty, let detected = AWSEndpoint.detect(serverDetails.host?.url ?? "") {
+      region = detected.region
+    }
+    
+    let credentials = AWSCredentials(
+      accessKeyId: serverDetails.awsAccessKeyId.trimmingCharacters(in: .whitespacesAndNewlines),
+      secretAccessKey: serverDetails.awsSecretAccessKey.trimmingCharacters(in: .whitespacesAndNewlines),
+      sessionToken: token.isEmpty ? nil : token)
+    
+    return AWSSigV4Signer(credentials: credentials,
+                          region: region,
+                          service: serverDetails.awsService.rawValue)
+  }
+  
+  // Runs once for every SigV4 response, before any caller parses or logs the body
+  static func handleSigV4Response(_ resObject: ServerResponse, sessionToken: String?) {
+    guard let data = resObject.data else {
+      return
+    }
+    
+    let redacted = AWSSigV4Response.redact(data, sessionToken: sessionToken)
+    resObject.data = redacted
+    
+    guard resObject.httpStatus == 403,
+          let body = String(data: redacted, encoding: .utf8),
+          let message = AWSSigV4Response.errorMessage(for: body) else {
+      return
+    }
+    
+    resObject.error = ResponseError(title: "AWS Authentication Error",
+                                    message: message,
+                                    type: .critical)
+    
+    // Don't show the canonical string the server echoes back on a mismatch
+    if body.contains("The request signature we calculated does not match"),
+       let replacement = try? JSONSerialization.data(withJSONObject: ["message": message]) {
+      resObject.data = replacement
+    }
+  }
+
 }
 
 

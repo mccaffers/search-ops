@@ -175,7 +175,9 @@ struct ContentViewMacOS: View {
                              searchHistoryManager: searchHistoryManager,
                              selection: $selection)
             } else if sidebar == .develop {
-              macosDevelopView(fullScreen: $fullScreen)
+              macosDevelopView(fullScreen: $fullScreen,
+                               serverObjects: serverObjects,
+                               hostsUpdated: hostsUpdated)
             } else if sidebar == .manage {
               macosManageHostsView(fullScreen: $fullScreen,
                                    serverObjects: serverObjects,

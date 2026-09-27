@@ -1190,6 +1190,124 @@ struct SearchOpsUnitTests {
     XCTAssertEqual(result3.errorMessage, "Connection refused")
   }
 
+  @Test func testParseTaskSubmission() {
+    let started = IndexManagementService.parseTaskSubmission(Data(#"{"task":"oTUltX4IQMOUUVeiohTt8A:12345"}"#.utf8), httpStatus: 200)
+    XCTAssertEqual(started, .started("oTUltX4IQMOUUVeiohTt8A:12345"))
+
+    let notFound = """
+    {"error":{"root_cause":[{"type":"index_not_found_exception","reason":"no such index [missing]"}],"type":"index_not_found_exception","reason":"no such index [missing]"},"status":404}
+    """
+    guard case .failed(let notFoundResult) = IndexManagementService.parseTaskSubmission(Data(notFound.utf8), httpStatus: 404) else {
+      XCTFail("Expected failed submission"); return
+    }
+    XCTAssertFalse(notFoundResult.isSuccess)
+    XCTAssertEqual(notFoundResult.errorMessage, "no such index [missing]")
+
+    let networkError = ResponseError(title: "Request Error", message: "Connection refused", type: .critical)
+    guard case .failed(let networkResult) = IndexManagementService.parseTaskSubmission(nil, httpStatus: nil, requestError: networkError) else {
+      XCTFail("Expected failed submission"); return
+    }
+    XCTAssertEqual(networkResult.errorMessage, "Connection refused")
+
+    guard case .failed(let missingTaskResult) = IndexManagementService.parseTaskSubmission(Data("{}".utf8), httpStatus: 200) else {
+      XCTFail("Expected failed submission"); return
+    }
+    XCTAssertFalse(missingTaskResult.isSuccess)
+    XCTAssertNotNil(missingTaskResult.errorMessage)
+  }
+
+  @Test func testParseTaskStatus_running() {
+    let json = """
+    {
+      "completed": false,
+      "task": {
+        "node": "oTUltX4IQMOUUVeiohTt8A",
+        "id": 12345,
+        "action": "indices:data/write/delete/byquery",
+        "status": { "total": 6154, "updated": 0, "created": 0, "deleted": 3500, "batches": 4, "version_conflicts": 0, "noops": 0 },
+        "cancellable": true
+      }
+    }
+    """
+    guard case .running(let progress) = IndexManagementService.parseTaskStatus(Data(json.utf8), httpStatus: 200) else {
+      XCTFail("Expected running status"); return
+    }
+    XCTAssertEqual(progress, DeleteTaskProgress(total: 6154, deleted: 3500, batches: 4))
+  }
+
+  @Test func testParseTaskStatus_completed() {
+    let json = """
+    {
+      "completed": true,
+      "task": { "node": "n1", "id": 1, "status": { "total": 4200, "deleted": 4200, "batches": 5 } },
+      "response": { "took": 128, "timed_out": false, "total": 4200, "deleted": 4200, "batches": 5, "version_conflicts": 0, "noops": 0, "failures": [] }
+    }
+    """
+    guard case .completed(let result) = IndexManagementService.parseTaskStatus(Data(json.utf8), httpStatus: 200) else {
+      XCTFail("Expected completed status"); return
+    }
+    XCTAssertTrue(result.isSuccess)
+    XCTAssertEqual(result.deleted, 4200)
+    XCTAssertEqual(result.took, 128)
+    XCTAssertNil(result.canceled)
+    XCTAssertNil(result.errorMessage)
+  }
+
+  @Test func testParseTaskStatus_cancelled() {
+    let json = """
+    {
+      "completed": true,
+      "task": { "node": "n1", "id": 1, "cancelled": true },
+      "response": { "took": 900, "timed_out": false, "total": 6154, "deleted": 3500, "batches": 4, "failures": [], "canceled": "by user request" }
+    }
+    """
+    guard case .completed(let result) = IndexManagementService.parseTaskStatus(Data(json.utf8), httpStatus: 200) else {
+      XCTFail("Expected completed status"); return
+    }
+    XCTAssertFalse(result.isSuccess)
+    XCTAssertEqual(result.canceled, "by user request")
+    XCTAssertEqual(result.errorMessage, "Cancelled after deleting 3500 of 6154")
+  }
+
+  @Test func testParseTaskStatus_completedWithError() {
+    let json = """
+    {
+      "completed": true,
+      "task": { "node": "n1", "id": 1 },
+      "error": { "type": "search_phase_execution_exception", "reason": "all shards failed" }
+    }
+    """
+    guard case .completed(let result) = IndexManagementService.parseTaskStatus(Data(json.utf8), httpStatus: 200) else {
+      XCTFail("Expected completed status"); return
+    }
+    XCTAssertFalse(result.isSuccess)
+    XCTAssertEqual(result.errorMessage, "all shards failed")
+  }
+
+  @Test func testParseTaskStatus_untrackableAndPollFailures() {
+    let notFound = """
+    {"error":{"root_cause":[{"type":"resource_not_found_exception","reason":"task [n1:1] isn't running and hasn't stored its results"}],"type":"resource_not_found_exception","reason":"task [n1:1] isn't running and hasn't stored its results"},"status":404}
+    """
+    guard case .untrackable(let err404) = IndexManagementService.parseTaskStatus(Data(notFound.utf8), httpStatus: 404) else {
+      XCTFail("Expected untrackable for 404"); return
+    }
+    XCTAssertEqual(err404.message, "task [n1:1] isn't running and hasn't stored its results")
+
+    guard case .untrackable = IndexManagementService.parseTaskStatus(nil, httpStatus: 403) else {
+      XCTFail("Expected untrackable for 403"); return
+    }
+
+    guard case .pollFailed = IndexManagementService.parseTaskStatus(nil, httpStatus: 502) else {
+      XCTFail("Expected pollFailed for 502"); return
+    }
+
+    let networkError = ResponseError(title: "Request Error", message: "Connection refused", type: .critical)
+    guard case .pollFailed(let netErr) = IndexManagementService.parseTaskStatus(nil, httpStatus: nil, requestError: networkError) else {
+      XCTFail("Expected pollFailed for network error"); return
+    }
+    XCTAssertEqual(netErr.message, "Connection refused")
+  }
+
   @Test func testDateFieldRanking() {
     let field1 = DateFieldInfo(name: "created_at", isNanos: false, isSeconds: false)
     let field2 = DateFieldInfo(name: "@timestamp", isNanos: false, isSeconds: false)
@@ -1268,5 +1386,269 @@ struct SearchOpsUnitTests {
 
     let empty = IndexManagementService.extractIndexStats(from: [:], for: "any")
     XCTAssertNil(empty)
+  }
+
+  @Test func testValidateTargetIndex_rejectsUnsafeTargets() {
+    let rejected = [
+      "", " ", "\t",
+      ".", "..",
+      "_all", "_ALL",
+      "*", "logs-*", "logs-?", "a,b",
+      "-logs", "+logs", "_logs",
+      "a/b", "a\\b", "a\"b", "<logs-{now/d}>", "a|b", "a#b", "remote:logs",
+      "logs 2026", "logs\n"
+    ]
+    for name in rejected {
+      XCTAssertNotNil(IndexManagementService.validateTargetIndex(name), "Expected '\(name)' to be rejected")
+    }
+
+    XCTAssertEqual(IndexManagementService.validateTargetIndex("_all")?.message, "Deleting from '_all' indices is not allowed")
+    XCTAssertEqual(IndexManagementService.validateTargetIndex("")?.message, "Index name is empty")
+  }
+
+  @Test func testValidateTargetIndex_acceptsConcreteTargets() {
+    let accepted = [
+      "logs",
+      "logs-2026.09.24",
+      "my_index-01",
+      ".kibana_1",
+      ".security-7",
+      ".ds-logs-app-2026.09.24-000001",
+      "logs-alias"
+    ]
+    for name in accepted {
+      XCTAssertNil(IndexManagementService.validateTargetIndex(name), "Expected '\(name)' to be accepted")
+    }
+  }
+
+  @Test @MainActor func testDeleteFunctions_rejectInvalidTargetBeforeRequest() async {
+    let host = HostDetails()
+    let expected = IndexManagementService.validateTargetIndex("logs-*")?.message
+
+    let allSubmission = await IndexManagementService.deleteAllDocuments(serverDetails: host, index: "logs-*")
+    XCTAssertEqual(allSubmission, .failed(DeleteByQueryResult(errorMessage: expected, isSuccess: false)))
+
+    let ageSubmission = await IndexManagementService.deleteDocumentsByAge(
+      serverDetails: host,
+      index: "_all",
+      dateField: "@timestamp",
+      dateMathExpression: "now-30d"
+    )
+    XCTAssertEqual(ageSubmission, .failed(DeleteByQueryResult(errorMessage: "Deleting from '_all' indices is not allowed", isSuccess: false)))
+  }
+
+  // MARK: - IndexDeleteTaskTracker
+
+  @MainActor
+  private func makeDeleteTracker(
+    _ cluster: ScriptedDeleteTaskCluster,
+    cancel: @escaping IndexDeleteTaskTracker.Canceller = { _, _ in nil }
+  ) -> IndexDeleteTaskTracker {
+    IndexDeleteTaskTracker(
+      fetchStatus: { _, _ in cluster.nextStatus() },
+      cancelTask: cancel,
+      sleep: { interval in await cluster.didSleep(interval) },
+      initialPollInterval: 1,
+      maxPollInterval: 3,
+      maxPollFailures: 3
+    )
+  }
+
+  @MainActor
+  private func makeTrackerHost() -> HostDetails {
+    let host = HostDetails()
+    host.id = UUID()
+    host.name = "Tracker Cluster"
+    return host
+  }
+
+  @Test @MainActor func testDeleteTracker_runningThenCompleted() async {
+    let completed = DeleteByQueryResult(took: 128, total: 4200, deleted: 4200, batches: 5, failures: [], isSuccess: true)
+    let cluster = ScriptedDeleteTaskCluster([
+      .running(DeleteTaskProgress(total: 4200, deleted: 1000, batches: 1)),
+      .running(DeleteTaskProgress(total: 4200, deleted: 2000, batches: 2)),
+      .running(DeleteTaskProgress(total: 4200, deleted: 3000, batches: 3)),
+      .completed(completed)
+    ])
+    var observedStates: [DeleteOperationState] = []
+    let tracker = makeDeleteTracker(cluster)
+    let host = makeTrackerHost()
+    let key = IndexDeleteTaskTracker.key(host: host, index: "logs")
+    cluster.onSleep = { observedStates.append(tracker.operations[key]!.state) }
+
+    XCTAssertTrue(tracker.start(kind: .byAge, host: host, index: "logs") { _ in .started("n1:1") })
+    XCTAssertEqual(tracker.operations[key]?.state, .submitting)
+    XCTAssertEqual(tracker.operations[key]?.kind, .byAge)
+
+    await tracker.waitUntilSettled(key)
+
+    XCTAssertEqual(tracker.operations[key]?.state, .finished(completed))
+    XCTAssertEqual(tracker.completions[key], 1)
+    XCTAssertEqual(cluster.fetchCount, 4)
+    // Interval grows by the initial step each poll and is capped at the max
+    XCTAssertEqual(cluster.sleeps, [1, 2, 3, 3])
+    XCTAssertEqual(observedStates.first, .running(taskId: "n1:1", progress: nil))
+    XCTAssertEqual(observedStates.last, .running(taskId: "n1:1", progress: DeleteTaskProgress(total: 4200, deleted: 3000, batches: 3)))
+  }
+
+  @Test @MainActor func testDeleteTracker_threeConsecutivePollErrorsBecomeUntracked() async {
+    let failure = DeleteTaskStatus.pollFailed(ResponseError(title: "Request Error", message: "Request timed out", type: .critical))
+    let cluster = ScriptedDeleteTaskCluster([
+      failure,
+      .running(DeleteTaskProgress(total: 10, deleted: 5)),
+      failure,
+      failure,
+      failure
+    ])
+    let tracker = makeDeleteTracker(cluster)
+    let host = makeTrackerHost()
+    let key = IndexDeleteTaskTracker.key(host: host, index: "logs")
+
+    tracker.start(kind: .all, host: host, index: "logs") { _ in .started("n1:2") }
+    await tracker.waitUntilSettled(key)
+
+    // The running poll in between resets the failure count, so 5 polls are needed
+    XCTAssertEqual(cluster.fetchCount, 5)
+    guard case .untracked(let taskId, let message) = tracker.operations[key]?.state else {
+      XCTFail("Expected untracked state"); return
+    }
+    XCTAssertEqual(taskId, "n1:2")
+    XCTAssertTrue(message.contains("Task n1:2 may still be running on the cluster"))
+    XCTAssertTrue(message.contains("Request timed out"))
+    XCTAssertFalse(tracker.isActive(key))
+    XCTAssertEqual(tracker.completions[key], 1)
+  }
+
+  @Test @MainActor func testDeleteTracker_forbiddenTasksApiBecomesUntrackedImmediately() async {
+    let forbidden = ResponseError(title: "security_exception", message: "action [cluster:monitor/task/get] is unauthorized", type: .warn)
+    let cluster = ScriptedDeleteTaskCluster([.untrackable(forbidden)])
+    let tracker = makeDeleteTracker(cluster)
+    let host = makeTrackerHost()
+    let key = IndexDeleteTaskTracker.key(host: host, index: "logs")
+
+    tracker.start(kind: .all, host: host, index: "logs") { _ in .started("n1:3") }
+    await tracker.waitUntilSettled(key)
+
+    XCTAssertEqual(cluster.fetchCount, 1)
+    guard case .untracked(_, let message) = tracker.operations[key]?.state else {
+      XCTFail("Expected untracked state"); return
+    }
+    XCTAssertTrue(message.contains("may still be running"))
+    XCTAssertTrue(message.contains("unauthorized"))
+  }
+
+  @Test @MainActor func testDeleteTracker_secondStartOnSameIndexIsRefused() async {
+    let done = DeleteByQueryResult(deleted: 1, failures: [], isSuccess: true)
+    let cluster = ScriptedDeleteTaskCluster([.completed(done), .completed(done), .completed(done)])
+    let tracker = makeDeleteTracker(cluster)
+    let host = makeTrackerHost()
+    let key = IndexDeleteTaskTracker.key(host: host, index: "logs")
+    var submitCount = 0
+
+    XCTAssertTrue(tracker.start(kind: .all, host: host, index: "logs") { _ in submitCount += 1; return .started("n1:4") })
+    XCTAssertFalse(tracker.start(kind: .byAge, host: host, index: "logs") { _ in submitCount += 1; return .started("n1:5") })
+    XCTAssertEqual(tracker.operations[key]?.kind, .all)
+
+    // A different index on the same host is independent
+    let otherKey = IndexDeleteTaskTracker.key(host: host, index: "metrics")
+    XCTAssertTrue(tracker.start(kind: .all, host: host, index: "metrics") { _ in submitCount += 1; return .started("n1:6") })
+
+    await tracker.waitUntilSettled(key)
+    await tracker.waitUntilSettled(otherKey)
+    XCTAssertEqual(submitCount, 2)
+
+    // Once finished, a new delete may start
+    XCTAssertTrue(tracker.start(kind: .byAge, host: host, index: "logs") { _ in .started("n1:7") })
+    await tracker.waitUntilSettled(key)
+    XCTAssertEqual(tracker.completions[key], 2)
+  }
+
+  @Test @MainActor func testDeleteTracker_failedSubmissionFinishesWithoutPolling() async {
+    let cluster = ScriptedDeleteTaskCluster([])
+    let tracker = makeDeleteTracker(cluster)
+    let host = makeTrackerHost()
+    let key = IndexDeleteTaskTracker.key(host: host, index: "logs")
+    let rejected = DeleteByQueryResult(errorMessage: "no such index [logs]", isSuccess: false)
+
+    tracker.start(kind: .all, host: host, index: "logs") { _ in .failed(rejected) }
+    await tracker.waitUntilSettled(key)
+
+    XCTAssertEqual(tracker.operations[key]?.state, .finished(rejected))
+    XCTAssertEqual(cluster.fetchCount, 0)
+
+    tracker.clear(key)
+    XCTAssertNil(tracker.operations[key])
+  }
+
+  @Test @MainActor func testDeleteTracker_cancelMovesToCancellingAndRevertsWhenRejected() async {
+    let cancelled = DeleteByQueryResult(total: 10, deleted: 4, failures: [], canceled: "by user request", errorMessage: "Cancelled after deleting 4 of 10", isSuccess: false)
+    let cluster = ScriptedDeleteTaskCluster([
+      .running(DeleteTaskProgress(total: 10, deleted: 2)),
+      .running(DeleteTaskProgress(total: 10, deleted: 3)),
+      .running(DeleteTaskProgress(total: 10, deleted: 4)),
+      .completed(cancelled)
+    ])
+    var cancelCalls = 0
+    let tracker = makeDeleteTracker(cluster, cancel: { _, _ in
+      cancelCalls += 1
+      return cancelCalls == 1 ? ResponseError(title: "Cancel Failed", message: "task not cancellable", type: .warn) : nil
+    })
+    let host = makeTrackerHost()
+    let key = IndexDeleteTaskTracker.key(host: host, index: "logs")
+    var statesAfterCancel: [DeleteOperationState] = []
+    var notices: [String?] = []
+
+    cluster.onSleep = {
+      switch cluster.sleeps.count {
+      case 2, 4:
+        tracker.cancel(key)
+        if case .cancelling = tracker.operations[key]?.state {
+          statesAfterCancel.append(tracker.operations[key]!.state)
+        }
+      case 3:
+        // Let the rejected cancel request land before the next poll
+        for _ in 0..<10 { await Task.yield() }
+        notices.append(tracker.operations[key]?.notice)
+      default:
+        break
+      }
+    }
+
+    tracker.start(kind: .all, host: host, index: "logs") { _ in .started("n1:8") }
+    await tracker.waitUntilSettled(key)
+    // The second cancel request is fire-and-forget, let it run
+    for _ in 0..<10 { await Task.yield() }
+
+    XCTAssertEqual(cancelCalls, 2)
+    XCTAssertEqual(statesAfterCancel.count, 2)
+    XCTAssertEqual(notices, ["Cancel failed: task not cancellable"])
+    XCTAssertEqual(tracker.operations[key]?.state, .finished(cancelled))
+    XCTAssertNil(tracker.operations[key]?.notice)
+  }
+}
+
+/// Plays back a fixed sequence of `_tasks` responses for IndexDeleteTaskTracker tests
+@MainActor
+private final class ScriptedDeleteTaskCluster {
+  private var statuses: [DeleteTaskStatus]
+  private(set) var fetchCount = 0
+  private(set) var sleeps: [UInt64] = []
+  var onSleep: (() async -> Void)?
+
+  init(_ statuses: [DeleteTaskStatus]) {
+    self.statuses = statuses
+  }
+
+  func nextStatus() -> DeleteTaskStatus {
+    fetchCount += 1
+    guard !statuses.isEmpty else {
+      return .pollFailed(ResponseError(title: "Script", message: "No scripted status left", type: .warn))
+    }
+    return statuses.removeFirst()
+  }
+
+  func didSleep(_ interval: UInt64) async {
+    sleeps.append(interval)
+    await onSleep?()
   }
 }

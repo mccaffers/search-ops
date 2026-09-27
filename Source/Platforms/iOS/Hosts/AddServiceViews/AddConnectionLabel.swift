@@ -32,6 +32,40 @@ struct AddConnectionLabel: View {
   
   @Binding var schemaUpdate : HostScheme
   
+  // Hides the value, for secrets
+  var secure = false
+  
+  // Receives the port from a tidied "Host URL", which this label doesn't own
+  var onPortParsed: ((String) -> Void)? = nil
+  
+  // Moves the scheme, port and any path out of a pasted address
+  private func tidyHostURL() {
+    let address = HostAddress.parse(value)
+    if value != address.host {
+      value = address.host
+      innerValue = address.host
+    }
+    if let scheme = address.scheme {
+      schemaUpdate = scheme
+    }
+    if let port = address.port {
+      onPortParsed?(port)
+    }
+  }
+  
+  @ViewBuilder
+  private var inputField: some View {
+    if secure {
+      SecureField("", text: $innerValue, prompt: Text(placeholder).foregroundColor(.gray))
+    } else {
+      TextField (
+        "", // Placeholder
+        text:$innerValue,
+        prompt: Text(placeholder).foregroundColor(.gray)
+      )
+    }
+  }
+  
   @ViewBuilder
   var body: some View {
     VStack (spacing:0) {
@@ -53,11 +87,7 @@ struct AddConnectionLabel: View {
       
       HStack (spacing:0) {
         
-        TextField (
-          "", // Placeholder
-          text:$innerValue,
-          prompt: Text(placeholder).foregroundColor(.gray)
-        )
+        inputField
         .focused($focusedField, equals: identifer)
 #if os(iOS)
         .keyboardType(.alphabet)
@@ -77,22 +107,18 @@ struct AddConnectionLabel: View {
             selected = false
             
             if identifer == "Host URL" {
-              if value.hasPrefix("https://") {
-                value = String(value.dropFirst("https://".count))
-                innerValue = value
-                schemaUpdate = .HTTPS
-              }
-              if value.hasPrefix("http://") {
-                value = String(value.dropFirst("https://".count))
-                innerValue = value
-                schemaUpdate = .HTTP
-              }
+              tidyHostURL()
             }
           }
         })
         .onChange(of: innerValue, perform: { newValue in
           value=newValue
           observeFieldChanges.change = UUID().uuidString
+          
+          // A pasted URL, eg. from the AWS console, is tidied straight away
+          if identifer == "Host URL" && newValue.contains("://") {
+            tidyHostURL()
+          }
         })
         .onAppear {
           innerValue=value

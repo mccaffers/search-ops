@@ -17,7 +17,7 @@ struct macosHostAddConnectionDetailsView: View {
   @State var hostURL : String = ""
   @State var port : String = ""
   @State var selfSignedCertificates = false
-  @State private var connectionType : ConnectionType = ConnectionType.CloudID
+  @Binding var connectionType : ConnectionType
 
   @FocusState var focusedField: String?
   @State var selectedHostnameField = false
@@ -27,6 +27,20 @@ struct macosHostAddConnectionDetailsView: View {
   @Binding var isHostValid : Bool
   
   @State var showSelfSignedView : Bool = false
+  
+  // Moves the scheme, port and any path out of a pasted address
+  private func tidyHostURL() {
+    let address = HostAddress.parse(hostURL)
+    if let scheme = address.scheme {
+      schemeUpdate = scheme
+    }
+    if let parsedPort = address.port {
+      port = parsedPort
+    }
+    if hostURL != address.host {
+      hostURL = address.host
+    }
+  }
   
     var body: some View {
       VStack(spacing:10) {
@@ -161,18 +175,51 @@ struct macosHostAddConnectionDetailsView: View {
               }
             }
             
-            macosHostsSchemePickerView(localScheme: $schemeUpdate)
-              .onChange(of: schemeUpdate)  { newValue in
-                updateScheme(newValue)
-              }
-              .onAppear {
-                if let item = item,
-                   let currentHost = item.host {
-                  updateScheme(currentHost.scheme)
-                } else if let scheme = host.host?.scheme {
-                  updateScheme(scheme)
+            HStack(alignment: .bottom) {
+              macosHostsSchemePickerView(localScheme: $schemeUpdate)
+                .onChange(of: schemeUpdate)  { newValue in
+                  updateScheme(newValue)
                 }
+                .onAppear {
+                  if let item = item,
+                     let currentHost = item.host {
+                    updateScheme(currentHost.scheme)
+                  } else if let scheme = host.host?.scheme {
+                    updateScheme(scheme)
+                  }
+                }
+              
+              if showSelfSignedView {
+                Button {
+                  selfSignedCertificates.toggle()
+                  host.host?.selfSignedCertificate = selfSignedCertificates
+                } label: {
+                  HStack {
+                    Text("Allow self signed certificates")
+                    Image(systemName: selfSignedCertificates ? "checkmark.circle.fill" : "circle")
+                      .padding(10)
+                      .background(Color("Button"))
+                      .clipShape(.rect(cornerRadius: 5))
+                  }
+                }.buttonStyle(PlainButtonStyle())
+                  .onAppear {
+                    if let item = item,
+                       let selfSigned = item.host?.selfSignedCertificate {
+                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        withAnimation {
+                          self.selfSignedCertificates = selfSigned
+                          if host.host == nil {
+                            host.host = HostURL()
+                          }
+                          self.host.host?.selfSignedCertificate = selfSigned
+                        }
+                      }
+                    } else if let selfSignedCertificates =  host.host?.selfSignedCertificate {
+                      self.selfSignedCertificates = selfSignedCertificates
+                    }
+                  }
               }
+            }
           }
           VStack (spacing:5) {
             Text("URL & Port")
@@ -197,6 +244,14 @@ struct macosHostAddConnectionDetailsView: View {
                 }
                 host.host?.url = newValue
                 isHostValid = host.isValid()
+                
+                // A pasted URL, eg. from the AWS console, is tidied straight away
+                if newValue.contains("://") {
+                  tidyHostURL()
+                }
+              }
+              .onSubmit {
+                tidyHostURL()
               }
               .onAppear {
                 if let item = item,
@@ -254,39 +309,6 @@ struct macosHostAddConnectionDetailsView: View {
                 RoundedRectangle(cornerRadius: 5)
                   .stroke(selectedPortField ? Color("LabelBackgroundBorder") : Color("BackgroundAlt"), lineWidth: 1)
               )
-            
-            if showSelfSignedView {
-              Button {
-                selfSignedCertificates.toggle()
-                host.host?.selfSignedCertificate = selfSignedCertificates
-              } label: {
-                HStack {
-                  Spacer()
-                  Text("Allow self signed certificates")
-                  Image(systemName: selfSignedCertificates ? "checkmark.circle.fill" : "circle")
-                    .padding(10)
-                    .background(Color("Button"))
-                    .clipShape(.rect(cornerRadius: 5))
-                }
-              }.buttonStyle(PlainButtonStyle())
-                .frame(maxWidth: .infinity)
-                .onAppear {
-                  if let item = item,
-                     let selfSigned = item.host?.selfSignedCertificate {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                      withAnimation {
-                        self.selfSignedCertificates = selfSigned
-                        if host.host == nil {
-                          host.host = HostURL()
-                        }
-                        self.host.host?.selfSignedCertificate = selfSigned
-                      }
-                    }
-                  } else if let selfSignedCertificates =  host.host?.selfSignedCertificate {
-                    self.selfSignedCertificates = selfSignedCertificates
-                  }
-                }
-            }
           }
           .onChange(of: focusedField, perform: { newValue in
             // selected the textfield view, needs a negative check on selected
@@ -303,7 +325,8 @@ struct macosHostAddConnectionDetailsView: View {
               selectedHostnameField = true
             } else if selectedHostnameField && newValue != "hostname" {
               selectedHostnameField = false
-            }            
+              tidyHostURL()
+            }
           })
         }
       }

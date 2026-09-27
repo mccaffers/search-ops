@@ -11,12 +11,18 @@ struct macosHostAddAuthenticationViews: View {
   @Binding var host: HostDetails
   var item: HostDetails? = nil
   var offset: CGFloat
+  var connectionType: ConnectionType
   
   @State private var username: String = ""
   @State private var password: String = ""
   @State private var authToken: String = ""
   @State private var apiToken: String = ""
   @State private var apiKey: String = ""
+  @State private var awsAccessKeyId: String = ""
+  @State private var awsSecretAccessKey: String = ""
+  @State private var awsSessionToken: String = ""
+  @State private var awsRegion: String = ""
+  @State private var awsService: AWSService = .es
   
   @State private var authType: AuthenticationTypes = .None
   
@@ -37,11 +43,11 @@ struct macosHostAddAuthenticationViews: View {
         .foregroundStyle(Color("TextSecondary"))
       
       HStack(spacing: 5) {
-        ForEach(AuthenticationTypes.allCases, id: \.self) { type in
+        ForEach(AuthenticationTypes.available(for: connectionType), id: \.self) { type in
           Button {
             authType = type
           } label: {
-            Text(type.rawValue)
+            Text(type.shortName)
               .padding(10)
               .background(authType == type ? Color("ButtonHighlighted") : Color("Button"))
               .clipShape(RoundedRectangle(cornerRadius: 5))
@@ -70,6 +76,11 @@ struct macosHostAddAuthenticationViews: View {
     .onChange(of: authType) { newValue in
       host.authenticationType = newValue
     }
+    .onChange(of: connectionType) { newValue in
+      if !authType.isAvailable(for: newValue) {
+        authType = .None
+      }
+    }
   }
   
   private var authenticationFields: some View {
@@ -92,6 +103,8 @@ struct macosHostAddAuthenticationViews: View {
         apiTokenField
       case .APIKey:
         apiKeyField
+      case .AWSSigV4:
+        awsSigV4Fields
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -216,4 +229,94 @@ struct macosHostAddAuthenticationViews: View {
         }
       }
   }
+  
+  private func authTextField(_ title: String, text: Binding<String>, secure: Bool = false) -> some View {
+    Group {
+      if secure {
+        SecureField(title, text: text)
+      } else {
+        TextField(title, text: text)
+      }
+    }
+    .textFieldStyle(PlainTextFieldStyle())
+    .padding(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 6))
+    .frame(height: 36)
+    .background(Color("Button"))
+    .clipShape(.rect(cornerRadius: 5))
+    .overlay(
+      RoundedRectangle(cornerRadius: 5)
+        .stroke(Color("BackgroundAlt"), lineWidth: 1)
+      )
+  }
+  
+  private var awsSigV4Fields: some View {
+    VStack(alignment: .leading, spacing: 5) {
+      authTextField("Access Key ID", text: $awsAccessKeyId)
+        .onChange(of: awsAccessKeyId) { newValue in
+          host.awsAccessKeyId = newValue
+        }
+      
+      authTextField("Secret Access Key", text: $awsSecretAccessKey, secure: true)
+        .onChange(of: awsSecretAccessKey) { newValue in
+          host.awsSecretAccessKey = newValue
+        }
+      
+      authTextField("Session Token (optional)", text: $awsSessionToken, secure: true)
+        .onChange(of: awsSessionToken) { newValue in
+          host.awsSessionToken = newValue
+        }
+      
+      HStack(spacing: 5) {
+        authTextField("Region (eg. eu-west-2)", text: $awsRegion)
+          .onChange(of: awsRegion) { newValue in
+            host.awsRegion = newValue
+          }
+        
+        HStack(spacing: 5) {
+          ForEach(AWSService.allCases, id: \.self) { service in
+            Button {
+              awsService = service
+            } label: {
+              Text(service.rawValue)
+                .padding(10)
+                .background(awsService == service ? Color("ButtonHighlighted") : Color("Button"))
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .contentShape(Rectangle())
+                .help(service.displayName)
+            }
+            .buttonStyle(PlainButtonStyle())
+          }
+        }
+        .onChange(of: awsService) { newValue in
+          host.awsService = newValue
+        }
+      }
+      
+      Text("Use an IAM user's access keys, or temporary credentials with a session token. Custom headers named Authorization, Host, Content-Type or X-Amz-* aren't sent.")
+        .font(.system(size: 11))
+        .foregroundStyle(Color("TextSecondary"))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .onAppear {
+      let source = item ?? host
+      awsAccessKeyId = source.awsAccessKeyId
+      awsSecretAccessKey = source.awsSecretAccessKey
+      awsSessionToken = source.awsSessionToken
+      awsRegion = source.awsRegion
+      awsService = source.awsService
+      
+      // Pre-fill region and service from the endpoint, the user can override them
+      if awsRegion.isEmpty, let detected = AWSEndpoint.detect(host.host?.url ?? "") {
+        awsRegion = detected.region
+        awsService = detected.service
+      }
+      
+      host.awsAccessKeyId = awsAccessKeyId
+      host.awsSecretAccessKey = awsSecretAccessKey
+      host.awsSessionToken = awsSessionToken
+      host.awsRegion = awsRegion
+      host.awsService = awsService
+    }
+  }
+
 }

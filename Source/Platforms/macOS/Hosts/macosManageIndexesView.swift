@@ -173,7 +173,8 @@ struct macosManageIndexesView: View {
             }
           }
           .padding(.horizontal, 8)
-          .padding(.vertical, 6)
+          .padding(.vertical, 8)
+          .frame(maxHeight: .infinity)
           .background(Color("Button"))
           .clipShape(RoundedRectangle(cornerRadius: 5))
 
@@ -199,7 +200,8 @@ struct macosManageIndexesView: View {
             }
             .foregroundColor(showHiddenIndices ? .primary : Color("TextSecondary"))
             .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.vertical, 8)
+            .frame(maxHeight: .infinity)
             .background(showHiddenIndices ? (isToggleHovered ? Color("ButtonHighlighted") : Color("ButtonHighlighted").opacity(0.7)) : (isToggleHovered ? Color("ButtonHighlighted") : Color("Button")))
             .clipShape(RoundedRectangle(cornerRadius: 5))
             .contentShape(Rectangle())
@@ -210,11 +212,12 @@ struct macosManageIndexesView: View {
           }
           .help(showHiddenIndices ? "Hide system and hidden indices" : "Show system and hidden indices (prefixed with .)")
         }
+        .fixedSize(horizontal: false, vertical: true)
 
         // Sort options bar
         HStack(spacing: 5) {
           Text("Sort:")
-            .font(.system(size: 11, weight: .medium))
+            .font(.system(size: 12, weight: .medium))
             .foregroundColor(Color("TextSecondary"))
 
           ForEach(ManageIndexesSortOption.allCases) { option in
@@ -674,24 +677,24 @@ struct macosManageIndexesSortButton: View {
         if isLoading {
           ProgressView()
             .scaleEffect(0.5)
-            .frame(width: 11, height: 11)
+            .frame(width: 12, height: 12)
         } else {
           Image(systemName: option.iconName)
-            .font(.system(size: 10, weight: .medium))
+            .font(.system(size: 11, weight: .medium))
         }
 
         Text(option.rawValue)
-          .font(.system(size: 11, weight: .medium))
+          .font(.system(size: 12, weight: .medium))
 
         if isSelected {
           Image(systemName: isAscending ? "arrow.up" : "arrow.down")
-            .font(.system(size: 8, weight: .bold))
+            .font(.system(size: 9, weight: .bold))
         }
       }
       .fixedSize()
       .foregroundColor(isSelected ? .primary : Color("TextSecondary"))
-      .padding(.horizontal, 7)
-      .padding(.vertical, 4)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 6)
       .background(
         isSelected
           ? (isHovered ? Color("ButtonHighlighted") : Color("ButtonHighlighted").opacity(0.8))

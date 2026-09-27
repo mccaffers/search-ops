@@ -9,7 +9,28 @@
 import Foundation
 
 public class SystemLogManager {
-  
+
+  /// Overrides the default "log" folder, tests use this so each one writes to its own folder
+  private let customLogsDirectory: URL?
+
+  init() {
+    self.customLogsDirectory = nil
+  }
+
+  /// Uses the given folder for log files instead of the "log" folder in the caches directory.
+  init(logsDirectory: URL) {
+    self.customLogsDirectory = logsDirectory
+  }
+
+  /// The folder log files are written to, the "log" folder within the caches directory by default.
+  func resolveLogsDirectory() throws -> URL {
+    if let customLogsDirectory = customLogsDirectory {
+      return customLogsDirectory
+    }
+    let cachesURL = try FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+    return cachesURL.appendingPathComponent("log", isDirectory: true)
+  }
+
   /// Appends the given content to a file in the "log" folder within the caches directory.
    /// The file name is automatically generated based on the current date.
    /// If the file size exceeds 1MB, a new file is created with a sequence number.
@@ -17,11 +38,8 @@ public class SystemLogManager {
   func appendToFileInDocuments(content: String) {
     let fileManager = FileManager.default
     do {
-      // Retrieve the URL for the caches directory.
-      let cachesURL = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-      
-      // Construct the URL for the "log" folder within the caches directory.
-      let logsDirectoryURL = cachesURL.appendingPathComponent("log", isDirectory: true)
+      // Resolve the "log" folder.
+      let logsDirectoryURL = try resolveLogsDirectory()
       
       // Ensure the "log" directory exists.
       if !fileManager.fileExists(atPath: logsDirectoryURL.path) {
@@ -72,11 +90,8 @@ public class SystemLogManager {
     
     let fileManager = FileManager.default
     do {
-      // Get the URL for the documents directory
-      let documentsURL = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-      
-      // Specify the "log" folder within the documents directory
-      let logsDirectoryURL = documentsURL.appendingPathComponent("log", isDirectory: true)
+      // Resolve the "log" folder.
+      let logsDirectoryURL = try resolveLogsDirectory()
       
       // Append the filename to the logs directory path to get the file URL
       let fileURL = logsDirectoryURL.appendingPathComponent(fileName)
@@ -102,11 +117,8 @@ public class SystemLogManager {
   func listLogFiles() -> [String] {
     let fileManager = FileManager.default
     do {
-      // Retrieve the URL for the caches directory.
-      let documentsURL = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-      
-      // Construct the URL for the "log" folder within the documents directory.
-      let logsDirectoryURL = documentsURL.appendingPathComponent("log", isDirectory: true)
+      // Resolve the "log" folder.
+      let logsDirectoryURL = try resolveLogsDirectory()
       
       // Check if the "log" directory exists; if not, return an empty array as there are no files to list.
       guard fileManager.fileExists(atPath: logsDirectoryURL.path) else {
@@ -128,11 +140,8 @@ public class SystemLogManager {
   func clearLogDirectory() {
     let fileManager = FileManager.default
     do {
-      // Retrieve the URL for the caches directory.
-      let documentsURL = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-      
-      // Construct the URL for the "log" folder within the caches directory.
-      let logsDirectoryURL = documentsURL.appendingPathComponent("log", isDirectory: true)
+      // Resolve the "log" folder.
+      let logsDirectoryURL = try resolveLogsDirectory()
       
       // Check if the "log" directory exists; if not, there's nothing to clear.
       guard fileManager.fileExists(atPath: logsDirectoryURL.path) else {
@@ -160,8 +169,7 @@ public class SystemLogManager {
   func getSizeOfLogFolder() -> Int {
     let fileManager = FileManager.default
     do {
-      let documentsURL = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-      let logsDirectoryURL = documentsURL.appendingPathComponent("log", isDirectory: true)
+      let logsDirectoryURL = try resolveLogsDirectory()
       
       // Check if the log directory exists
       guard fileManager.fileExists(atPath: logsDirectoryURL.path) else {

@@ -14,40 +14,73 @@ public struct macosIndexManageOperationsTabView: View {
   public var indexName: String
   public var dateFields: [DateFieldInfo]
   public var currentDocCount: Int?
-  public var onStatsUpdated: () -> Void
+  /// Number of concrete indices the name resolves to, more than one means an alias or data stream
+  public var targetIndexCount: Int
+  // Captured once so an invalidated Realm host is never read during a later render
+  private let operationKey: DeleteOperationKey
 
-  // Operation 1: Delete All Documents state
+  // Delete state lives in the tracker so it survives tab switches and navigation
+  @ObservedObject private var tracker = IndexDeleteTaskTracker.shared
+
+  // Confirmation state
   @State private var showDeleteAllAlert: Bool = false
-  @State private var isDeletingAll: Bool = false
-  @State private var deleteAllResultMessage: String? = nil
-  @State private var deleteAllIsError: Bool = false
+  @State private var showDeleteByAgeAlert: Bool = false
+  @State private var typedConfirmationKind: DeleteOperationKind? = nil
+  @State private var typedConfirmationText: String = ""
 
-  // Operation 2: Delete Documents by Age state
+  // Delete Documents by Age inputs
   @State private var selectedDateField: String = ""
   @State private var ageValue: Int = 30
   @State private var selectedPeriod: SearchDateTimePeriods = .Days
-  @State private var showDeleteByAgeAlert: Bool = false
-  @State private var isDeletingByAge: Bool = false
-  @State private var deleteByAgeResultMessage: String? = nil
-  @State private var deleteByAgeIsError: Bool = false
 
   public init(
     host: HostDetails,
     indexName: String,
     dateFields: [DateFieldInfo],
     currentDocCount: Int?,
-    onStatsUpdated: @escaping () -> Void
+    targetIndexCount: Int = 1
   ) {
     self.host = host
     self.indexName = indexName
     self.dateFields = dateFields
     self.currentDocCount = currentDocCount
-    self.onStatsUpdated = onStatsUpdated
+    self.targetIndexCount = targetIndexCount
+    self.operationKey = IndexDeleteTaskTracker.key(host: host, index: indexName)
   }
+
+  private static let decimalFormatter: NumberFormatter = {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    return formatter
+  }()
 
   private let availablePeriods: [SearchDateTimePeriods] = [
     .Hours, .Days, .Weeks, .Months, .Years
   ]
+
+  private var currentOperation: DeleteOperation? {
+    tracker.operations[operationKey]
+  }
+
+  private var isOperationActive: Bool {
+    currentOperation?.state.isActive == true
+  }
+
+  private func operation(for kind: DeleteOperationKind) -> DeleteOperation? {
+    guard let op = currentOperation, op.kind == kind else { return nil }
+    return op
+  }
+
+  private var requiresTypedConfirmation: Bool {
+    indexName.hasPrefix(".") || targetIndexCount > 1
+  }
+
+  private var typedConfirmationReason: String {
+    if targetIndexCount > 1 {
+      return "'\(indexName)' resolves to \(targetIndexCount) indices. Documents will be deleted from all of them."
+    }
+    return "'\(indexName)' is a hidden or system index. Deleting its documents can break the features that depend on it."
+  }
 
   private var dateMathExpression: String {
     IndexAgeHelper.dateMathExpression(value: ageValue, period: selectedPeriod)
@@ -65,13 +98,21 @@ public struct macosIndexManageOperationsTabView: View {
     IndexAgeHelper.buildRangeDeleteQuery(dateField: selectedDateField, dateMathExpression: dateMathExpression)
   }
 
+  private var deleteAllConfirmationMessage: String {
+    "Are you sure you want to permanently delete ALL documents from '\(indexName)'? The index mappings and settings will be preserved, but this operation cannot be undone."
+  }
+
+  private var deleteByAgeConfirmationMessage: String {
+    "Are you sure you want to permanently delete documents where '\(selectedDateField)' is older than \(ageValue) \(selectedPeriod.rawValue.lowercased()) (before ~\(formattedCutoffDate)) from '\(indexName)'? This operation cannot be undone."
+  }
+
   public var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 20) {
+      VStack(alignment: .leading, spacing: 12) {
         deleteAllDocumentsCard
         deleteDocumentsByAgeCard
       }
-      .padding(.vertical, 8)
+      .padding(.bottom, 8)
     }
     .onAppear {
       if selectedDateField.isEmpty, let firstField = dateFields.first {
@@ -89,7 +130,7 @@ public struct macosIndexManageOperationsTabView: View {
         executeDeleteAll()
       }
     } message: {
-      Text("Are you sure you want to permanently delete ALL documents from '\(indexName)'? The index mappings and settings will be preserved, but this operation cannot be undone.")
+      Text(deleteAllConfirmationMessage)
     }
     .alert("Delete Documents by Age?", isPresented: $showDeleteByAgeAlert) {
       Button("Cancel", role: .cancel) { }
@@ -97,7 +138,10 @@ public struct macosIndexManageOperationsTabView: View {
         executeDeleteByAge()
       }
     } message: {
-      Text("Are you sure you want to permanently delete documents where '\(selectedDateField)' is older than \(ageValue) \(selectedPeriod.rawValue.lowercased()) (before ~\(formattedCutoffDate)) from '\(indexName)'? This operation cannot be undone.")
+      Text(deleteByAgeConfirmationMessage)
+    }
+    .sheet(item: $typedConfirmationKind) { kind in
+      typedConfirmationSheet(kind)
     }
   }
 
@@ -130,53 +174,28 @@ public struct macosIndexManageOperationsTabView: View {
         }
       }
 
-      if let msg = deleteAllResultMessage {
-        HStack(spacing: 6) {
-          Image(systemName: deleteAllIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-            .foregroundColor(deleteAllIsError ? .orange : .green)
-          Text(msg)
-            .font(.system(size: 12))
-            .foregroundColor(deleteAllIsError ? .orange : .green)
-        }
-        .padding(8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color("BackgroundFixedShadow"))
-        .clipShape(RoundedRectangle(cornerRadius: 5))
+      if let op = operation(for: .all) {
+        operationStatusView(op, activeLabel: "Deleting all documents")
       }
 
-      HStack {
-        if isDeletingAll {
-          HStack(spacing: 8) {
-            ProgressView()
-              .scaleEffect(0.7)
-            Text("Deleting all documents...")
-              .font(.system(size: 12))
-              .foregroundColor(Color("TextSecondary"))
+      if operation(for: .all)?.state.isActive != true {
+        Button(action: {
+          requestConfirmation(.all)
+        }) {
+          HStack(spacing: 6) {
+            Image(systemName: "trash")
+            Text("Delete All Documents")
           }
-        } else {
-          Button(action: {
-            deleteAllResultMessage = nil
-            showDeleteAllAlert = true
-          }) {
-            HStack(spacing: 6) {
-              Image(systemName: "trash")
-              Text("Delete All Documents...")
-            }
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(.red)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.red.opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 5))
-            .overlay(
-              RoundedRectangle(cornerRadius: 5)
-                .stroke(Color.red.opacity(0.3), lineWidth: 1)
-            )
-            .contentShape(Rectangle())
-          }
-          .buttonStyle(PlainButtonStyle())
-          .disabled(isDeletingAll || isDeletingByAge)
+          .font(.system(size: 12, weight: .medium))
+          .foregroundColor(Color("DeleteButtonText"))
+          .padding(.horizontal, 12)
+          .padding(.vertical, 6)
+          .background(Color("DeleteButtonRed"))
+          .clipShape(RoundedRectangle(cornerRadius: 5))
+          .contentShape(Rectangle())
         }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(isOperationActive)
       }
     }
     .padding(14)
@@ -238,7 +257,8 @@ public struct macosIndexManageOperationsTabView: View {
               }
             }
             .pickerStyle(MenuPickerStyle())
-            .frame(maxWidth: 300)
+            .labelsHidden()
+            .frame(maxWidth: 300, alignment: .leading)
           }
 
           // Age and Period Selection
@@ -266,7 +286,8 @@ public struct macosIndexManageOperationsTabView: View {
               }
             }
             .pickerStyle(MenuPickerStyle())
-            .frame(width: 120)
+            .labelsHidden()
+            .frame(width: 120, alignment: .leading)
           }
 
           // Live Preview Box
@@ -303,56 +324,31 @@ public struct macosIndexManageOperationsTabView: View {
           .background(Color("BackgroundFixedShadow"))
           .clipShape(RoundedRectangle(cornerRadius: 5))
 
-          if let msg = deleteByAgeResultMessage {
-            HStack(spacing: 6) {
-              Image(systemName: deleteByAgeIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                .foregroundColor(deleteByAgeIsError ? .orange : .green)
-              Text(msg)
-                .font(.system(size: 12))
-                .foregroundColor(deleteByAgeIsError ? .orange : .green)
-            }
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color("BackgroundFixedShadow"))
-            .clipShape(RoundedRectangle(cornerRadius: 5))
-          }
-
-          // Action Button
-          HStack {
-            if isDeletingByAge {
-              HStack(spacing: 8) {
-                ProgressView()
-                  .scaleEffect(0.7)
-                Text("Deleting documents older than \(ageValue) \(selectedPeriod.rawValue.lowercased())...")
-                  .font(.system(size: 12))
-                  .foregroundColor(Color("TextSecondary"))
+          if operation(for: .byAge)?.state.isActive != true {
+            Button(action: {
+              requestConfirmation(.byAge)
+            }) {
+              HStack(spacing: 6) {
+                Image(systemName: "trash")
+                Text("Delete Documents by Age")
               }
-            } else {
-              Button(action: {
-                deleteByAgeResultMessage = nil
-                showDeleteByAgeAlert = true
-              }) {
-                HStack(spacing: 6) {
-                  Image(systemName: "trash")
-                  Text("Delete Documents by Age...")
-                }
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.orange)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.orange.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 5))
-                .overlay(
-                  RoundedRectangle(cornerRadius: 5)
-                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                )
-                .contentShape(Rectangle())
-              }
-              .buttonStyle(PlainButtonStyle())
-              .disabled(isDeletingAll || isDeletingByAge || selectedDateField.isEmpty || ageValue <= 0)
+              .font(.system(size: 12, weight: .medium))
+              .foregroundColor(Color("DeleteButtonText"))
+              .padding(.horizontal, 12)
+              .padding(.vertical, 6)
+              .background(Color("DeleteButtonAmber"))
+              .clipShape(RoundedRectangle(cornerRadius: 5))
+              .contentShape(Rectangle())
             }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(isOperationActive || selectedDateField.isEmpty || ageValue <= 0)
           }
         }
+      }
+
+      // Shown outside the inputs so a running delete stays visible even if the mapping changes
+      if let op = operation(for: .byAge) {
+        operationStatusView(op, activeLabel: "Deleting documents by age")
       }
     }
     .padding(14)
@@ -361,73 +357,188 @@ public struct macosIndexManageOperationsTabView: View {
     .clipShape(RoundedRectangle(cornerRadius: 6))
   }
 
-  // MARK: - Actions
+  // MARK: - Operation Status
 
-  private func executeDeleteAll() {
-    isDeletingAll = true
-    deleteAllResultMessage = nil
-    deleteAllIsError = false
+  @ViewBuilder
+  private func operationStatusView(_ op: DeleteOperation, activeLabel: String) -> some View {
+    switch op.state {
+    case .submitting:
+      HStack(spacing: 8) {
+        ProgressView()
+          .scaleEffect(0.7)
+        Text("Starting delete...")
+          .font(.system(size: 12))
+          .foregroundColor(Color("TextSecondary"))
+      }
 
-    let detachedHost = host.generateCopy()
-    Task {
-      let result = await IndexManagementService.deleteAllDocuments(serverDetails: detachedHost, index: indexName)
-      await MainActor.run {
-        isDeletingAll = false
-        if result.isSuccess {
-          let formatter = NumberFormatter()
-          formatter.numberStyle = .decimal
-          let countStr = formatter.string(from: NSNumber(value: result.deleted ?? 0)) ?? "\(result.deleted ?? 0)"
-          let tookStr = result.took != nil ? " in \(result.took!)ms" : ""
-          deleteAllResultMessage = "Successfully deleted \(countStr) documents\(tookStr)."
-          deleteAllIsError = false
-          onStatsUpdated()
-        } else {
-          deleteAllResultMessage = result.errorMessage ?? "Failed to delete documents."
-          deleteAllIsError = true
+    case .running(_, let progress), .cancelling(_, let progress):
+      let isCancelling: Bool = {
+        if case .cancelling = op.state { return true }
+        return false
+      }()
+
+      VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: 8) {
+          if let progress = progress, let total = progress.total, total > 0 {
+            ProgressView(value: Double(min(progress.deleted ?? 0, total)), total: Double(total))
+              .frame(maxWidth: 240)
+            Text("Deleted \(formatDocCount(progress.deleted ?? 0)) of \(formatDocCount(total))")
+              .font(.system(size: 12, design: .monospaced))
+              .foregroundColor(Color("TextSecondary"))
+          } else {
+            ProgressView()
+              .scaleEffect(0.7)
+            Text("\(activeLabel)...")
+              .font(.system(size: 12))
+              .foregroundColor(Color("TextSecondary"))
+          }
+
+          Button(isCancelling ? "Cancelling..." : "Cancel") {
+            tracker.cancel(operationKey)
+          }
+          .font(.system(size: 12))
+          .disabled(isCancelling)
+        }
+
+        if let notice = op.notice {
+          Text(notice)
+            .font(.system(size: 11))
+            .foregroundColor(.orange)
         }
       }
+
+    case .finished(let result):
+      resultRow(message: resultMessage(result), isError: !result.isSuccess)
+
+    case .untracked(_, let message):
+      resultRow(message: message, isError: true)
+    }
+  }
+
+  private func resultRow(message: String, isError: Bool) -> some View {
+    HStack(spacing: 6) {
+      Image(systemName: isError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+        .foregroundColor(isError ? .orange : .green)
+      Text(message)
+        .font(.system(size: 12))
+        .foregroundColor(isError ? .orange : .green)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(8)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color("BackgroundFixedShadow"))
+    .clipShape(RoundedRectangle(cornerRadius: 5))
+  }
+
+  private func resultMessage(_ result: DeleteByQueryResult) -> String {
+    guard result.isSuccess else {
+      return result.errorMessage ?? "Failed to delete documents."
+    }
+    let tookStr = result.took.map { " in \($0)ms" } ?? ""
+    return "Successfully deleted \(formatDocCount(result.deleted ?? 0)) documents\(tookStr)."
+  }
+
+  // MARK: - Typed Confirmation
+
+  private func typedConfirmationSheet(_ kind: DeleteOperationKind) -> some View {
+    let isMatch = typedConfirmationText == indexName
+
+    return VStack(alignment: .leading, spacing: 14) {
+      HStack(spacing: 8) {
+        Image(systemName: "exclamationmark.triangle.fill")
+          .foregroundColor(.red)
+        Text(kind == .all ? "Delete All Documents?" : "Delete Documents by Age?")
+          .font(.system(size: 15, weight: .semibold))
+      }
+
+      Text(kind == .all ? deleteAllConfirmationMessage : deleteByAgeConfirmationMessage)
+        .font(.system(size: 12))
+        .fixedSize(horizontal: false, vertical: true)
+
+      Text(typedConfirmationReason)
+        .font(.system(size: 12, weight: .medium))
+        .foregroundColor(.orange)
+        .fixedSize(horizontal: false, vertical: true)
+
+      VStack(alignment: .leading, spacing: 6) {
+        Text("Type \(indexName) to confirm:")
+          .font(.system(size: 12))
+          .foregroundColor(Color("TextSecondary"))
+        TextField(indexName, text: $typedConfirmationText)
+          .textFieldStyle(RoundedBorderTextFieldStyle())
+          .font(.system(size: 12, design: .monospaced))
+          .disableAutocorrection(true)
+      }
+
+      HStack {
+        Spacer()
+        Button("Cancel") {
+          typedConfirmationKind = nil
+        }
+        .keyboardShortcut(.cancelAction)
+
+        Button(kind == .all ? "Delete All Documents" : "Delete Documents") {
+          typedConfirmationKind = nil
+          switch kind {
+          case .all:
+            executeDeleteAll()
+          case .byAge:
+            executeDeleteByAge()
+          }
+        }
+        .foregroundColor(.red)
+        .disabled(!isMatch)
+      }
+    }
+    .padding(20)
+    .frame(width: 440)
+  }
+
+  // MARK: - Actions
+
+  private func requestConfirmation(_ kind: DeleteOperationKind) {
+    guard !isOperationActive else { return }
+    tracker.clear(operationKey)
+
+    if requiresTypedConfirmation {
+      typedConfirmationText = ""
+      typedConfirmationKind = kind
+      return
+    }
+
+    switch kind {
+    case .all:
+      showDeleteAllAlert = true
+    case .byAge:
+      showDeleteByAgeAlert = true
+    }
+  }
+
+  private func executeDeleteAll() {
+    let index = indexName
+    tracker.start(kind: .all, host: host, index: index) { detachedHost in
+      await IndexManagementService.deleteAllDocuments(serverDetails: detachedHost, index: index)
     }
   }
 
   private func executeDeleteByAge() {
     guard !selectedDateField.isEmpty else { return }
-    isDeletingByAge = true
-    deleteByAgeResultMessage = nil
-    deleteByAgeIsError = false
 
+    let index = indexName
     let dateField = selectedDateField
     let expr = dateMathExpression
-    let detachedHost = host.generateCopy()
-
-    Task {
-      let result = await IndexManagementService.deleteDocumentsByAge(
+    tracker.start(kind: .byAge, host: host, index: index) { detachedHost in
+      await IndexManagementService.deleteDocumentsByAge(
         serverDetails: detachedHost,
-        index: indexName,
+        index: index,
         dateField: dateField,
         dateMathExpression: expr
       )
-      await MainActor.run {
-        isDeletingByAge = false
-        if result.isSuccess {
-          let formatter = NumberFormatter()
-          formatter.numberStyle = .decimal
-          let countStr = formatter.string(from: NSNumber(value: result.deleted ?? 0)) ?? "\(result.deleted ?? 0)"
-          let tookStr = result.took != nil ? " in \(result.took!)ms" : ""
-          deleteByAgeResultMessage = "Successfully deleted \(countStr) documents\(tookStr)."
-          deleteByAgeIsError = false
-          onStatsUpdated()
-        } else {
-          deleteByAgeResultMessage = result.errorMessage ?? "Failed to delete documents."
-          deleteByAgeIsError = true
-        }
-      }
     }
   }
 
   private func formatDocCount(_ count: Int) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    return formatter.string(from: NSNumber(value: count)) ?? "\(count)"
+    Self.decimalFormatter.string(from: NSNumber(value: count)) ?? "\(count)"
   }
 }
 #endif

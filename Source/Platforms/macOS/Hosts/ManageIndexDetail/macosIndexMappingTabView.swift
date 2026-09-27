@@ -61,9 +61,13 @@ public struct macosFieldTypeBadgeView: View {
 
 public struct SelectableReadOnlyTextView: NSViewRepresentable {
   public var text: String
+  /// Overlay scrollers stay hidden until you scroll, so wide content looks cut off.
+  /// Legacy scrollers are shown whenever the content overflows, and hidden otherwise.
+  public var showsScrollersWhenOverflowing: Bool
 
-  public init(text: String) {
+  public init(text: String, showsScrollersWhenOverflowing: Bool = false) {
     self.text = text
+    self.showsScrollersWhenOverflowing = showsScrollersWhenOverflowing
   }
 
   public func makeNSView(context: Context) -> NSScrollView {
@@ -72,6 +76,9 @@ public struct SelectableReadOnlyTextView: NSViewRepresentable {
     scrollView.hasHorizontalScroller = true
     scrollView.autohidesScrollers = true
     scrollView.drawsBackground = false
+    if showsScrollersWhenOverflowing {
+      scrollView.scrollerStyle = .legacy
+    }
 
     let textView = NSTextView()
     textView.isEditable = false

@@ -23,6 +23,11 @@ public class HostDetails : Object  {
   @Persisted public var authToken: String = ""
   @Persisted public var apiToken: String = ""
   @Persisted public var apiKey: String = ""
+  @Persisted public var awsAccessKeyId: String = ""
+  @Persisted public var awsSecretAccessKey: String = ""
+  @Persisted public var awsSessionToken: String = ""
+  @Persisted public var awsRegion: String = ""
+  @Persisted public var awsService = AWSService.es
   @Persisted public var version: String = ""
   
   @Persisted public var customHeaders: List<Headers>
@@ -40,22 +45,43 @@ public class HostDetails : Object  {
         self.password = ""
         self.authToken = ""
         self.apiToken = ""
+        clearAWSCredentials()
       } else if authenticationType == .AuthToken {
         self.username = ""
         self.password = ""
         self.apiKey = ""
         self.apiToken = ""
+        clearAWSCredentials()
       } else if authenticationType == .UsernamePassword {
         self.authToken = ""
         self.apiKey = ""
         self.apiToken = ""
+        clearAWSCredentials()
       } else if authenticationType == .APIToken {
         self.authToken = ""
         self.apiKey = ""
         self.username = ""
         self.password = ""
+        clearAWSCredentials()
+      } else if authenticationType == .AWSSigV4 {
+        // Leaves the AWS fields alone, generateCopy() sets them before the type
+        self.username = ""
+        self.password = ""
+        self.authToken = ""
+        self.apiToken = ""
+        self.apiKey = ""
+      } else if authenticationType == .None {
+        clearAWSCredentials()
       }
     }
+  }
+  
+  private func clearAWSCredentials() {
+    self.awsAccessKeyId = ""
+    self.awsSecretAccessKey = ""
+    self.awsSessionToken = ""
+    self.awsRegion = ""
+    self.awsService = .es
   }
   
   public func isValid() -> Bool {
@@ -109,6 +135,11 @@ public class HostDetails : Object  {
     copy.authToken = self.authToken
     copy.apiToken = self.apiToken
     copy.apiKey = self.apiKey
+    copy.awsAccessKeyId = self.awsAccessKeyId
+    copy.awsSecretAccessKey = self.awsSecretAccessKey
+    copy.awsSessionToken = self.awsSessionToken
+    copy.awsRegion = self.awsRegion
+    copy.awsService = self.awsService
     copy.version = self.version
     let headersCopy = List<Headers>()
     for item in self.customHeaders {

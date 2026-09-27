@@ -20,35 +20,15 @@ struct macOSDocumentSearchView: View {
   
   var gridItemLayout = [GridItem(.flexible()), GridItem(.flexible())]
   
-  func getDateValue(from flatArray: OrderedDictionary<String, Any>) -> String {
-    guard let dateField = renderedObjects?.dateField else { return "" }
-    if let output = flatArray.first(where: { $0.key == dateField.squashedString })?.value as? [String], !output.isEmpty {
-      return output.first ?? ""
-    }
-    return ""
-  }
-  
   func buildDateObject(from dateField: SquashedFieldsArray?, dateValue: String) -> (key: SquashedFieldsArray, value: String)? {
     guard let dateField = dateField, !dateValue.isEmpty else { return nil }
     return (key: dateField, value: dateValue)
   }
-  
+
   func processRow(item: OrderedDictionary<String, Any>, dateField: SquashedFieldsArray?) -> (item: OrderedDictionary<String, Any>, myDic: [TextModel], dateValue: String, shouldShowRow: Bool) {
-    var itemWithoutDate = item
-    if let dateKey = dateField?.squashedString {
-      itemWithoutDate.removeValue(forKey: dateKey)
-    }
-    let myDic = ElasticDocumentBuilder.exportFlatValues(input: itemWithoutDate, filteredFields: filteredFields)
-    let dateValue = getDateValue(from: item)
-    let shouldShow = Self.shouldDisplayRow(
-      hasBodyContent: !myDic.isEmpty,
-      showDateHeader: showDateHeader,
-      hasDateValue: !dateValue.isEmpty,
-      isBodyFiltered: !filteredFields.isEmpty
-    )
-    return (item, myDic, dateValue, shouldShow)
+    Self.processRow(item: item, dateField: dateField, filteredFields: filteredFields, showDateHeader: showDateHeader)
   }
-  
+
   var body: some View {
     VStack {
       if let renderedObjects = renderedObjects {
@@ -87,6 +67,37 @@ struct macOSDocumentSearchView: View {
 }
 
 extension macOSDocumentSearchView {
+  public static func getDateValue(from flatArray: OrderedDictionary<String, Any>, dateField: SquashedFieldsArray?) -> String {
+    guard let dateField = dateField else { return "" }
+    if let output = flatArray.first(where: { $0.key == dateField.squashedString })?.value as? [String], !output.isEmpty {
+      return output.first ?? ""
+    }
+    return ""
+  }
+
+  /// Builds the body summary of a flat document row and decides whether the row is shown.
+  /// Shared by the document and table layouts so both hide the same documents.
+  public static func processRow(
+    item: OrderedDictionary<String, Any>,
+    dateField: SquashedFieldsArray?,
+    filteredFields: [SquashedFieldsArray],
+    showDateHeader: Bool
+  ) -> (item: OrderedDictionary<String, Any>, myDic: [TextModel], dateValue: String, shouldShowRow: Bool) {
+    var itemWithoutDate = item
+    if let dateKey = dateField?.squashedString {
+      itemWithoutDate.removeValue(forKey: dateKey)
+    }
+    let myDic = ElasticDocumentBuilder.exportFlatValues(input: itemWithoutDate, filteredFields: filteredFields)
+    let dateValue = getDateValue(from: item, dateField: dateField)
+    let shouldShow = shouldDisplayRow(
+      hasBodyContent: !myDic.isEmpty,
+      showDateHeader: showDateHeader,
+      hasDateValue: !dateValue.isEmpty,
+      isBodyFiltered: !filteredFields.isEmpty
+    )
+    return (item, myDic, dateValue, shouldShow)
+  }
+
   /// Determines whether a document row should be rendered in the search results.
   /// When body fields are filtered (`isBodyFiltered == true`), documents must contain at least one of the selected
   /// body fields (`hasBodyContent == true`) to prevent rendering ghost cards with only a date header.

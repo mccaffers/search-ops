@@ -61,6 +61,8 @@ struct macosSearchMainView: View {
   
   @State var searchResponseError : ResponseError?
   
+  @AppStorage("search.resultsLayout") var resultsLayout: macosSearchResultsLayout = .document
+  
   func convertToTimeInterval(value: Double, unit: TimeUnit) -> TimeInterval {
       switch unit {
       case .milliseconds:
@@ -249,6 +251,7 @@ struct macosSearchMainView: View {
         macosSearchTopButtonsView(macosSearchRouterPath:$macosSearchRouterPath,
                                     selection: $selection,
                                     showFilterSidebar: $showFilterSidebar,
+                                    resultsLayout: $resultsLayout,
                                     hostName: selectedHost?.name,
                                     index: selectedIndex,
                                     currentWidth: $currentWidth)
@@ -284,6 +287,7 @@ struct macosSearchMainView: View {
                                        viewableFields: resultsFields,
                                        fields: bodyFilteredFields,
                                        showDateHeader: showDateHeader,
+                                       layout: resultsLayout,
                                        selectedHost:$selectedHost,
                                        selectedIndex: $selectedIndex,
                                        itemDetail: itemDetail,

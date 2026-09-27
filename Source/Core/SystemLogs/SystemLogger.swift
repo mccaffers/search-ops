@@ -19,6 +19,7 @@ public class SystemLogger : SystemLogBufferWritter {
     // you must explicitly provide a public no-argument initializer yourself as part of the type’s definition.
     // Reference: https://docs.swift.org/swift-book/documentation/the-swift-programming-language/accesscontrol/
     // SonarCloud - swift:S1186
+    super.init()
   }
   
   /// Appends a message to the log file.

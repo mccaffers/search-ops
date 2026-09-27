@@ -17,6 +17,7 @@ public struct DeleteByQueryResult: Equatable, Sendable {
   public var versionConflicts: Int?
   public var noops: Int?
   public var failures: [String]
+  public var canceled: String?
   public var errorMessage: String?
   public var isSuccess: Bool
 
@@ -29,6 +30,7 @@ public struct DeleteByQueryResult: Equatable, Sendable {
     versionConflicts: Int? = nil,
     noops: Int? = nil,
     failures: [String] = [],
+    canceled: String? = nil,
     errorMessage: String? = nil,
     isSuccess: Bool = true
   ) {
@@ -40,9 +42,39 @@ public struct DeleteByQueryResult: Equatable, Sendable {
     self.versionConflicts = versionConflicts
     self.noops = noops
     self.failures = failures
+    self.canceled = canceled
     self.errorMessage = errorMessage
     self.isSuccess = isSuccess
   }
+}
+
+/// Outcome of submitting a `_delete_by_query` with `wait_for_completion=false`
+public enum DeleteTaskSubmission: Equatable, Sendable {
+  case started(String)
+  case failed(DeleteByQueryResult)
+}
+
+/// Progress of a running delete task, read from `task.status`
+public struct DeleteTaskProgress: Equatable, Sendable {
+  public var total: Int?
+  public var deleted: Int?
+  public var batches: Int?
+
+  public init(total: Int? = nil, deleted: Int? = nil, batches: Int? = nil) {
+    self.total = total
+    self.deleted = deleted
+    self.batches = batches
+  }
+}
+
+/// Result of polling `GET /_tasks/<id>`
+public enum DeleteTaskStatus {
+  case running(DeleteTaskProgress)
+  case completed(DeleteByQueryResult)
+  /// The task can't be read (403 / 404 on `_tasks`), it may still be running on the cluster
+  case untrackable(ResponseError)
+  /// A transient failure while polling (network error, 5xx, unreadable body), safe to poll again
+  case pollFailed(ResponseError)
 }
 
 public struct IndexAgeHelper {
@@ -200,27 +232,39 @@ public class IndexManagementService {
     return (fields: fields, dateFields: deduplicatedDateFields, rawJson: rawJson, error: nil)
   }
 
+  public nonisolated static func validateTargetIndex(_ index: String) -> ResponseError? {
+    let title = "Invalid Delete Target"
+
+    if index.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      return ResponseError(title: title, message: "Index name is empty", type: .critical)
+    }
+
+    if index == "." || index == ".." {
+      return ResponseError(title: title, message: "'\(index)' is not a valid index name", type: .critical)
+    }
+
+    if index.lowercased() == "_all" {
+      return ResponseError(title: title, message: "Deleting from '_all' indices is not allowed", type: .critical)
+    }
+
+    if let first = index.first, ["_", "-", "+"].contains(first) {
+      return ResponseError(title: title, message: "Index name cannot start with '\(first)'", type: .critical)
+    }
+
+    let forbidden: Set<Character> = ["*", "?", ",", "/", "\\", "\"", "<", ">", "|", "#", ":"]
+    if let bad = index.first(where: { forbidden.contains($0) || $0.isWhitespace }) {
+      return ResponseError(title: title, message: "Index name cannot contain '\(bad)'. Only a single, exact index or alias can be targeted", type: .critical)
+    }
+
+    return nil
+  }
+
   public static func deleteAllDocuments(
     serverDetails: HostDetails,
     index: String
-  ) async -> DeleteByQueryResult {
-    let endpoint = "/\(index)/_delete_by_query?conflicts=proceed&refresh=true&timeout=60s"
+  ) async -> DeleteTaskSubmission {
     let query = IndexAgeHelper.buildMatchAllDeleteQuery()
-
-    let response = await Request().invoke(
-      serverDetails: serverDetails,
-      endpoint: endpoint,
-      json: query,
-      timeoutInterval: 120.0
-    )
-
-    if let data = response.data {
-      response.parsed = String(bytes: data, encoding: .utf8) ?? ""
-    }
-
-    Logger.event(response: response, index: index, host: serverDetails)
-
-    return parseDeleteResponse(response.data, httpStatus: response.httpStatus, requestError: response.error)
+    return await submitDeleteByQuery(serverDetails: serverDetails, index: index, query: query)
   }
 
   public static func deleteDocumentsByAge(
@@ -228,15 +272,26 @@ public class IndexManagementService {
     index: String,
     dateField: String,
     dateMathExpression: String
-  ) async -> DeleteByQueryResult {
-    let endpoint = "/\(index)/_delete_by_query?conflicts=proceed&refresh=true&timeout=60s"
+  ) async -> DeleteTaskSubmission {
     let query = IndexAgeHelper.buildRangeDeleteQuery(dateField: dateField, dateMathExpression: dateMathExpression)
+    return await submitDeleteByQuery(serverDetails: serverDetails, index: index, query: query)
+  }
+
+  private static func submitDeleteByQuery(
+    serverDetails: HostDetails,
+    index: String,
+    query: String
+  ) async -> DeleteTaskSubmission {
+    if let err = validateTargetIndex(index) {
+      return .failed(DeleteByQueryResult(errorMessage: err.message, isSuccess: false))
+    }
+
+    let endpoint = "/\(index)/_delete_by_query?conflicts=proceed&refresh=true&wait_for_completion=false&expand_wildcards=none"
 
     let response = await Request().invoke(
       serverDetails: serverDetails,
       endpoint: endpoint,
-      json: query,
-      timeoutInterval: 120.0
+      json: query
     )
 
     if let data = response.data {
@@ -245,7 +300,63 @@ public class IndexManagementService {
 
     Logger.event(response: response, index: index, host: serverDetails)
 
-    return parseDeleteResponse(response.data, httpStatus: response.httpStatus, requestError: response.error)
+    return parseTaskSubmission(response.data, httpStatus: response.httpStatus, requestError: response.error)
+  }
+
+  public static func fetchDeleteTaskStatus(
+    serverDetails: HostDetails,
+    taskId: String
+  ) async -> DeleteTaskStatus {
+    let response = await Request().invoke(serverDetails: serverDetails, endpoint: "/_tasks/\(taskId)")
+
+    if let data = response.data {
+      response.parsed = String(bytes: data, encoding: .utf8) ?? ""
+    }
+
+    Logger.event(response: response, host: serverDetails)
+
+    return parseTaskStatus(response.data, httpStatus: response.httpStatus, requestError: response.error)
+  }
+
+  /// Requests cancellation of a delete task, returns nil when the cluster accepted it
+  public static func cancelDeleteTask(
+    serverDetails: HostDetails,
+    taskId: String
+  ) async -> ResponseError? {
+    let response = await Request().invoke(
+      serverDetails: serverDetails,
+      endpoint: "/_tasks/\(taskId)/_cancel",
+      method: "POST"
+    )
+
+    if let data = response.data {
+      response.parsed = String(bytes: data, encoding: .utf8) ?? ""
+    }
+
+    Logger.event(response: response, host: serverDetails)
+
+    if let err = response.error {
+      return err
+    }
+
+    if response.httpStatus >= 400 {
+      return parseErrorMessage(from: response.data, httpStatus: response.httpStatus, defaultTitle: "Cancel Failed")
+    }
+
+    // _cancel returns 200 with node_failures / task_failures when the task couldn't be cancelled
+    if let data = response.data,
+       let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+      for key in ["task_failures", "node_failures"] {
+        if let failures = json[key] as? [[String: Any]], let first = failures.first {
+          let reason = (first["reason"] as? [String: Any])?["reason"] as? String
+            ?? (first["caused_by"] as? [String: Any])?["reason"] as? String
+            ?? "Task could not be cancelled"
+          return ResponseError(title: "Cancel Failed", message: reason, type: .warn)
+        }
+      }
+    }
+
+    return nil
   }
 
   public nonisolated static func extractIndexStats(
@@ -313,6 +424,11 @@ public class IndexManagementService {
       )
     }
 
+    return parseDeleteResponse(json: json)
+  }
+
+  /// Maps a `_delete_by_query` body, either the synchronous response or a completed task's `response` object
+  public nonisolated static func parseDeleteResponse(json: [String: Any]) -> DeleteByQueryResult {
     let took = json["took"] as? Int
     let timedOut = json["timed_out"] as? Bool
     let total = json["total"] as? Int
@@ -320,6 +436,7 @@ public class IndexManagementService {
     let batches = json["batches"] as? Int
     let versionConflicts = json["version_conflicts"] as? Int
     let noops = json["noops"] as? Int
+    let canceled = (json["canceled"] as? String).flatMap { $0.isEmpty ? nil : $0 }
 
     var failureStrings: [String] = []
     if let rawFailures = json["failures"] as? [Any] {
@@ -339,8 +456,13 @@ public class IndexManagementService {
       }
     }
 
-    let isSuccess = failureStrings.isEmpty && !(timedOut ?? false)
-    let errorMessage = failureStrings.first ?? (timedOut == true ? "Operation timed out on cluster" : nil)
+    let isSuccess = failureStrings.isEmpty && !(timedOut ?? false) && canceled == nil
+    let errorMessage: String?
+    if canceled != nil {
+      errorMessage = "Cancelled after deleting \(deleted ?? 0) of \(total ?? 0)"
+    } else {
+      errorMessage = failureStrings.first ?? (timedOut == true ? "Operation timed out on cluster" : nil)
+    }
 
     return DeleteByQueryResult(
       took: took,
@@ -351,9 +473,84 @@ public class IndexManagementService {
       versionConflicts: versionConflicts,
       noops: noops,
       failures: failureStrings,
+      canceled: canceled,
       errorMessage: errorMessage,
       isSuccess: isSuccess
     )
+  }
+
+  /// Reads the task id from a `wait_for_completion=false` submission
+  public nonisolated static func parseTaskSubmission(
+    _ data: Data?,
+    httpStatus: Int? = nil,
+    requestError: ResponseError? = nil
+  ) -> DeleteTaskSubmission {
+    if requestError == nil,
+       (httpStatus ?? 200) < 400,
+       let data = data,
+       let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+       let taskId = json["task"] as? String, !taskId.isEmpty {
+      return .started(taskId)
+    }
+
+    let result = parseDeleteResponse(data, httpStatus: httpStatus, requestError: requestError)
+    if !result.isSuccess {
+      return .failed(result)
+    }
+
+    return .failed(DeleteByQueryResult(
+      failures: [],
+      errorMessage: "Cluster did not return a task id for the delete",
+      isSuccess: false
+    ))
+  }
+
+  /// Maps a `GET /_tasks/<id>` response
+  public nonisolated static func parseTaskStatus(
+    _ data: Data?,
+    httpStatus: Int? = nil,
+    requestError: ResponseError? = nil
+  ) -> DeleteTaskStatus {
+    if let requestError = requestError {
+      return .pollFailed(requestError)
+    }
+
+    if let status = httpStatus, status == 403 || status == 404 {
+      let err = parseErrorMessage(from: data, httpStatus: status, defaultTitle: "Task Unavailable")
+        ?? ResponseError(title: "HTTP Error \(status)", message: "Request failed with HTTP status \(status)", type: .warn)
+      return .untrackable(err)
+    }
+
+    if let status = httpStatus, status >= 400 {
+      let err = parseErrorMessage(from: data, httpStatus: status)
+        ?? ResponseError(title: "HTTP Error \(status)", message: "Request failed with HTTP status \(status)", type: .critical)
+      return .pollFailed(err)
+    }
+
+    guard let data = data, !data.isEmpty,
+          let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
+      return .pollFailed(ResponseError(title: "Task Status Error", message: "Invalid task status response", type: .warn))
+    }
+
+    if json["completed"] as? Bool == true {
+      if let response = json["response"] as? [String: Any] {
+        return .completed(parseDeleteResponse(json: response))
+      }
+      let message = parseErrorMessage(from: data, httpStatus: nil, defaultTitle: "Delete Failed")?.message
+        ?? "Delete task completed without a response"
+      return .completed(DeleteByQueryResult(
+        failures: [],
+        errorMessage: message,
+        isSuccess: false
+      ))
+    }
+
+    let status = (json["task"] as? [String: Any])?["status"] as? [String: Any] ?? [:]
+    return .running(DeleteTaskProgress(
+      total: status["total"] as? Int,
+      deleted: status["deleted"] as? Int,
+      batches: status["batches"] as? Int
+    ))
   }
 
   public nonisolated static func parseErrorMessage(

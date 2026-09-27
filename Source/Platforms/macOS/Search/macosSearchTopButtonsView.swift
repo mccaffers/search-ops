@@ -13,10 +13,29 @@ struct macosSearchTopButtonsView: View {
   @Binding var macosSearchRouterPath : macosSearchRouterPath
   @Binding var selection: macosSearchViewEnum
   @Binding var showFilterSidebar :  Bool
+  @Binding var resultsLayout: macosSearchResultsLayout
  
   var hostName : String? = nil
   var index: String? = nil
   @Binding var currentWidth: CGFloat
+  
+  func layoutButton(_ layout: macosSearchResultsLayout, systemImage: String, help: String) -> some View {
+    Button {
+      resultsLayout = layout
+    } label: {
+      Image(systemName: systemImage)
+        .font(.system(size: 13))
+        .frame(width: 28, height: 24)
+        .background(resultsLayout == layout ? Color("BackgroundAlt") : Color.clear)
+        .clipShape(.rect(cornerRadius: 4))
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(PlainButtonStyle())
+    .help(help)
+    .accessibilityLabel(help)
+    .accessibilityAddTraits(resultsLayout == layout ? .isSelected : [])
+  }
+  
     var body: some View {
       VStack {
         HStack (spacing: 5){
@@ -68,6 +87,13 @@ struct macosSearchTopButtonsView: View {
           }.buttonStyle(PlainButtonStyle())
           Spacer()
           
+          HStack(spacing: 2) {
+            layoutButton(.document, systemImage: "doc.plaintext", help: "Show results as documents")
+            layoutButton(.table, systemImage: "tablecells", help: "Show results as a table")
+          }
+          .padding(2)
+          .background(Color("Button"))
+          .clipShape(.rect(cornerRadius: 5))
           
           Button {
             showFilterSidebar.toggle()
