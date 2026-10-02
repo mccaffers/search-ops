@@ -20,19 +20,19 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
     _ = RealmManager().getRealm(inMemory: true)
   }
   
-  // Evaluates the extraction of objects from a simulated ElasticSearch response and verifies the count of the items returned.
+  // Evaluates the extraction of objects from a simulated Elasticsearch response and verifies the count of the items returned.
   func testObjects() async throws {
     
-    // Load a predefined static JSON file that simulates an ElasticSearch response to eliminate external dependencies during tests.
+    // Load a predefined static JSON file that simulates an Elasticsearch response to eliminate external dependencies during tests.
     let response = try SearchOpsTests().OpenFile(filename: "response.1")
-    // Extract objects using a predefined parsing method tailored for ElasticSearch response structures.
+    // Extract objects using a predefined parsing method tailored for Elasticsearch response structures.
     let output = Search.getObjects(input: response)
     
     // Asserts that the number of parsed data objects is as expected, ensuring correct parsing functionality.
     let objectCount = output.data.count
     XCTAssertEqual(objectCount, 1)
     
-    // Asserts that the number of hits (a specific metric relevant to ElasticSearch) retrieved matches the expected count.
+    // Asserts that the number of hits (a specific metric relevant to Elasticsearch) retrieved matches the expected count.
     let hitsCount = Fields.getHits(input: response)
     XCTAssertEqual(hitsCount, 1)
   }

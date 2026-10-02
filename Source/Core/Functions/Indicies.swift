@@ -54,24 +54,25 @@ public class Indicies {
   /// - Parameters:
   ///   - serverDetails: Contains the server details needed for the request.
   ///   - index: The specific index to retrieve stats for, defaults to all indices if empty.
-  /// - Returns: A string representation of the stats data in UTF-8 format, or an empty string if no data.
-  public static func indexStats(serverDetails: HostDetails, index: String) async -> String {
-    
-    // Default endpoint for getting stats of all indices.
-    var endpoint = "/_stats"
-    // Modify the endpoint if a specific index is provided.
-    if index != "" {
-      endpoint = "/" + index + "/_stats"
+  /// - Returns: A `ServerResponse` containing the API response details, including the duration of the request.
+  public static func indexStats(serverDetails: HostDetails, index: String = "") async -> ServerResponse {
+    let endpoint = index.isEmpty ? "/_stats/docs,store?expand_wildcards=all" : "/\(index)/_stats/docs,store?expand_wildcards=all"
+    let clock = ContinuousClock()
+    var response = ServerResponse()
+
+    let timeTaken = await clock.measure {
+      response = await Request().invoke(serverDetails: serverDetails, endpoint: endpoint)
+
+      if let data = response.data {
+        response.parsed = String(bytes: data, encoding: String.Encoding.utf8) ?? ""
+      }
     }
-    
-    // Perform the HTTP request.
-    let response = await Request().invoke(serverDetails: serverDetails, endpoint: endpoint)
-    
-    // Convert the response data to a UTF-8 string if present, otherwise return an empty string.
-    if let data = response.data {
-      return String(bytes: data, encoding: String.Encoding.utf8) ?? "";
-    } else {
-      return ""
-    }
+
+    response.duration = timeTaken
+
+    await Logger.event(response: response,
+                       host: serverDetails)
+
+    return response
   }
 }

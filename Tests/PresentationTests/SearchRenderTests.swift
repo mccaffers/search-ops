@@ -7,6 +7,7 @@
 
 import XCTest
 import RealmSwift
+import OrderedCollections
 
 @testable import Search_Ops
 
@@ -458,6 +459,285 @@ final class SearchRenderTests: XCTestCase  {
     XCTAssertTrue(fieldB.visible, "Visible field in fields must remain true")
     XCTAssertFalse(visA.visible, "Hidden field must not be resurrected in onlyVisibleFields")
     XCTAssertTrue(visB.visible, "Visible field must be marked visible in onlyVisibleFields")
+  }
+
+  func testSetFieldVisibilitySyncsBothArrays() {
+    let item = SquashedFieldsArray(squashedString: "timestamp", fieldParts: ["timestamp"])
+    item.visible = false
+    let itemInFields = SquashedFieldsArray(squashedString: "timestamp", fieldParts: ["timestamp"])
+    itemInFields.visible = false
+    let itemInOnlyVis = SquashedFieldsArray(squashedString: "timestamp", fieldParts: ["timestamp"])
+    itemInOnlyVis.visible = false
+
+    let fields = [itemInFields]
+    let onlyVisible = [itemInOnlyVis]
+
+    // Toggle on
+    let changed = macosSearchFieldSheetView.setFieldVisibility(
+      item: item,
+      visible: true,
+      fields: fields,
+      onlyVisibleFields: onlyVisible
+    )
+    XCTAssertTrue(changed)
+    XCTAssertTrue(item.visible)
+    XCTAssertTrue(itemInFields.visible)
+    XCTAssertTrue(itemInOnlyVis.visible)
+
+    // Redundant toggle on should return false
+    let redundant = macosSearchFieldSheetView.setFieldVisibility(
+      item: item,
+      visible: true,
+      fields: fields,
+      onlyVisibleFields: onlyVisible
+    )
+    XCTAssertFalse(redundant)
+
+    // Toggle off
+    let changedOff = macosSearchFieldSheetView.setFieldVisibility(
+      item: item,
+      visible: false,
+      fields: fields,
+      onlyVisibleFields: onlyVisible
+    )
+    XCTAssertTrue(changedOff)
+    XCTAssertFalse(item.visible)
+    XCTAssertFalse(itemInFields.visible)
+    XCTAssertFalse(itemInOnlyVis.visible)
+  }
+
+  func testBodyFilteredFieldsExcludesDateField() {
+    let dateField = SquashedFieldsArray(squashedString: "timestamp", fieldParts: ["timestamp"])
+    dateField.visible = true
+    let bodyField1 = SquashedFieldsArray(squashedString: "threadCount", fieldParts: ["threadCount"])
+    bodyField1.visible = true
+    let bodyField2 = SquashedFieldsArray(squashedString: "message", fieldParts: ["message"])
+    bodyField2.visible = false
+
+    let allFields = [dateField, bodyField1, bodyField2]
+
+    let bodyFiltered = macosSearchMainView.computeBodyFilteredFields(
+      fields: allFields,
+      activeDateField: dateField
+    )
+
+    XCTAssertEqual(bodyFiltered.count, 1)
+    XCTAssertEqual(bodyFiltered[0].squashedString, "threadCount")
+    XCTAssertFalse(bodyFiltered.contains(where: { $0.squashedString == "timestamp" }))
+    XCTAssertFalse(bodyFiltered.contains(where: { $0.squashedString == "message" }))
+  }
+
+  func testShowDateHeaderReflectsDateFieldVisibility() {
+    let dateField = SquashedFieldsArray(squashedString: "timestamp", fieldParts: ["timestamp"])
+    dateField.visible = true
+    let otherField = SquashedFieldsArray(squashedString: "message", fieldParts: ["message"])
+    otherField.visible = true
+
+    // Active and visible -> true
+    XCTAssertTrue(macosSearchMainView.shouldShowDateHeader(fields: [dateField, otherField], activeDateField: dateField))
+
+    // Active but hidden -> false
+    dateField.visible = false
+    XCTAssertFalse(macosSearchMainView.shouldShowDateHeader(fields: [dateField, otherField], activeDateField: dateField))
+
+    // Active date field is nil -> false
+    XCTAssertFalse(macosSearchMainView.shouldShowDateHeader(fields: [dateField, otherField], activeDateField: nil))
+
+    // Active date field not in fields -> false
+    let missingDateField = SquashedFieldsArray(squashedString: "missing", fieldParts: ["missing"])
+    missingDateField.visible = true
+    XCTAssertFalse(macosSearchMainView.shouldShowDateHeader(fields: [dateField, otherField], activeDateField: missingDateField))
+  }
+
+  func testUnconditionalDateRemovalFromItem() {
+    var item = OrderedDictionary<String, Any>()
+    item["timestamp"] = ["2026-09-20T12:00:00Z"]
+    item["message"] = ["Server started"]
+
+    var itemWithoutDate = item
+    itemWithoutDate.removeValue(forKey: "timestamp")
+
+    // Unfiltered path: filteredFields is empty
+    let unfilteredResult = ElasticDocumentBuilder.exportFlatValues(input: itemWithoutDate, filteredFields: [])
+    let unfilteredValues = unfilteredResult.map { $0.value }
+    XCTAssertTrue(unfilteredValues.contains("message"))
+    XCTAssertTrue(unfilteredValues.contains("Server started"))
+    XCTAssertFalse(unfilteredValues.contains("timestamp"))
+    XCTAssertFalse(unfilteredValues.contains("2026-09-20T12:00:00Z"))
+
+    // Filtered path: filteredFields has message
+    let messageField = SquashedFieldsArray(squashedString: "message", fieldParts: ["message"])
+    messageField.visible = true
+    let filteredResult = ElasticDocumentBuilder.exportFlatValues(input: itemWithoutDate, filteredFields: [messageField])
+    let filteredValues = filteredResult.map { $0.value }
+    XCTAssertTrue(filteredValues.contains("message"))
+    XCTAssertTrue(filteredValues.contains("Server started"))
+    XCTAssertFalse(filteredValues.contains("timestamp"))
+  }
+
+  func testRowVisibilityWithBodyFiltersExcludesMissingFields() {
+    // 1. Body filtered, missing body fields -> should NOT show row (no ghost card)
+    XCTAssertFalse(macOSDocumentSearchView.shouldDisplayRow(
+      hasBodyContent: false,
+      showDateHeader: true,
+      hasDateValue: true,
+      isBodyFiltered: true
+    ))
+
+    // 2. Body filtered, has body fields -> should show row
+    XCTAssertTrue(macOSDocumentSearchView.shouldDisplayRow(
+      hasBodyContent: true,
+      showDateHeader: true,
+      hasDateValue: true,
+      isBodyFiltered: true
+    ))
+
+    // 3. Body filtered, has body fields, date hidden -> should show row
+    XCTAssertTrue(macOSDocumentSearchView.shouldDisplayRow(
+      hasBodyContent: true,
+      showDateHeader: false,
+      hasDateValue: false,
+      isBodyFiltered: true
+    ))
+
+    // 4. Body unfiltered, has body fields -> should show row
+    XCTAssertTrue(macOSDocumentSearchView.shouldDisplayRow(
+      hasBodyContent: true,
+      showDateHeader: true,
+      hasDateValue: true,
+      isBodyFiltered: false
+    ))
+
+    // 5. Body unfiltered, has NO body fields but has date header & value -> should show row
+    XCTAssertTrue(macOSDocumentSearchView.shouldDisplayRow(
+      hasBodyContent: false,
+      showDateHeader: true,
+      hasDateValue: true,
+      isBodyFiltered: false
+    ))
+
+    // 6. Body unfiltered, has NO body fields and date header hidden -> should NOT show row
+    XCTAssertFalse(macOSDocumentSearchView.shouldDisplayRow(
+      hasBodyContent: false,
+      showDateHeader: false,
+      hasDateValue: true,
+      isBodyFiltered: false
+    ))
+  }
+
+  func testDateFieldPickerSwitchSyncsRenderedObject() {
+    let oldDateField = SquashedFieldsArray(squashedString: "timestamp", fieldParts: ["timestamp"])
+    oldDateField.visible = true
+    let newDateField = SquashedFieldsArray(squashedString: "@timestamp", fieldParts: ["@timestamp"])
+    newDateField.visible = false
+
+    var fields = [oldDateField, newDateField]
+    var onlyVisible = [oldDateField, newDateField]
+    var currentActive: String? = "timestamp"
+    var rendered: RenderObject? = RenderObject(headers: [], results: [], flat: [], dateField: oldDateField)
+
+    // Switch to newDateField
+    let switched = macosSearchMainView.switchDateField(
+      newDateField: newDateField,
+      currentActiveDateField: &currentActive,
+      fields: &fields,
+      onlyVisibleFields: &onlyVisible,
+      renderedObjects: &rendered
+    )
+
+    XCTAssertTrue(switched)
+    XCTAssertEqual(currentActive, "@timestamp")
+    XCTAssertFalse(oldDateField.visible)
+    XCTAssertTrue(newDateField.visible)
+    XCTAssertEqual(rendered?.dateField?.squashedString, "@timestamp")
+
+    // Switching to same field returns false (no-op)
+    let noOp = macosSearchMainView.switchDateField(
+      newDateField: newDateField,
+      currentActiveDateField: &currentActive,
+      fields: &fields,
+      onlyVisibleFields: &onlyVisible,
+      renderedObjects: &rendered
+    )
+    XCTAssertFalse(noOp)
+
+    // Switch to nil
+    let switchedToNil = macosSearchMainView.switchDateField(
+      newDateField: nil,
+      currentActiveDateField: &currentActive,
+      fields: &fields,
+      onlyVisibleFields: &onlyVisible,
+      renderedObjects: &rendered
+    )
+    XCTAssertTrue(switchedToNil)
+    XCTAssertNil(currentActive)
+    XCTAssertFalse(newDateField.visible)
+    XCTAssertNil(rendered?.dateField)
+  }
+
+  func testSwitchDateFieldSetsVisibleOnPassedInstance() {
+    let externalDateField = SquashedFieldsArray(squashedString: "created_at", fieldParts: ["created_at"])
+    externalDateField.visible = false
+
+    var fields = [externalDateField]
+    var onlyVisible = [externalDateField]
+    var currentActive: String? = nil
+    var rendered: RenderObject? = nil
+
+    let switched = macosSearchMainView.switchDateField(
+      newDateField: externalDateField,
+      currentActiveDateField: &currentActive,
+      fields: &fields,
+      onlyVisibleFields: &onlyVisible,
+      renderedObjects: &rendered
+    )
+
+    XCTAssertTrue(switched)
+    XCTAssertTrue(externalDateField.visible, "The passed newDateField instance must have visible set to true")
+    XCTAssertEqual(currentActive, "created_at")
+  }
+
+  func testSwitchDateFieldNilToNilIsNoOp() {
+    var fields = [SquashedFieldsArray]()
+    var onlyVisible = [SquashedFieldsArray]()
+    var currentActive: String? = nil
+    var rendered: RenderObject? = nil
+
+    let switched = macosSearchMainView.switchDateField(
+      newDateField: nil,
+      currentActiveDateField: &currentActive,
+      fields: &fields,
+      onlyVisibleFields: &onlyVisible,
+      renderedObjects: &rendered
+    )
+
+    XCTAssertFalse(switched, "Switching nil to nil must be a no-op returning false")
+    XCTAssertNil(currentActive)
+  }
+
+  func testMultipleDateFieldsTreatsSecondaryDateAsBodyField() {
+    let primaryDateField = SquashedFieldsArray(squashedString: "@timestamp", fieldParts: ["@timestamp"])
+    primaryDateField.type = "date"
+    primaryDateField.visible = true
+
+    let secondaryDateField = SquashedFieldsArray(squashedString: "event_time", fieldParts: ["event_time"])
+    secondaryDateField.type = "date"
+    secondaryDateField.visible = true
+
+    let regularField = SquashedFieldsArray(squashedString: "message", fieldParts: ["message"])
+    regularField.type = "text"
+    regularField.visible = false
+
+    let allFields = [primaryDateField, secondaryDateField, regularField]
+
+    // Verify date header reflects only the primary active date field
+    XCTAssertTrue(macosSearchMainView.shouldShowDateHeader(fields: allFields, activeDateField: primaryDateField))
+
+    // Verify body filtered fields includes the secondary date field, but strips the primary date field
+    let bodyFiltered = macosSearchMainView.computeBodyFilteredFields(fields: allFields, activeDateField: primaryDateField)
+    XCTAssertEqual(bodyFiltered.count, 1)
+    XCTAssertEqual(bodyFiltered[0].squashedString, "event_time")
+    XCTAssertFalse(bodyFiltered.contains(where: { $0.squashedString == "@timestamp" }))
   }
 #endif
 

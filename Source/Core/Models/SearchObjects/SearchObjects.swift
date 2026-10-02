@@ -70,6 +70,48 @@ public class SquashedFieldsArray : Identifiable, Hashable, ObservableObject {
 @available(iOS 13.0, *)
 public class IndexResult : ObservableObject {
 		public var data : [String] = []
+		public var hiddenData : [String] = []
 		public var error : String?
+}
+
+@available(macOS 13.0, *)
+@available(iOS 13.0, *)
+public struct IndexStatsItem: Equatable, Sendable {
+  public var docCount: Int?
+  public var storageBytes: Int64?
+  public var totalDocCount: Int?
+  public var totalStorageBytes: Int64?
+  public var deletedDocCount: Int?
+
+  public init(
+    docCount: Int? = nil,
+    storageBytes: Int64? = nil,
+    totalDocCount: Int? = nil,
+    totalStorageBytes: Int64? = nil,
+    deletedDocCount: Int? = nil
+  ) {
+    self.docCount = docCount
+    self.storageBytes = storageBytes
+    self.totalDocCount = totalDocCount
+    self.totalStorageBytes = totalStorageBytes
+    self.deletedDocCount = deletedDocCount
+  }
+
+  public var formattedDocCount: String? {
+    guard let count = docCount, count >= 0 else { return nil }
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    let formattedNumber = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
+    return count == 1 ? "\(formattedNumber) doc" : "\(formattedNumber) docs"
+  }
+
+  public var formattedStorageSize: String? {
+    guard let bytes = storageBytes, bytes >= 0 else { return nil }
+    let formatter = ByteCountFormatter()
+    formatter.allowedUnits = [.useAll]
+    formatter.countStyle = .file
+    formatter.allowsNonnumericFormatting = false
+    return formatter.string(fromByteCount: bytes)
+  }
 }
 

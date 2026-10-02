@@ -77,16 +77,29 @@ struct macosMainMenu: View {
             buttonColor : sidebar == .hosts ? Color("ButtonHighlighted") : Color("Button")
         )
         
+        CustomButtonView(
+            action: {
+              sidebar = .manage
+              sidebarHistory = nil
+              serverObjects.refresh()
+              searchHistoryManager.refresh()
+            },
+            iconName: "slider.horizontal.3",
+            text: "Manage",
+            buttonColor : sidebar == .manage ? Color("ButtonHighlighted") : Color("Button")
+        )
         
-//        CustomButtonView(
-//            action: {
-//              sidebar = .develop
-//            },
-//            iconName: "ellipsis.curlybraces",
-//            text: "Develop",
-//            buttonColor : sidebar == .develop ? Color("ButtonHighlighted") : Color("Button")
-//        )
-//        
+        CustomButtonView(
+            action: {
+              sidebar = .develop
+              sidebarHistory = nil
+              serverObjects.refresh()
+            },
+            iconName: "ellipsis.curlybraces",
+            text: "Dev",
+            buttonColor : sidebar == .develop ? Color("ButtonHighlighted") : Color("Button")
+        )
+
         CustomButtonView(
             action: {
               sidebar = .settings

@@ -8,12 +8,19 @@
 
 import SwiftUI
 
+enum macosSearchResultsLayout: String {
+  case document
+  case table
+}
+
 struct macosSearchResultsView: View {
   @Binding var renderedObjects: RenderObject?
   @ObservedObject var viewableFields: RenderedFields
   @EnvironmentObject var filterObject: FilterObject
   
   var fields : [SquashedFieldsArray]
+  var showDateHeader: Bool
+  var layout: macosSearchResultsLayout = .table
   @Binding var selectedHost: HostDetails?
   @Binding var selectedIndex: String
   @State var loadingFields : String = ""
@@ -95,10 +102,20 @@ struct macosSearchResultsView: View {
         
         VStack {
           
-          macOSDocumentSearchView(renderedObjects: $renderedObjects,
-                                  resultsFields: viewableFields,
-                                  itemDetail: itemDetail,
-                                  filteredFields: fields)
+          switch layout {
+          case .document:
+            macOSDocumentSearchView(renderedObjects: $renderedObjects,
+                                    resultsFields: viewableFields,
+                                    itemDetail: itemDetail,
+                                    filteredFields: fields,
+                                    showDateHeader: showDateHeader)
+          case .table:
+            macosTableSearchView(renderedObjects: $renderedObjects,
+                                 resultsFields: viewableFields,
+                                 itemDetail: itemDetail,
+                                 filteredFields: fields,
+                                 showDateHeader: showDateHeader)
+          }
           
           
           if searchIndicator {

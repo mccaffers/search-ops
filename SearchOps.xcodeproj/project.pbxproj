@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		37773CE53ACD9D7B33E6C918 /* HostDetailsMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38E065ADF846C1AF2FB323EF /* HostDetailsMigrationTests.swift */; };
+		7AEC161EBF239F1E44872675 /* macosTableRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 667B7205111154C3FE202F83 /* macosTableRowView.swift */; };
+		873EDDAC695BD6F731FE36BF /* AWSSigV4SignerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDBCD84D82A9EC64887F24AE /* AWSSigV4SignerTests.swift */; };
+		8A09C1736ED27B26BA4B57E5 /* AWSSigV4Signer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9428FD771F9445EF65C992 /* AWSSigV4Signer.swift */; };
 		9403221C2A4D8B4B00FC8BBE /* SettingsHome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9403215B2A4D8B4B00FC8BBE /* SettingsHome.swift */; };
 		9403221E2A4D8B4B00FC8BBE /* SettingsActionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9403215D2A4D8B4B00FC8BBE /* SettingsActionView.swift */; };
 		940322302A4D8B4B00FC8BBE /* DashboardMainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 940321732A4D8B4B00FC8BBE /* DashboardMainView.swift */; };
@@ -362,6 +366,15 @@
 		94B91B2C2C4283430010C411 /* macosSearchHomeDateValuesAbsolute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B91B2B2C4283430010C411 /* macosSearchHomeDateValuesAbsolute.swift */; };
 		94B96F2F2A51D9FB001F41BB /* ElasticDocumentBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94B96F2E2A51D9FB001F41BB /* ElasticDocumentBuilder.swift */; };
 		94BAAE752C6355A500C9E274 /* macosHostsTestConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94BAAE742C6355A500C9E274 /* macosHostsTestConnectionView.swift */; };
+		94C0A1012DC130AA006780BC /* IndexActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0A1022DC12A62006780BC /* IndexActivityService.swift */; };
+		94C0A2012DC130AA006780BC /* macosManageHostsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0A2022DC12A62006780BC /* macosManageHostsView.swift */; };
+		94C0A2032DC130AA006780BC /* macosManageHostOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0A2042DC12A62006780BC /* macosManageHostOptionsView.swift */; };
+		94C0A2052DC130AA006780BC /* macosManageIndexesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0A2062DC12A62006780BC /* macosManageIndexesView.swift */; };
+		94C0B1022DC130AA006780BC /* IndexManagementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0B1012DC12A62006780BC /* IndexManagementService.swift */; };
+		94C0B1042DC130AA006780BC /* macosManageIndexDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0B1032DC12A62006780BC /* macosManageIndexDetailView.swift */; };
+		94C0B1062DC130AA006780BC /* macosIndexMappingTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0B1052DC12A62006780BC /* macosIndexMappingTabView.swift */; };
+		94C0B1082DC130AA006780BC /* macosIndexManageOperationsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0B1072DC12A62006780BC /* macosIndexManageOperationsTabView.swift */; };
+		94C0D1022DC130AA006780BC /* IndexDeleteTaskTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C0D1012DC12A62006780BC /* IndexDeleteTaskTracker.swift */; };
 		94C63C4B2A5F457900739E7A /* SettingsDetailHostInformationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C63C4A2A5F457900739E7A /* SettingsDetailHostInformationView.swift */; };
 		94C63C4D2A5F468000739E7A /* SettingsDetailHTTPResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C63C4C2A5F468000739E7A /* SettingsDetailHTTPResponse.swift */; };
 		94CF93A82A5B074200BDF7B5 /* SearchMainStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94CF93A72A5B074200BDF7B5 /* SearchMainStatusView.swift */; };
@@ -384,6 +397,11 @@
 		94F977752A5FE83C0097639F /* HTTPStatusColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94F977742A5FE83C0097639F /* HTTPStatusColors.swift */; };
 		94FBEE542DEB0F0000950DAE /* SwiftyJSON in Frameworks */ = {isa = PBXBuildFile; productRef = 94A7F3E32DC12ED7006780BC /* SwiftyJSON */; };
 		94FE2BC72C47E20F00AD98BA /* macosSearchHomeInitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FE2BC62C47E20F00AD98BA /* macosSearchHomeInitView.swift */; };
+		B7DB1F97344C669F66A1A4DF /* macosTableSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BFFD4CC2AB3311C47B4780A /* macosTableSearchView.swift */; };
+		C890208E40CF04C7FFBE20E6 /* macosTableSearchViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20CF383A7CE471926621CE1C /* macosTableSearchViewTests.swift */; };
+		DE7C05012E00000000000002 /* DevConsoleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7C05012E00000000000001 /* DevConsoleService.swift */; };
+		DE7C05012E00000000000004 /* macosCodeEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7C05012E00000000000003 /* macosCodeEditor.swift */; };
+		DE7C05012E00000000000006 /* DevConsoleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7C05012E00000000000005 /* DevConsoleTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -421,6 +439,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		20CF383A7CE471926621CE1C /* macosTableSearchViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosTableSearchViewTests.swift; sourceTree = "<group>"; };
+		38E065ADF846C1AF2FB323EF /* HostDetailsMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostDetailsMigrationTests.swift; sourceTree = "<group>"; };
+		667B7205111154C3FE202F83 /* macosTableRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosTableRowView.swift; sourceTree = "<group>"; };
+		6BFFD4CC2AB3311C47B4780A /* macosTableSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosTableSearchView.swift; sourceTree = "<group>"; };
+		8E9428FD771F9445EF65C992 /* AWSSigV4Signer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AWSSigV4Signer.swift; sourceTree = "<group>"; };
 		9403212B2A4D8B1D00FC8BBE /* Search Ops.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Search Ops.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		940321342A4D8B1D00FC8BBE /* SearchOpsApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SearchOpsApp.entitlements; sourceTree = "<group>"; };
 		9403215B2A4D8B4B00FC8BBE /* SettingsHome.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsHome.swift; sourceTree = "<group>"; };
@@ -777,6 +800,15 @@
 		94B91B2B2C4283430010C411 /* macosSearchHomeDateValuesAbsolute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSearchHomeDateValuesAbsolute.swift; sourceTree = "<group>"; };
 		94B96F2E2A51D9FB001F41BB /* ElasticDocumentBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElasticDocumentBuilder.swift; sourceTree = "<group>"; };
 		94BAAE742C6355A500C9E274 /* macosHostsTestConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosHostsTestConnectionView.swift; sourceTree = "<group>"; };
+		94C0A1022DC12A62006780BC /* IndexActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexActivityService.swift; sourceTree = "<group>"; };
+		94C0A2022DC12A62006780BC /* macosManageHostsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosManageHostsView.swift; sourceTree = "<group>"; };
+		94C0A2042DC12A62006780BC /* macosManageHostOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosManageHostOptionsView.swift; sourceTree = "<group>"; };
+		94C0A2062DC12A62006780BC /* macosManageIndexesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosManageIndexesView.swift; sourceTree = "<group>"; };
+		94C0B1012DC12A62006780BC /* IndexManagementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexManagementService.swift; sourceTree = "<group>"; };
+		94C0B1032DC12A62006780BC /* macosManageIndexDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosManageIndexDetailView.swift; sourceTree = "<group>"; };
+		94C0B1052DC12A62006780BC /* macosIndexMappingTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosIndexMappingTabView.swift; sourceTree = "<group>"; };
+		94C0B1072DC12A62006780BC /* macosIndexManageOperationsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosIndexManageOperationsTabView.swift; sourceTree = "<group>"; };
+		94C0D1012DC12A62006780BC /* IndexDeleteTaskTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexDeleteTaskTracker.swift; sourceTree = "<group>"; };
 		94C63C4A2A5F457900739E7A /* SettingsDetailHostInformationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDetailHostInformationView.swift; sourceTree = "<group>"; };
 		94C63C4C2A5F468000739E7A /* SettingsDetailHTTPResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDetailHTTPResponse.swift; sourceTree = "<group>"; };
 		94CC67C32DC6257000D5C6E2 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Platforms/MacOSX.platform/Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
@@ -803,6 +835,10 @@
 		94F879D72C6B48780066B7E9 /* iosSearchRecentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iosSearchRecentView.swift; sourceTree = "<group>"; };
 		94F977742A5FE83C0097639F /* HTTPStatusColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPStatusColors.swift; sourceTree = "<group>"; };
 		94FE2BC62C47E20F00AD98BA /* macosSearchHomeInitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSearchHomeInitView.swift; sourceTree = "<group>"; };
+		DE7C05012E00000000000001 /* DevConsoleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevConsoleService.swift; sourceTree = "<group>"; };
+		DE7C05012E00000000000003 /* macosCodeEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosCodeEditor.swift; sourceTree = "<group>"; };
+		DE7C05012E00000000000005 /* DevConsoleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevConsoleTests.swift; sourceTree = "<group>"; };
+		FDBCD84D82A9EC64887F24AE /* AWSSigV4SignerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AWSSigV4SignerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -827,6 +863,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		51CF8E1AC9DE8C0586BD11D0 /* TableSearchViews */ = {
+			isa = PBXGroup;
+			children = (
+				6BFFD4CC2AB3311C47B4780A /* macosTableSearchView.swift */,
+				667B7205111154C3FE202F83 /* macosTableRowView.swift */,
+			);
+			path = TableSearchViews;
+			sourceTree = "<group>";
+		};
 		940321222A4D8B1D00FC8BBE = {
 			isa = PBXGroup;
 			children = (
@@ -1290,6 +1335,7 @@
 			isa = PBXGroup;
 			children = (
 				941AAE122DC89B0C00555527 /* SearchRenderTests.swift */,
+				20CF383A7CE471926621CE1C /* macosTableSearchViewTests.swift */,
 			);
 			path = PresentationTests;
 			sourceTree = "<group>";
@@ -1298,6 +1344,7 @@
 			isa = PBXGroup;
 			children = (
 				941AAE142DC89B0C00555527 /* RealmMigrationTests.swift */,
+				38E065ADF846C1AF2FB323EF /* HostDetailsMigrationTests.swift */,
 				941AAE152DC89B0C00555527 /* RealmTests.swift */,
 			);
 			path = RealmTests;
@@ -1340,6 +1387,7 @@
 				941AAE212DC89B0C00555527 /* HostTests.swift */,
 				941AAE222DC89B0C00555527 /* QueryElasticTests.swift */,
 				941AAE232DC89B0C00555527 /* RequestTests.swift */,
+				DE7C05012E00000000000005 /* DevConsoleTests.swift */,
 				941AAE242DC89B0C00555527 /* ResponseErrorTests.swift */,
 			);
 			path = RequestTests;
@@ -1435,6 +1483,7 @@
 			isa = PBXGroup;
 			children = (
 				941AAE462DC89B0C00555527 /* AuthBuilderTests.swift */,
+				FDBCD84D82A9EC64887F24AE /* AWSSigV4SignerTests.swift */,
 				941AAE472DC89B0C00555527 /* BearerTests.swift */,
 				941AAE482DC89B0C00555527 /* DateToolsTests.swift */,
 				941AAE492DC89B0C00555527 /* InsecureConnectionTests.swift */,
@@ -1581,9 +1630,13 @@
 			isa = PBXGroup;
 			children = (
 				9488A6672C05E3EE007CC13C /* macosHostsView.swift */,
+				94C0A2022DC12A62006780BC /* macosManageHostsView.swift */,
+				94C0A2042DC12A62006780BC /* macosManageHostOptionsView.swift */,
+				94C0A2062DC12A62006780BC /* macosManageIndexesView.swift */,
 				94B1BB872C396CAA00E270B1 /* macosHostsListView.swift */,
 				94EC856C2C333A6D0039D5F9 /* macosHostManagementHomeButton.swift */,
 				94B1BB852C396C7400E270B1 /* macosHostsAdd */,
+				94C0B1002DC12A62006780BC /* ManageIndexDetail */,
 			);
 			path = Hosts;
 			sourceTree = "<group>";
@@ -1601,6 +1654,7 @@
 				947336F92BFC96AD00345C2C /* Popups */,
 				947336F82BFC96A000345C2C /* Headers */,
 				947F63102BFB5BB4009C5904 /* DocumentSearchViews */,
+				51CF8E1AC9DE8C0586BD11D0 /* TableSearchViews */,
 				942E182C2C356C980070EECF /* macosSearchTopButtonsView.swift */,
 				942075812C3EC9480001F706 /* macosSearchRouter.swift */,
 				94D3F75B2BEA7FAF000D46C2 /* macosSearchMainView.swift */,
@@ -1755,6 +1809,7 @@
 			children = (
 				948F54D02BEA284F0087A6E1 /* MyButtonStyle.swift */,
 				94D3F75D2BEA8599000D46C2 /* CustomSplitView.swift */,
+				DE7C05012E00000000000003 /* macosCodeEditor.swift */,
 				944A54752BECEE7F00DB8B06 /* ReducingBarView.swift */,
 				94F667102C0C63B700D576DC /* CustomNSTextField.swift */,
 			);
@@ -1833,6 +1888,10 @@
 			children = (
 				94A7F3882DC12A62006780BC /* Fields.swift */,
 				94A7F3892DC12A62006780BC /* IndexMap.swift */,
+				94C0A1022DC12A62006780BC /* IndexActivityService.swift */,
+				94C0B1012DC12A62006780BC /* IndexManagementService.swift */,
+				94C0D1012DC12A62006780BC /* IndexDeleteTaskTracker.swift */,
+				DE7C05012E00000000000001 /* DevConsoleService.swift */,
 				94A7F38A2DC12A62006780BC /* Indicies.swift */,
 				94A7F38B2DC12A62006780BC /* Logger.swift */,
 				94A7F38C2DC12A62006780BC /* Request.swift */,
@@ -2021,6 +2080,7 @@
 			isa = PBXGroup;
 			children = (
 				94A7F3D42DC12A62006780BC /* AuthBuilder.swift */,
+				8E9428FD771F9445EF65C992 /* AWSSigV4Signer.swift */,
 				94A7F3D52DC12A62006780BC /* DateTools.swift */,
 				94A7F3D62DC12A62006780BC /* InsecureConnection.swift */,
 				94A7F3D72DC12A62006780BC /* JsonTools.swift */,
@@ -2091,6 +2151,16 @@
 				94B91B2B2C4283430010C411 /* macosSearchHomeDateValuesAbsolute.swift */,
 			);
 			path = Absolute;
+			sourceTree = "<group>";
+		};
+		94C0B1002DC12A62006780BC /* ManageIndexDetail */ = {
+			isa = PBXGroup;
+			children = (
+				94C0B1032DC12A62006780BC /* macosManageIndexDetailView.swift */,
+				94C0B1052DC12A62006780BC /* macosIndexMappingTabView.swift */,
+				94C0B1072DC12A62006780BC /* macosIndexManageOperationsTabView.swift */,
+			);
+			path = ManageIndexDetail;
 			sourceTree = "<group>";
 		};
 		94D3E33B2BEFE2740083B3F7 /* Test Plans */ = {
@@ -2422,6 +2492,8 @@
 				94B1BB882C396CAA00E270B1 /* macosHostsListView.swift in Sources */,
 				940322772A4D8B4C00FC8BBE /* SearchQueryCommandsView.swift in Sources */,
 				94D3E3382BEDFCCF0083B3F7 /* macosDocumentSearchView.swift in Sources */,
+				B7DB1F97344C669F66A1A4DF /* macosTableSearchView.swift in Sources */,
+				7AEC161EBF239F1E44872675 /* macosTableRowView.swift in Sources */,
 				9403227A2A4D8B4C00FC8BBE /* SearchMainView.swift in Sources */,
 				940322802A4D8B4C00FC8BBE /* ElasticGeneralDetails.swift in Sources */,
 				940322832A4D8B4C00FC8BBE /* ElasticCloudIDView.swift in Sources */,
@@ -2450,6 +2522,7 @@
 				94A7F4172DC1318D006780BC /* RealmFilterObject.swift in Sources */,
 				94E0D6E52BC47CA600D97BA4 /* macosHostAddView.swift in Sources */,
 				94D3F75E2BEA8599000D46C2 /* CustomSplitView.swift in Sources */,
+				DE7C05012E00000000000004 /* macosCodeEditor.swift in Sources */,
 				940322322A4D8B4B00FC8BBE /* Navigation.swift in Sources */,
 				940322442A4D8B4B00FC8BBE /* SearchDetailView.swift in Sources */,
 				940322532A4D8B4B00FC8BBE /* HostSelectionView.swift in Sources */,
@@ -2469,6 +2542,12 @@
 				944AD67E2A65CDBB000E16E1 /* SettingDetailJsonViewer.swift in Sources */,
 				940322702A4D8B4C00FC8BBE /* SearchQueryDateSheetTimePicker.swift in Sources */,
 				9488A6682C05E3EE007CC13C /* macosHostsView.swift in Sources */,
+				94C0A2012DC130AA006780BC /* macosManageHostsView.swift in Sources */,
+				94C0A2032DC130AA006780BC /* macosManageHostOptionsView.swift in Sources */,
+				94C0A2052DC130AA006780BC /* macosManageIndexesView.swift in Sources */,
+				94C0B1042DC130AA006780BC /* macosManageIndexDetailView.swift in Sources */,
+				94C0B1062DC130AA006780BC /* macosIndexMappingTabView.swift in Sources */,
+				94C0B1082DC130AA006780BC /* macosIndexManageOperationsTabView.swift in Sources */,
 				94B41E702C466625001C4F6E /* macosSearchHomeSort.swift in Sources */,
 				9403223B2A4D8B4B00FC8BBE /* TextFieldClearButton.swift in Sources */,
 				94815F042C0B6465007E618C /* macosSidebarHostsDropdownView.swift in Sources */,
@@ -2525,6 +2604,7 @@
 				94A7F4392DC131DA006780BC /* StringExtensions.swift in Sources */,
 				94A7F43A2DC131DA006780BC /* InsecureConnection.swift in Sources */,
 				94A7F43B2DC131DA006780BC /* AuthBuilder.swift in Sources */,
+				8A09C1736ED27B26BA4B57E5 /* AWSSigV4Signer.swift in Sources */,
 				94A7F43C2DC131DA006780BC /* DateTools.swift in Sources */,
 				94A7F43D2DC131DA006780BC /* JsonTools.swift in Sources */,
 				94A7F4332DC131CA006780BC /* RealmManager.swift in Sources */,
@@ -2607,6 +2687,10 @@
 				94A7F4022DC130AA006780BC /* Indicies.swift in Sources */,
 				94A7F4032DC130AA006780BC /* Fields.swift in Sources */,
 				94A7F4042DC130AA006780BC /* IndexMap.swift in Sources */,
+				94C0A1012DC130AA006780BC /* IndexActivityService.swift in Sources */,
+				94C0B1022DC130AA006780BC /* IndexManagementService.swift in Sources */,
+				94C0D1022DC130AA006780BC /* IndexDeleteTaskTracker.swift in Sources */,
+				DE7C05012E00000000000002 /* DevConsoleService.swift in Sources */,
 				94A7F4052DC130AA006780BC /* Search.swift in Sources */,
 				94A7F3F82DC1309C006780BC /* SortOrderEnum.swift in Sources */,
 				94A7F3F92DC1309C006780BC /* ErrorResponseType.swift in Sources */,
@@ -2664,7 +2748,9 @@
 				941AAE6A2DC89B0C00555527 /* QueryBuilderTests.swift in Sources */,
 				941AAE6B2DC89B0C00555527 /* RealmObjectsTests.swift in Sources */,
 				941AAE6C2DC89B0C00555527 /* SearchRenderTests.swift in Sources */,
+				C890208E40CF04C7FFBE20E6 /* macosTableSearchViewTests.swift in Sources */,
 				941AAE6D2DC89B0C00555527 /* RealmMigrationTests.swift in Sources */,
+				37773CE53ACD9D7B33E6C918 /* HostDetailsMigrationTests.swift in Sources */,
 				941AAE6E2DC89B0C00555527 /* RealmTests.swift in Sources */,
 				941AAE6F2DC89B0C00555527 /* MappingTests.v5.swift in Sources */,
 				941AAE702DC89B0C00555527 /* MappingTests.v6.swift in Sources */,
@@ -2676,6 +2762,7 @@
 				941AAE762DC89B0C00555527 /* HostTests.swift in Sources */,
 				941AAE772DC89B0C00555527 /* QueryElasticTests.swift in Sources */,
 				941AAE782DC89B0C00555527 /* RequestTests.swift in Sources */,
+				DE7C05012E00000000000006 /* DevConsoleTests.swift in Sources */,
 				941AAE792DC89B0C00555527 /* ResponseErrorTests.swift in Sources */,
 				941AAE7A2DC89B0C00555527 /* SystemLoggerBufferTests.swift in Sources */,
 				941AAE7B2DC89B0C00555527 /* SystemLoggerDifferentFileSizeTests.swift in Sources */,
@@ -2683,6 +2770,7 @@
 				941AAE7D2DC89B0C00555527 /* SystemLogManagerSizeTests.swift in Sources */,
 				941AAE7E2DC89B0C00555527 /* SystemLogManagerTests.swift in Sources */,
 				941AAE7F2DC89B0C00555527 /* AuthBuilderTests.swift in Sources */,
+				873EDDAC695BD6F731FE36BF /* AWSSigV4SignerTests.swift in Sources */,
 				941AAE802DC89B0C00555527 /* BearerTests.swift in Sources */,
 				941AAE812DC89B0C00555527 /* DateToolsTests.swift in Sources */,
 				941AAE822DC89B0C00555527 /* InsecureConnectionTests.swift in Sources */,
@@ -2837,7 +2925,7 @@
 				CODE_SIGN_ENTITLEMENTS = Source/SearchOpsApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Source/Static/Preview.xcassets\"";
 				DEVELOPMENT_TEAM = "";
@@ -2864,7 +2952,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.5;
-				MARKETING_VERSION = 4;
+				MARKETING_VERSION = 4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mccaffers.searchops.prod;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -2888,7 +2976,7 @@
 				CODE_SIGN_ENTITLEMENTS = Source/SearchOpsApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Source/Static/Preview.xcassets\"";
 				DEVELOPMENT_TEAM = "";
@@ -2915,7 +3003,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.5;
-				MARKETING_VERSION = 4;
+				MARKETING_VERSION = 4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mccaffers.searchops.prod;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

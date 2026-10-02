@@ -35,7 +35,12 @@ struct AddHostConnectionView: View {
                              currentField: $currentField,
                              focusedField: _focusedField,
                              placeholder: "Host URL (eg. myhost.com)",
-                             schemaUpdate: $schemaUpdate)
+                             schemaUpdate: $schemaUpdate,
+                             onPortParsed: { port in
+                               binding.port.wrappedValue = port
+                               // Rebuilds the fields so the Port field shows it
+                               refresh = UUID()
+                             })
           
           AddConnectionLabel(identifer: "Port",
                              value: binding.port,

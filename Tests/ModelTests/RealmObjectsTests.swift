@@ -44,6 +44,41 @@ class HostDetailsTests: XCTestCase {
     hostDetails.authenticationType = .APIToken
     XCTAssertTrue(hostDetails.authToken.isEmpty && hostDetails.apiKey.isEmpty && hostDetails.username.isEmpty && hostDetails.password.isEmpty, "APIToken setting did not clear other fields properly with pre-populated data")
   }
+
+  func testSwitchingToNoneClearsCredentials() {
+    for type in AuthenticationTypes.allCases where type != .None {
+      let hostDetails = HostDetails()
+      hostDetails.authenticationType = type
+      hostDetails.username = "user"
+      hostDetails.password = "pass"
+      hostDetails.authToken = "token"
+      hostDetails.apiToken = "apiToken"
+      hostDetails.apiKey = "apiKey"
+      hostDetails.awsAccessKeyId = "AKID"
+      hostDetails.awsSecretAccessKey = "secret"
+
+      hostDetails.authenticationType = .None
+
+      XCTAssertTrue(hostDetails.username.isEmpty && hostDetails.password.isEmpty, "Switching from \(type) to None kept the username or password")
+      XCTAssertTrue(hostDetails.authToken.isEmpty && hostDetails.apiToken.isEmpty && hostDetails.apiKey.isEmpty, "Switching from \(type) to None kept a token or key")
+      XCTAssertTrue(hostDetails.awsAccessKeyId.isEmpty && hostDetails.awsSecretAccessKey.isEmpty, "Switching from \(type) to None kept the AWS keys")
+    }
+  }
+
+  func testGenerateCopyKeepsCredentialsOfLegacyNoneHost() {
+    // Hosts saved on None with credentials still send them, see Request.authorisation
+    let hostDetails = HostDetails()
+    hostDetails.username = "user"
+    hostDetails.password = "pass"
+    hostDetails.apiKey = "apiKey"
+
+    let copy = hostDetails.generateCopy()
+
+    XCTAssertEqual(copy.authenticationType, .None)
+    XCTAssertEqual(copy.username, "user")
+    XCTAssertEqual(copy.password, "pass")
+    XCTAssertEqual(copy.apiKey, "apiKey")
+  }
   
   
   func testEquality() {

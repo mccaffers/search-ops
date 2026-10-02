@@ -143,7 +143,6 @@ struct macosSearchSideBar: View {
             macosSearchFieldSheetView(loading: searchIndicator,
                                       selectedIndex: selectedIndex,
                                       fields: $fields,
-                                      renderedObjects: $renderedObjects,
                                       updatedFieldsNotification: $updatedFieldsNotification,
                                       onlyVisibleFields: $onlyVisibleFields,
                                       showMapped:showMapped, 

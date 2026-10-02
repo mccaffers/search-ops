@@ -73,18 +73,20 @@ struct macosSearchHomeView: View {
                                    selectedHost: selectedHostFunc)
           
           if showing == .NewSearch {
-            macosSearchHomeIndicesView(localSelectedHost: $localSelectedHost,
-                                       localSelectedIndex: $localSelectedIndex,
-                                       indexArray: $indexArray,
-                                       selectedHost: $localSelectedHost,
-                                       selectedIndex: $localSelectedIndex,
-                                       fields:$fields,
-                                       loadingIndices:$loadingIndices,
-                                       indexError: $indexError,
-                                       localFilterObject: localFilterObject,
-                                       request: request,
-                                       mappingsRequest: mappingRequest,
-                                       updateIndexArray: updateIndexArray)
+              macosSearchHomeIndicesView(localSelectedHost: $localSelectedHost,
+                                         localSelectedIndex: $localSelectedIndex,
+                                         indexArray: $indexArray,
+                                         selectedHost: $localSelectedHost,
+                                         selectedIndex: $localSelectedIndex,
+                                         fields:$fields,
+                                         loadingIndices:$loadingIndices,
+                                         indexError: $indexError,
+                                         localFilterObject: localFilterObject,
+                                         request: request,
+                                         mappingsRequest: mappingRequest,
+                                         updateIndexArray: updateIndexArray)
+          
+            
             
             macosSearchHomeDateTypePicker(localFilterObject: localFilterObject,
                                           selection:.constant(.None),

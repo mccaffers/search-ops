@@ -16,15 +16,12 @@ class SystemLogManagerCacheDirectoryTests: XCTestCase {
   
   override func setUpWithError() throws {
     super.setUp()
-    logManager = SystemLogManager()
     fileManager = FileManager.default
-    let documentsURL = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-    logsDirectoryURL = documentsURL.appendingPathComponent("log", isDirectory: true)
     
-    // Ensure the directory is clean before each test
-    if fileManager.fileExists(atPath: logsDirectoryURL.path) {
-      try fileManager.removeItem(at: logsDirectoryURL)
-    }
+    // Each test gets its own empty folder so parallel test runs can't collide
+    logsDirectoryURL = fileManager.temporaryDirectory
+      .appendingPathComponent("SystemLogTests-\(UUID().uuidString)", isDirectory: true)
+    logManager = SystemLogManager(logsDirectory: logsDirectoryURL)
     try fileManager.createDirectory(at: logsDirectoryURL, withIntermediateDirectories: true, attributes: nil)
   }
   
@@ -34,6 +31,13 @@ class SystemLogManagerCacheDirectoryTests: XCTestCase {
       try fileManager.removeItem(at: logsDirectoryURL)
     }
     super.tearDown()
+  }
+  
+  func testDefaultLogsDirectoryIsCachesLogFolder() throws {
+    // Without an override, logs go to the "log" folder in the caches directory. Only the path is checked, no files are touched
+    let cachesURL = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+    let expected = cachesURL.appendingPathComponent("log", isDirectory: true)
+    XCTAssertEqual(try SystemLogManager().resolveLogsDirectory(), expected)
   }
   
   func testFileCreationInCacheDirectory() {

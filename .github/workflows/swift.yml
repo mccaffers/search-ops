@@ -13,20 +13,18 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
     - uses: actions/checkout@v4
-    - name: Select Xcode  
-      run: sudo xcode-select -switch /Applications/Xcode_16.4.app && /usr/bin/xcodebuild -version
-      # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md
-    - name: Boot iOS Simulator
-      run: >
-          xcrun simctl boot "iPhone 16"
+    - name: Select Xcode
+      # realm-swift's community branch needs Swift tools 6.2.1+, i.e. Xcode 26.1 or later
+      run: sudo xcode-select -switch /Applications/Xcode_26.5.app && /usr/bin/xcodebuild -version
+      # https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md
     - name: Run tests
       run: >
-          xcodebuild 
-          -scheme SearchOpsUnitTests 
-          -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' 
+          xcodebuild
+          -scheme SearchOpsUnitTests
+          -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5'
           -resultBundlePath TestResult/ 
           -enableCodeCoverage YES 
           -derivedDataPath "${RUNNER_TEMP}/Build/DerivedData" 

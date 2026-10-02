@@ -19,6 +19,14 @@ struct AddElasticKeyboardToolbarView: View {
         
         if focusedField?.string == "Environment" {
           focusedField = "Name"
+        } else if focusedField?.string == "Access Key ID" {
+          focusedField = "Port"
+        } else if focusedField?.string == "Secret Access Key" {
+          focusedField = "Access Key ID"
+        } else if focusedField?.string == "Session Token" {
+          focusedField = "Secret Access Key"
+        } else if focusedField?.string == "Region" {
+          focusedField = "Session Token"
         } else if item.connectionType == ConnectionType.CloudID {
           if focusedField?.string == "Cloud ID" {
             focusedField = "Environment"
@@ -54,9 +62,21 @@ struct AddElasticKeyboardToolbarView: View {
 #endif
           } else if item.authenticationType == AuthenticationTypes.UsernamePassword {
             focusedField = "Username"
+          } else if item.authenticationType == AuthenticationTypes.AWSSigV4 {
+            focusedField = "Access Key ID"
           }
         } else if focusedField?.string == "Username" {
           focusedField = "Password"
+        } else if focusedField?.string == "Access Key ID" {
+          focusedField = "Secret Access Key"
+        } else if focusedField?.string == "Secret Access Key" {
+          focusedField = "Session Token"
+        } else if focusedField?.string == "Session Token" {
+          focusedField = "Region"
+        } else if focusedField?.string == "Region" {
+#if os(iOS)
+          dismissKeyboard()
+#endif
         } else if focusedField?.string == "Cloud ID" {
           if item.customHeaders.count == 0 {
 #if os(iOS)

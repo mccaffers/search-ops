@@ -16,9 +16,7 @@ struct macosSearchFieldSheetView: View {
   @Binding var fields: [SquashedFieldsArray]
 
 //  @EnvironmentObject var selectedHost: HostDetailsWrap
-  @EnvironmentObject var filterObject: FilterObject
   
-  @Binding var renderedObjects: RenderObject?
   @Binding var updatedFieldsNotification : UUID
   @Binding var onlyVisibleFields : [SquashedFieldsArray]
   
@@ -27,18 +25,29 @@ struct macosSearchFieldSheetView: View {
   @State var showingMeta = false
   
   @Binding var fieldsSearchtext : String
+
+  @discardableResult
+  public static func setFieldVisibility(
+    item: SquashedFieldsArray,
+    visible: Bool,
+    fields: [SquashedFieldsArray],
+    onlyVisibleFields: [SquashedFieldsArray]
+  ) -> Bool {
+    guard item.visible != visible else { return false }
+    item.visible = visible
+    onlyVisibleFields.first(where: { $0.squashedString == item.squashedString })?.visible = visible
+    fields.first(where: { $0.squashedString == item.squashedString })?.visible = visible
+    return true
+  }
   
   func onHide(item: SquashedFieldsArray) {
-    if item.visible {
-      item.visible = false
+    if Self.setFieldVisibility(item: item, visible: false, fields: fields, onlyVisibleFields: onlyVisibleFields) {
       updatedFieldsNotification = UUID()
     }
-    
   }
   
   func onAdd(item: SquashedFieldsArray) {
-    if !item.visible {
-      item.visible = true
+    if Self.setFieldVisibility(item: item, visible: true, fields: fields, onlyVisibleFields: onlyVisibleFields) {
       updatedFieldsNotification = UUID()
     }
   }
@@ -87,7 +96,6 @@ struct macosSearchFieldSheetView: View {
           
           ScrollView {
             FieldsList(fields: filteredFields,
-                       renderedObjects:  $renderedObjects,
                        onHide: onHide,
                        onAdd: onAdd)
 
@@ -105,13 +113,10 @@ struct macosSearchFieldSheetView: View {
       .onChange(of: selectedIndex) { newValue in
         loading = true
       }
-      .onChange(of: fields) { newValue in
-        fields.first { $0.fieldParts == filterObject.dateField?.fieldParts }?.visible = false
+      .onChange(of: fields) { _ in
         loading = false
       }
       .onAppear {
-        loading = true
-        fields.first { $0.fieldParts == filterObject.dateField?.fieldParts }?.visible = false
         loading = false
       }
     

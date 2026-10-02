@@ -312,20 +312,26 @@ public class Results {
       
       // Check for standard Elasticsearch error format
       if let errorMessage = json["error"] as? [String: Any] {
-        
         if let errorItems = errorMessage["root_cause"] as? [[String: Any]] {
-          
           for error in errorItems {
             if let reasonString = error["reason"] as? String {
               result.error = reasonString
             }
           }
         }
-        
+        if result.error == nil, let reason = errorMessage["reason"] as? String {
+          result.error = reason
+        }
         // Return early if there's an error to prevent processing error response fields
         return result
       }
-      
+
+      // Check if error is a simple string: {"error": "..."}
+      if let errorString = json["error"] as? String {
+        result.error = errorString
+        return result
+      }
+
       // Check for alternative error format with "message" and "ok" fields
       if let message = json["message"] as? String,
          let ok = json["ok"] as? Bool,
@@ -335,16 +341,70 @@ public class Results {
       }
       
       for item in json {
-        if !item.key.starts(with: ".") {
+        if item.key.starts(with: ".") {
+          result.hiddenData.append(item.key)
+        } else {
           result.data.append(item.key)
         }
-        
       }
       
     }
     
     return result
-    
-    
+  }
+
+  public static func parseIndexStats(_ input: String) -> [String: IndexStatsItem] {
+    guard let json = JsonTools.serialiseJson(input) else {
+      return [:]
+    }
+
+    if json["error"] != nil {
+      return [:]
+    }
+    if let ok = json["ok"] as? Bool, !ok {
+      return [:]
+    }
+
+    guard let indicesDict = (json["indices"] as? [String: Any]) ?? (json["_shards"] == nil ? json : nil) else {
+      return [:]
+    }
+
+    var result: [String: IndexStatsItem] = [:]
+    for (key, value) in indicesDict {
+      if key.hasPrefix("_") || key == "error" || key == "status" || key == "message" {
+        continue
+      }
+      guard let indexData = value as? [String: Any] else {
+        continue
+      }
+
+      let primaries = indexData["primaries"] as? [String: Any]
+      let total = indexData["total"] as? [String: Any]
+
+      let primaryDocs = primaries?["docs"] as? [String: Any]
+      let primaryStore = primaries?["store"] as? [String: Any]
+      let totalDocs = total?["docs"] as? [String: Any]
+      let totalStore = total?["store"] as? [String: Any]
+
+      let primaryDocCount = (primaryDocs?["count"] as? NSNumber)?.intValue
+      let totalDocCount = (totalDocs?["count"] as? NSNumber)?.intValue
+      let docCount = primaryDocCount ?? totalDocCount
+
+      let primaryStorage = (primaryStore?["size_in_bytes"] as? NSNumber)?.int64Value
+      let totalStorage = (totalStore?["size_in_bytes"] as? NSNumber)?.int64Value
+      let storageBytes = primaryStorage ?? totalStorage
+
+      let deletedDocCount = (primaryDocs?["deleted"] as? NSNumber)?.intValue ?? (totalDocs?["deleted"] as? NSNumber)?.intValue
+
+      result[key] = IndexStatsItem(
+        docCount: docCount,
+        storageBytes: storageBytes,
+        totalDocCount: totalDocCount,
+        totalStorageBytes: totalStorage,
+        deletedDocCount: deletedDocCount
+      )
+    }
+
+    return result
   }
 }
