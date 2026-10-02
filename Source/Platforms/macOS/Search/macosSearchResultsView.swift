@@ -20,7 +20,7 @@ struct macosSearchResultsView: View {
   
   var fields : [SquashedFieldsArray]
   var showDateHeader: Bool
-  var layout: macosSearchResultsLayout = .document
+  var layout: macosSearchResultsLayout = .table
   @Binding var selectedHost: HostDetails?
   @Binding var selectedIndex: String
   @State var loadingFields : String = ""

@@ -57,18 +57,20 @@ struct macosHostAddAuthenticationViews: View {
         }
       }
       .onAppear {
-        if let item = item {
+        // Every field loads from host, the working copy, so unsaved edits
+        // survive the form being rebuilt after Test Connection
+        let currentType = host.authenticationType
+        if item != nil {
           // if there is animation offset, the view is just appearing,
           // lets delay the authentication appearing for 0.3 seconds
           let delay = offset != 0 ? 0.4 : 0
           DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             withAnimation {
-              authType = item.authenticationType
-              host.authenticationType = item.authenticationType
+              authType = currentType
             }
           }
         } else {
-          self.authType = host.authenticationType
+          self.authType = currentType
         }
       }
     }
@@ -126,12 +128,7 @@ struct macosHostAddAuthenticationViews: View {
           host.username = newValue
         }
         .onAppear {
-          if let item = item {
-            username = item.username
-            host.username = item.username
-          } else {
-            self.username = host.username
-          }
+          self.username = host.username
         }
       
       SecureField("Password", text: $password)
@@ -148,12 +145,7 @@ struct macosHostAddAuthenticationViews: View {
           host.password = newValue
         }
         .onAppear {
-          if let item = item {
-            password = item.password
-            host.password = item.password
-          } else {
-            self.password = host.password
-          }
+          self.password = host.password
         }
     }
   }
@@ -173,12 +165,7 @@ struct macosHostAddAuthenticationViews: View {
         host.authToken = newValue
       }
       .onAppear {
-        if let item = item {
-          authToken = item.authToken
-          host.authToken = item.authToken
-        } else {
-          self.authToken = host.authToken
-        }
+        self.authToken = host.authToken
       }
   }
   
@@ -197,12 +184,7 @@ struct macosHostAddAuthenticationViews: View {
         host.apiToken = newValue
       }
       .onAppear {
-        if let item = item {
-          apiToken = item.apiToken
-          host.apiToken = item.apiToken
-        } else {
-          self.apiToken = host.apiToken
-        }
+        self.apiToken = host.apiToken
       }
   }
   
@@ -221,12 +203,7 @@ struct macosHostAddAuthenticationViews: View {
         host.apiKey = newValue
       }
       .onAppear {
-        if let item = item {
-          apiKey = item.apiKey
-          host.apiKey = item.apiKey
-        } else {
-          self.apiKey = host.apiKey
-        }
+        self.apiKey = host.apiKey
       }
   }
   
@@ -298,12 +275,11 @@ struct macosHostAddAuthenticationViews: View {
         .fixedSize(horizontal: false, vertical: true)
     }
     .onAppear {
-      let source = item ?? host
-      awsAccessKeyId = source.awsAccessKeyId
-      awsSecretAccessKey = source.awsSecretAccessKey
-      awsSessionToken = source.awsSessionToken
-      awsRegion = source.awsRegion
-      awsService = source.awsService
+      awsAccessKeyId = host.awsAccessKeyId
+      awsSecretAccessKey = host.awsSecretAccessKey
+      awsSessionToken = host.awsSessionToken
+      awsRegion = host.awsRegion
+      awsService = host.awsService
       
       // Pre-fill region and service from the endpoint, the user can override them
       if awsRegion.isEmpty, let detected = AWSEndpoint.detect(host.host?.url ?? "") {

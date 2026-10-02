@@ -37,11 +37,36 @@ struct macosHostAddView: View {
   
   // Natural height of the form, so the scroll area only shrinks when the window is too short
   @State private var formHeight: CGFloat? = nil
-  
+
+  init(selection: Binding<macosSearchViewEnum>,
+       hostsUpdated: HostUpdatedNotifier,
+       serverObjects: HostsDataManager,
+       item: HostDetails? = nil,
+       deleteItem: @escaping () async -> ()) {
+    self._selection = selection
+    self.hostsUpdated = hostsUpdated
+    self.serverObjects = serverObjects
+    self.item = item
+    self.deleteItem = deleteItem
+
+    // Editing starts from a full copy of the saved host, as Update overwrites the
+    // whole record and the form only fills in the fields it shows
+    if let item = item, !item.isInvalidated {
+      self._host = State(initialValue: item.generateCopy())
+    }
+  }
+
+  // A leftover Cloud ID takes priority over the host URL in requests,
+  // so drop whichever one the connection type doesn't use
+  func clearUnusedConnectionFields() {
+    HostsDataManager.setConncetionType(item: host, connection: host.connectionType)
+  }
+
   func handleEnterPress() {
     if let item = item {
       host.id = item.id
     }
+    clearUnusedConnectionFields()
     serverObjects.addNew(item: host)
     hostsUpdated.updated = UUID()
     selection = .None
@@ -148,7 +173,7 @@ struct macosHostAddView: View {
   
   var formFields: some View {
     VStack(spacing: 10) {
-      macosHostAddNameEnvViews(host: $host, item: item, offset:offset, isHostValid: $isHostValid)
+      macosHostAddNameEnvViews(host: $host, offset:offset, isHostValid: $isHostValid)
       macosHostAddConnectionDetailsView(host: $host, item: item, offset:offset, connectionType: $connectionType, isHostValid: $isHostValid)
       macosHostAddAuthenticationViews(host: $host, item: item, offset: offset, connectionType: connectionType)
     }
@@ -169,6 +194,7 @@ struct macosHostAddView: View {
       Spacer()
       
       Button {
+        clearUnusedConnectionFields()
         withAnimation {
           currentView = .testConnection
         }

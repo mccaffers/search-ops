@@ -85,14 +85,14 @@ struct macosHostAddConnectionDetailsView: View {
             }
           }
         }.onAppear {
+          // Every field loads from host, the working copy, so unsaved edits
+          // survive the form being rebuilt after Test Connection
           if item != nil {
-            if let currentConnectionType = item?.connectionType {
-              let delay = offset != 0 ? 0.4 : 0
-              DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                withAnimation {
-                  connectionType = currentConnectionType
-                  host.connectionType = currentConnectionType
-                }
+            let currentConnectionType = host.connectionType
+            let delay = offset != 0 ? 0.4 : 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+              withAnimation {
+                connectionType = currentConnectionType
               }
             }
           } else {
@@ -122,15 +122,8 @@ struct macosHostAddConnectionDetailsView: View {
                 isHostValid = host.isValid()
               }
               .onAppear {
-                if item != nil {
-                  if let currentCloudID = item?.cloudid {
-                    self.cloudID = currentCloudID
-                    host.cloudid = currentCloudID
-                    isHostValid = host.isValid()
-                  }
-                } else {
-                  self.cloudID = host.cloudid
-                }
+                self.cloudID = host.cloudid
+                isHostValid = host.isValid()
               }
               .focused($focusedField, equals: "cloudid")
               .onChange(of: focusedField, perform: { newValue in
@@ -181,10 +174,7 @@ struct macosHostAddConnectionDetailsView: View {
                   updateScheme(newValue)
                 }
                 .onAppear {
-                  if let item = item,
-                     let currentHost = item.host {
-                    updateScheme(currentHost.scheme)
-                  } else if let scheme = host.host?.scheme {
+                  if let scheme = host.host?.scheme {
                     updateScheme(scheme)
                   }
                 }
@@ -203,19 +193,16 @@ struct macosHostAddConnectionDetailsView: View {
                   }
                 }.buttonStyle(PlainButtonStyle())
                   .onAppear {
-                    if let item = item,
-                       let selfSigned = item.host?.selfSignedCertificate {
-                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        withAnimation {
-                          self.selfSignedCertificates = selfSigned
-                          if host.host == nil {
-                            host.host = HostURL()
+                    if let selfSigned = host.host?.selfSignedCertificate {
+                      if item != nil {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                          withAnimation {
+                            self.selfSignedCertificates = selfSigned
                           }
-                          self.host.host?.selfSignedCertificate = selfSigned
                         }
+                      } else {
+                        self.selfSignedCertificates = selfSigned
                       }
-                    } else if let selfSignedCertificates =  host.host?.selfSignedCertificate {
-                      self.selfSignedCertificates = selfSignedCertificates
                     }
                   }
               }
@@ -254,19 +241,10 @@ struct macosHostAddConnectionDetailsView: View {
                 tidyHostURL()
               }
               .onAppear {
-                if let item = item,
-                   let currentHost = item.host {
-                  hostURL = currentHost.url
-                  
-                  if host.host == nil {
-                    host.host = HostURL()
-                  }
-                  host.host?.url = currentHost.url
-                  
-                  isHostValid = host.isValid()
-                } else if let url =  host.host?.url {
+                if let url = host.host?.url {
                   self.hostURL = url
                 }
+                isHostValid = host.isValid()
               }
               .focused($focusedField, equals: "hostname")
               .overlay(
@@ -288,20 +266,16 @@ struct macosHostAddConnectionDetailsView: View {
                 host.host?.port = newValue
               }
               .onAppear {
-                if let item = item,
-                   let port = item.host?.port {
-                  if host.host == nil {
-                    host.host = HostURL()
-                  }
-                  self.host.host?.port = port
-                  
-                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    withAnimation {
-                      self.port = port
+                if let port = host.host?.port {
+                  if item != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                      withAnimation {
+                        self.port = port
+                      }
                     }
+                  } else {
+                    self.port = port
                   }
-                } else if let port =  host.host?.port {
-                  self.port = port
                 }
               }
               .focused($focusedField, equals: "port")

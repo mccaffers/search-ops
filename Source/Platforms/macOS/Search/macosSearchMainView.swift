@@ -61,7 +61,7 @@ struct macosSearchMainView: View {
   
   @State var searchResponseError : ResponseError?
   
-  @AppStorage("search.resultsLayout") var resultsLayout: macosSearchResultsLayout = .document
+  @AppStorage("search.resultsLayout") var resultsLayout: macosSearchResultsLayout = .table
   
   func convertToTimeInterval(value: Double, unit: TimeUnit) -> TimeInterval {
       switch unit {

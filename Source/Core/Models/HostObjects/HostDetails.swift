@@ -71,6 +71,14 @@ public class HostDetails : Object  {
         self.apiToken = ""
         self.apiKey = ""
       } else if authenticationType == .None {
+        // Only when switching from another type. generateCopy() starts from None,
+        // so a host saved on None keeps the credentials Request still falls back to
+        guard oldValue != .None else { return }
+        self.username = ""
+        self.password = ""
+        self.authToken = ""
+        self.apiToken = ""
+        self.apiKey = ""
         clearAWSCredentials()
       }
     }

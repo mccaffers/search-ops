@@ -69,7 +69,7 @@ Privacy & Transparency:
 * Uses a local on device database (Realm) with encryption on
 
 Local Database
-* This package utilises a local Realm Database (https://github.com/realm/realm-swift). By default, this package enables encryption and disables metrics.
+* This package utilizes a local Realm Database (https://github.com/realm/realm-swift). By default, this package enables encryption and disables metrics.
 
 Testing
 * Swift testing with various responses `./Tests/Resources`
