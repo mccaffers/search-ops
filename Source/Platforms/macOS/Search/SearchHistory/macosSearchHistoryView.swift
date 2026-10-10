@@ -15,7 +15,7 @@ struct macosSearchHistoryView: View {
   @Binding var showing : macosSearchWelcomeScreenMainView
   @ObservedObject var searchHistoryManager : SearchHistoryDataManager
   
-  var request : (_ selectedHost: HostDetails, _ selectedIndex: String, _ filterObject: FilterObject) -> ()
+  var request : SearchRequestAction
   
   var active : Bool {
     return showing == .All || showing == .Recent

@@ -61,63 +61,63 @@ public class ElasticDocumentBuilder {
       let values = Results.getValueForKey(fieldParts: header.fieldParts,
                                           item: input)
       
-      for output2 in values {
+      // The field name once, then all of its values, eg. "tags a, b, c"
+      let output2 = Results.joinedValues(values)
+      
+      
+      // Skip processing if the extracted value is empty or contains only whitespace.
+      if output2.isEmpty {
+        continue
+      }
+      
+      // Check if the current field is not the special date field.
+      if header.fieldParts != dateObj?.fieldParts {
         
+        var headerString = header.squashedString
+        var valueString = output2
         
-        // Skip processing if the extracted value is empty or contains only whitespace.
-        if output2.isEmpty {
-          continue
-        }
-        
-        // Check if the current field is not the special date field.
-        if header.fieldParts != dateObj?.fieldParts {
-          
-          var headerString = header.squashedString
-          var valueString = output2
-          
-          if header.squashedString.count + totalCount > maxCount {
-            var amountOfTextLeft = maxCount - totalCount
-            if amountOfTextLeft > 0 {
-              headerString = headerString.truncated(to: amountOfTextLeft)
-              if !headerString.isEmpty {
-                myArray.append(TextModel(value: headerString, display: .highlighted))
-              }
-            } else {
-              return myArray
+        if header.squashedString.count + totalCount > maxCount {
+          var amountOfTextLeft = maxCount - totalCount
+          if amountOfTextLeft > 0 {
+            headerString = headerString.truncated(to: amountOfTextLeft)
+            if !headerString.isEmpty {
+              myArray.append(TextModel(value: headerString, display: .highlighted))
             }
-          } else if !headerString.isEmpty {
-            myArray.append(TextModel(value: headerString, display: .highlighted))
+          } else {
+            return myArray
           }
-          
-          totalCount += header.squashedString.count
-          
-          if valueString.count + totalCount > maxCount {
-            var amountOfTextLeft = maxCount - totalCount
-            if amountOfTextLeft > 0 {
-              if amountOfTextLeft <= 3 {
-                valueString = valueString.truncated(to: amountOfTextLeft, addEllipsis: false) + "..."
-              } else {
-                valueString = valueString.truncated(to: amountOfTextLeft)
-              }
-              if !valueString.isEmpty {
-                myArray.append(TextModel(value: valueString, display: .normal, valueFontSize: valueFontSize))
-              }
-            } else {
-              return myArray
-            }
-          } else  if !valueString.isEmpty {
-            myArray.append(TextModel(value: valueString, display: .normal, valueFontSize: valueFontSize))
-          }
-          
-          totalCount +=  valueString.count
-          
+        } else if !headerString.isEmpty {
+          myArray.append(TextModel(value: headerString, display: .highlighted))
         }
         
-        if totalCount > maxCount {
-          return myArray
+        totalCount += header.squashedString.count
+        
+        if valueString.count + totalCount > maxCount {
+          var amountOfTextLeft = maxCount - totalCount
+          if amountOfTextLeft > 0 {
+            if amountOfTextLeft <= 3 {
+              valueString = valueString.truncated(to: amountOfTextLeft, addEllipsis: false) + "..."
+            } else {
+              valueString = valueString.truncated(to: amountOfTextLeft)
+            }
+            if !valueString.isEmpty {
+              myArray.append(TextModel(value: valueString, display: .normal, valueFontSize: valueFontSize))
+            }
+          } else {
+            return myArray
+          }
+        } else  if !valueString.isEmpty {
+          myArray.append(TextModel(value: valueString, display: .normal, valueFontSize: valueFontSize))
         }
+        
+        totalCount +=  valueString.count
         
       }
+      
+      if totalCount > maxCount {
+        return myArray
+      }
+      
     }
       
       // Return the array containing all formatted Text views.

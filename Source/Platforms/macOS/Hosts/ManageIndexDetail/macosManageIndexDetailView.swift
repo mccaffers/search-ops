@@ -31,9 +31,13 @@ public struct macosManageIndexDetailView: View {
   @State private var isRefreshHovered: Bool = false
   @State private var loadTask: Task<Void, Never>? = nil
   @State private var targetIndexCount: Int = 1
+  @State private var mappingDisplayMode: MappingDisplayMode = .structured
+  @State private var mappingSearchText: String = ""
   @ObservedObject private var deleteTracker = IndexDeleteTaskTracker.shared
   // Captured once so an invalidated Realm host is never read during a later render
   private let deleteOperationKey: DeleteOperationKey
+  // Shared by the stats badges and the refresh button so they line up
+  private let headerControlHeight: CGFloat = 28
 
   public init(
     host: HostDetails,
@@ -56,26 +60,33 @@ public struct macosManageIndexDetailView: View {
     VStack(alignment: .leading, spacing: 10) {
       headerView
 
-      tabBarView
+      VStack(alignment: .leading, spacing: 8) {
+        tabBarView
 
-      if isLoading {
-        RepeatedPlaceholderView()
-        Spacer()
-      } else if let error = errorMessage {
-        errorView(message: error)
-        Spacer()
-      } else {
-        switch selectedTab {
-        case .mapping:
-          macosIndexMappingTabView(fields: mappingFields, rawJson: rawMappingJson)
-        case .manage:
-          macosIndexManageOperationsTabView(
-            host: host,
-            indexName: indexName,
-            dateFields: dateFields,
-            currentDocCount: stats?.docCount,
-            targetIndexCount: targetIndexCount
-          )
+        if isLoading {
+          RepeatedPlaceholderView()
+          Spacer()
+        } else if let error = errorMessage {
+          errorView(message: error)
+          Spacer()
+        } else {
+          switch selectedTab {
+          case .mapping:
+            macosIndexMappingTabView(
+              fields: mappingFields,
+              rawJson: rawMappingJson,
+              displayMode: mappingDisplayMode,
+              searchText: $mappingSearchText
+            )
+          case .manage:
+            macosIndexManageOperationsTabView(
+              host: host,
+              indexName: indexName,
+              dateFields: dateFields,
+              currentDocCount: stats?.docCount,
+              targetIndexCount: targetIndexCount
+            )
+          }
         }
       }
     }
@@ -115,10 +126,6 @@ public struct macosManageIndexDetailView: View {
       }
       .help("Back to indexes list")
 
-      Image(systemName: isHidden ? "eye.slash" : "cylinder")
-        .font(.system(size: 16))
-        .foregroundColor(Color("TextSecondary"))
-
       VStack(alignment: .leading, spacing: 2) {
         HStack(spacing: 6) {
           Text(indexName)
@@ -153,28 +160,28 @@ public struct macosManageIndexDetailView: View {
           if let docCountStr = stats.formattedDocCount {
             HStack(spacing: 4) {
               Image(systemName: "doc.text")
-                .font(.system(size: 11))
+                .font(.system(size: 12))
               Text(docCountStr)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .font(.system(size: 13, weight: .medium, design: .monospaced))
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 10)
+            .frame(height: headerControlHeight)
             .background(Color("Button"))
-            .clipShape(Capsule())
+            .clipShape(RoundedRectangle(cornerRadius: 5))
             .foregroundColor(Color("TextSecondary"))
           }
 
           if let storageStr = stats.formattedStorageSize {
             HStack(spacing: 4) {
               Image(systemName: "internaldrive")
-                .font(.system(size: 11))
+                .font(.system(size: 12))
               Text(storageStr)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .font(.system(size: 13, weight: .medium, design: .monospaced))
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 10)
+            .frame(height: headerControlHeight)
             .background(Color("Button"))
-            .clipShape(Capsule())
+            .clipShape(RoundedRectangle(cornerRadius: 5))
             .foregroundColor(Color("TextSecondary"))
           }
         }
@@ -184,9 +191,9 @@ public struct macosManageIndexDetailView: View {
         }) {
           Image(systemName: "arrow.clockwise")
             .font(.system(size: 13, weight: .medium))
-            .padding(6)
+            .frame(width: headerControlHeight, height: headerControlHeight)
             .background(isRefreshHovered ? Color("ButtonHighlighted") : Color("Button"))
-            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .clipShape(RoundedRectangle(cornerRadius: 5))
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
@@ -218,8 +225,16 @@ public struct macosManageIndexDetailView: View {
       )
 
       Spacer()
+
+      if selectedTab == .mapping && !isLoading && errorMessage == nil {
+        macosIndexMappingControlsView(
+          fields: mappingFields,
+          rawJson: rawMappingJson,
+          displayMode: $mappingDisplayMode,
+          searchText: mappingSearchText
+        )
+      }
     }
-    .padding(.bottom, 6)
   }
 
   @ViewBuilder

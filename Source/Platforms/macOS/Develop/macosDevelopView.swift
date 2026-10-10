@@ -22,6 +22,9 @@ struct macosDevelopView: View {
   @State private var result: DevConsoleResult? = nil
   @State private var parseError: String? = nil
   @State private var isCopied = false
+  @State private var isCurlCopied = false
+  @State private var showTemplates = false
+  @State private var templateHost: HostDetails? = nil
 
   private var activeHosts: [HostDetails] {
     serverObjects.items.filter { !$0.isInvalidated }
@@ -33,9 +36,34 @@ struct macosDevelopView: View {
   }
 
   var body: some View {
-    HStack(spacing: 5) {
-      requestPanel
-      responsePanel
+    ZStack {
+      HStack(spacing: 5) {
+        requestPanel
+        responsePanel
+      }
+
+      if showTemplates, let host = templateHost {
+        RoundedRectangle(cornerRadius: 5).fill(Color.black).opacity(0.4)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .contentShape(Rectangle())
+          .onTapGesture {
+            closeTemplates()
+          }
+
+        GeometryReader { proxy in
+          macosDevTemplatesView(host: host,
+                                initialIndex: DevConsoleTemplate.index(fromRequestText: requestText) ?? "",
+                                onUse: { template in
+                                  requestText = template
+                                  // The response belongs to the previous request
+                                  parseError = nil
+                                  closeTemplates()
+                                },
+                                onClose: closeTemplates)
+          .frame(width: proxy.size.width * 0.8, height: proxy.size.height * 0.8)
+          .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+        }
+      }
     }
     .padding(.leading, 3)
     .padding(.trailing, 5)
@@ -54,10 +82,12 @@ struct macosDevelopView: View {
   private var requestPanel: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 8) {
-        Text("Dev")
+        Text("API")
           .font(.system(size: 22, weight: .light))
 
         Spacer()
+
+        templatesButton
 
         hostPicker
 
@@ -77,12 +107,13 @@ struct macosDevelopView: View {
         }
         .buttonStyle(PlainButtonStyle())
         .keyboardShortcut(.return, modifiers: .command)
-        .disabled(!isSending && selectedHost == nil)
+        // The templates popup has its own ⌘↩
+        .disabled(showTemplates || (!isSending && selectedHost == nil))
         .help(isSending ? "Cancel request (⌘↩)" : "Send request (⌘↩)")
       }
       .padding(.top, 10)
 
-      macosCodeEditor(text: $requestText)
+      macosCodeEditor(text: $requestText, isInteractive: !showTemplates)
         .background(Color("BackgroundAlt"))
         .clipShape(.rect(cornerRadius: 5))
 
@@ -107,6 +138,31 @@ struct macosDevelopView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color("BackgroundFixedShadow"))
     .clipShape(.rect(cornerRadius: 5))
+  }
+
+  private var templatesButton: some View {
+    Button(action: {
+      if showTemplates {
+        closeTemplates()
+      } else {
+        openTemplates()
+      }
+    }) {
+      HStack(spacing: 4) {
+        Image(systemName: "square.grid.2x2")
+          .font(.system(size: 11))
+        Text("Templates")
+          .font(.system(size: 12))
+      }
+      .padding(.horizontal, 8)
+      .padding(.vertical, 5)
+      .background(Color(showTemplates ? "macosGreenButton" : "Button"))
+      .clipShape(RoundedRectangle(cornerRadius: 5))
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(PlainButtonStyle())
+    .disabled(selectedHost == nil)
+    .help("Start from a template built from the index mapping")
   }
 
   @ViewBuilder
@@ -168,7 +224,7 @@ struct macosDevelopView: View {
           }
 
           if let duration = result.duration {
-            Text(formatDuration(duration))
+            Text(duration.latencyLabel)
               .font(.system(size: 11))
               .foregroundColor(Color("TextSecondary"))
           }
@@ -189,6 +245,23 @@ struct macosDevelopView: View {
           .buttonStyle(PlainButtonStyle())
           .disabled(result.body.isEmpty)
         }
+
+        Button(action: copyCurl) {
+          HStack(spacing: 4) {
+            Image(systemName: isCurlCopied ? "checkmark" : "terminal")
+              .font(.system(size: 11))
+            Text(isCurlCopied ? "Copied!" : "cURL")
+              .font(.system(size: 11))
+          }
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(Color("Button"))
+          .clipShape(RoundedRectangle(cornerRadius: 5))
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(selectedHost == nil)
+        .help("Copy the request in the editor as a curl command, credentials are left as placeholders")
       }
       .padding(.top, 10)
 
@@ -302,6 +375,18 @@ struct macosDevelopView: View {
     isSending = false
   }
 
+  private func openTemplates() {
+    // Copy the host, the Realm object can be invalidated while the popup loads the mapping
+    guard let host = selectedHost?.generateCopy() else { return }
+    templateHost = host
+    showTemplates = true
+  }
+
+  private func closeTemplates() {
+    showTemplates = false
+    templateHost = nil
+  }
+
   private func copyResponse() {
     guard let body = result?.body, !body.isEmpty else { return }
     NSPasteboard.general.clearContents()
@@ -312,13 +397,21 @@ struct macosDevelopView: View {
     }
   }
 
-  private func formatDuration(_ duration: Duration) -> String {
-    let milliseconds = Double(duration.components.seconds) * 1000
-      + Double(duration.components.attoseconds) / 1e15
-    if milliseconds < 1000 {
-      return String(format: "%.0f ms", milliseconds)
+  private func copyCurl() {
+    guard let host = selectedHost else { return }
+    switch DevConsoleParser.parse(requestText) {
+    case .failure(let error):
+      parseError = error.localizedDescription
+    case .success(let request):
+      parseError = nil
+      NSPasteboard.general.clearContents()
+      NSPasteboard.general.setString(DevConsoleCurlExporter.command(for: request, host: host),
+                                     forType: .string)
+      isCurlCopied = true
+      DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        isCurlCopied = false
+      }
     }
-    return String(format: "%.2f s", milliseconds / 1000)
   }
 }
 

@@ -7,6 +7,7 @@
 // ---------------------------------------
 
 import SwiftUI
+import Combine
 
 
 struct SearchQueryDateView: View {
@@ -49,8 +50,7 @@ struct SearchQueryDateView: View {
     
     func UpdateDate() {
 //        fromDate = dateObj.GetFromTime()
-        fromDate = localRelativeRangeObject.GetFromTime() ?? Date.now
-        print("trigger " + fromDate.description)
+        fromDate = localRelativeRangeObject.GetFromTime()
     }
     
 //    func myTimer() async {

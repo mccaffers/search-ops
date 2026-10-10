@@ -21,7 +21,7 @@ struct macosAppHistory: View {
   @ObservedObject var serverObjects: HostsDataManager
   
 //  @Binding var firstSearchAfterSelectingIndex : Bool
-  var request : (_ selectedHost: HostDetails, _ selectedIndex: String, _ filterObject: FilterObject) -> ()
+  var request : SearchRequestAction
   
   func formattedDateString(from date: Date) -> String {
     let dateFormatter = DateFormatter()

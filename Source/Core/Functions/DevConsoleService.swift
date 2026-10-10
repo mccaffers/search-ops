@@ -212,6 +212,16 @@ public struct DevConsoleService {
 
     let duration = clock.now - start
 
+    // A cancelled request never got an answer, so there's nothing to record
+    if !Task.isCancelled {
+      response.duration = duration
+      response.jsonReq = request.body
+      if let data = response.data {
+        response.parsed = String(decoding: data, as: UTF8.self)
+      }
+      Logger.event(response: response, host: host, source: LogEvent.devConsoleSource)
+    }
+
     if let error = response.error {
       return DevConsoleResult(status: response.httpStatus,
                               sentMethod: request.sentMethod,
@@ -308,5 +318,79 @@ public struct DevConsoleService {
     }
 
     return output
+  }
+}
+
+/// Turns a Dev console request into a curl command for a terminal.
+/// Secrets never go into the command: passwords are prompted for by curl,
+/// tokens and keys are read from shell variables
+public struct DevConsoleCurlExporter {
+
+  @MainActor
+  public static func command(for request: DevConsoleRequest, host: HostDetails) -> String {
+    var lines = ["curl -X \(request.method.rawValue) \(shellQuote(Request.buildUrl(host, request.path)))"]
+
+    if host.host?.selfSignedCertificate == true {
+      lines.append("--insecure")
+    }
+
+    lines.append("-H \(shellQuote("Content-Type: application/json"))")
+    lines.append(contentsOf: authorisation(for: host))
+
+    for header in host.customHeaders where !header.header.isEmpty {
+      if host.authenticationType == .AWSSigV4, Request.isReservedForSigV4(header: header.header) {
+        continue
+      }
+      lines.append("-H \(shellQuote("\(header.header): \(header.value)"))")
+    }
+
+    if let body = request.body {
+      // --data-binary keeps the newlines _bulk and _msearch need
+      lines.append("--data-binary \(shellQuote(body))")
+    }
+
+    return lines.joined(separator: " \\\n  ")
+  }
+
+  /// Mirrors Request.authorisation, with every secret swapped for a placeholder
+  @MainActor
+  static func authorisation(for host: HostDetails) -> [String] {
+    func basic(username: String) -> [String] { ["-u \(shellQuote(username))"] }
+    let bearer = ["-H \"Authorization: Bearer ${ES_API_TOKEN}\""]
+    let apiKey = ["-H \"Authorization: ApiKey ${ES_API_KEY}\"", "-H \(shellQuote("kbn-xsrf: true"))"]
+    let authToken = ["-H \"Authorization: Basic ${ES_AUTH_TOKEN}\""]
+
+    switch host.authenticationType {
+    case .AWSSigV4:
+      var region = host.awsRegion.trimmingCharacters(in: .whitespacesAndNewlines)
+      if region.isEmpty, let detected = AWSEndpoint.detect(host.host?.url ?? "") {
+        region = detected.region
+      }
+      var lines = ["--aws-sigv4 \(shellQuote("aws:amz:\(region):\(host.awsService.rawValue)"))",
+                   "--user \"${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}\""]
+      if !host.awsSessionToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        lines.append("-H \"x-amz-security-token: ${AWS_SESSION_TOKEN}\"")
+      }
+      return lines
+    case .AuthToken:
+      return host.authToken.isEmpty ? [] : authToken
+    case .UsernamePassword:
+      return host.username.isEmpty ? [] : basic(username: host.username)
+    case .APIToken:
+      return host.apiToken.isEmpty ? [] : bearer
+    case .APIKey:
+      return host.apiKey.isEmpty ? [] : apiKey
+    case .None:
+      if !host.authToken.isEmpty { return authToken }
+      if !host.username.isEmpty { return basic(username: host.username) }
+      if !host.apiToken.isEmpty { return bearer }
+      if !host.apiKey.isEmpty { return apiKey }
+      return []
+    }
+  }
+
+  /// Single quotes stop the shell expanding anything, a ' inside becomes '\''
+  static func shellQuote(_ value: String) -> String {
+    "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
   }
 }

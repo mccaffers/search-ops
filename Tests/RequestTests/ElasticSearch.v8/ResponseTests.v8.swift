@@ -127,8 +127,8 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
     XCTAssertEqual(renderedResults?.headers.count, 34)
   }
   
-  // Tests the _UpdateResultsWithFlatArray function with simple data
-  func test_UpdateResultsWithFlatArray_SimpleData() async throws {
+  // Tests the UpdateResultsWithFlatArray function with simple data
+  func testUpdateResultsWithFlatArray_SimpleData() async throws {
     // Create test data
     let searchResults: [[String: Any]] = [
       ["name": "Test User", "age": 30, "city": "London"],
@@ -146,28 +146,28 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
     let viewableFields = RenderedFields(fields: fields)
     
     // Test the function
-    let result = Results._UpdateResultsWithFlatArray(searchResults: searchResults, resultsFields: viewableFields)
+    let result = Results.UpdateResultsWithFlatArray(searchResults: searchResults, resultsFields: viewableFields)
     
     // Assertions
     XCTAssertNotNil(result)
     XCTAssertEqual(result?.results.count, 2)
-    XCTAssertEqual(result?.flat?.count, 3) // Has 3 entries due to initial empty entry
+    XCTAssertEqual(result?.flat?.count, 2)
     XCTAssertEqual(result?.headers.count, 3)
     
-    // Check flat array content (skip first empty entry)
+    // Check flat array content
     if let flat = result?.flat {
-      XCTAssertEqual(flat[1]["name"] as? [String], ["Test User"])
-      XCTAssertEqual(flat[1]["age"] as? [String], ["30"])
-      XCTAssertEqual(flat[1]["city"] as? [String], ["London"])
+      XCTAssertEqual(flat[0]["name"] as? [String], ["Test User"])
+      XCTAssertEqual(flat[0]["age"] as? [String], ["30"])
+      XCTAssertEqual(flat[0]["city"] as? [String], ["London"])
       
-      XCTAssertEqual(flat[2]["name"] as? [String], ["Another User"])
-      XCTAssertEqual(flat[2]["age"] as? [String], ["25"])
-      XCTAssertEqual(flat[2]["city"] as? [String], ["Paris"])
+      XCTAssertEqual(flat[1]["name"] as? [String], ["Another User"])
+      XCTAssertEqual(flat[1]["age"] as? [String], ["25"])
+      XCTAssertEqual(flat[1]["city"] as? [String], ["Paris"])
     }
   }
   
-  // Tests _UpdateResultsWithFlatArray with nested data
-  func test_UpdateResultsWithFlatArray_NestedData() async throws {
+  // Tests UpdateResultsWithFlatArray with nested data
+  func testUpdateResultsWithFlatArray_NestedData() async throws {
     // Create nested test data
     let searchResults: [[String: Any]] = [
       [
@@ -194,39 +194,39 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
     let viewableFields = RenderedFields(fields: fields)
     
     // Test the function
-    let result = Results._UpdateResultsWithFlatArray(searchResults: searchResults, resultsFields: viewableFields)
+    let result = Results.UpdateResultsWithFlatArray(searchResults: searchResults, resultsFields: viewableFields)
     
     // Assertions
     XCTAssertNotNil(result)
     XCTAssertEqual(result?.results.count, 1)
     XCTAssertEqual(result?.headers.count, 4)
     
-    // Check flat array content for nested values (skip first empty entry)
+    // Check flat array content for nested values
     if let flat = result?.flat {
-      XCTAssertEqual(flat[1]["user.name"] as? [String], ["John Doe"])
-      XCTAssertEqual(flat[1]["user.details.age"] as? [String], ["35"])
-      XCTAssertEqual(flat[1]["user.details.location"] as? [String], ["NYC"])
-      XCTAssertEqual(flat[1]["status"] as? [String], ["active"])
+      XCTAssertEqual(flat[0]["user.name"] as? [String], ["John Doe"])
+      XCTAssertEqual(flat[0]["user.details.age"] as? [String], ["35"])
+      XCTAssertEqual(flat[0]["user.details.location"] as? [String], ["NYC"])
+      XCTAssertEqual(flat[0]["status"] as? [String], ["active"])
     }
   }
   
-  // Tests _UpdateResultsWithFlatArray with nil/empty data
-  func test_UpdateResultsWithFlatArray_EmptyData() async throws {
+  // Tests UpdateResultsWithFlatArray with nil/empty data
+  func testUpdateResultsWithFlatArray_EmptyData() async throws {
     let viewableFields = RenderedFields(fields: [])
     
     // Test with nil searchResults
-    let resultNil = Results._UpdateResultsWithFlatArray(searchResults: nil, resultsFields: viewableFields)
+    let resultNil = Results.UpdateResultsWithFlatArray(searchResults: nil, resultsFields: viewableFields)
     XCTAssertNil(resultNil)
     
     // Test with empty searchResults
-    let resultEmpty = Results._UpdateResultsWithFlatArray(searchResults: [], resultsFields: viewableFields)
+    let resultEmpty = Results.UpdateResultsWithFlatArray(searchResults: [], resultsFields: viewableFields)
     XCTAssertNotNil(resultEmpty)
     XCTAssertEqual(resultEmpty?.results.count, 0)
-    XCTAssertEqual(resultEmpty?.flat?.count, 1) // Has 1 entry due to initial empty entry
+    XCTAssertEqual(resultEmpty?.flat?.count, 0)
   }
   
-  // Tests _UpdateResultsWithFlatArray with array values
-  func test_UpdateResultsWithFlatArray_ArrayValues() async throws {
+  // Tests UpdateResultsWithFlatArray with array values
+  func testUpdateResultsWithFlatArray_ArrayValues() async throws {
     // Create test data with arrays
     let searchResults: [[String: Any]] = [
       [
@@ -245,50 +245,99 @@ final class ElasticSearchV8ResponseTests: XCTestCase {
     let viewableFields = RenderedFields(fields: fields)
     
     // Test the function
-    let result = Results._UpdateResultsWithFlatArray(searchResults: searchResults, resultsFields: viewableFields)
+    let result = Results.UpdateResultsWithFlatArray(searchResults: searchResults, resultsFields: viewableFields)
     
     // Assertions
     XCTAssertNotNil(result)
     XCTAssertEqual(result?.results.count, 1)
     
-    // Check array handling in flat structure (skip first empty entry)
+    // Check array handling in flat structure
     if let flat = result?.flat {
-      let tags = flat[1]["tags"] as? [String]
+      let tags = flat[0]["tags"] as? [String]
       XCTAssertEqual(tags?.count, 3)
       XCTAssertTrue(tags?.contains("swift") ?? false)
       
-      let scores = flat[1]["scores"] as? [String]
+      let scores = flat[0]["scores"] as? [String]
       XCTAssertEqual(scores?.count, 3)
       XCTAssertTrue(scores?.contains("95.5") ?? false)
     }
   }
   
-  // Tests that indirectly test loopInnerObjects through complex nested structures
-  func test_ComplexNestedStructure_IndirectlyTestsLoopInnerObjects() async throws {
+  // Flattens a response with nested objects
+  func testComplexNestedStructureFlattens() async throws {
     let response = try SearchOpsTests().OpenFile(filename: "response.3")
     let objects = Search.getObjects(input: response)
     let fields = Fields.getFields(input: response)
     
     let viewableFields = RenderedFields(fields: Results.SortedFieldsWithDate(input: fields))
     
-    // Use _UpdateResultsWithFlatArray to indirectly test loopInnerObjects
-    let result = Results._UpdateResultsWithFlatArray(searchResults: objects.data, resultsFields: viewableFields)
+    // Flatten a response with nested objects
+    let result = Results.UpdateResultsWithFlatArray(searchResults: objects.data, resultsFields: viewableFields)
     
     XCTAssertNotNil(result)
     XCTAssertEqual(result?.results.count, 1)
     
-    // Verify nested boundings object was processed correctly (skip first empty entry)
+    // Verify nested boundings object was processed correctly
     if let flat = result?.flat {
-      XCTAssertNotNil(flat[1]["boundings.west"])
-      XCTAssertNotNil(flat[1]["boundings.south"])
-      XCTAssertNotNil(flat[1]["boundings.east"])
-      XCTAssertNotNil(flat[1]["boundings.north"])
+      XCTAssertNotNil(flat[0]["boundings.west"])
+      XCTAssertNotNil(flat[0]["boundings.south"])
+      XCTAssertNotNil(flat[0]["boundings.east"])
+      XCTAssertNotNil(flat[0]["boundings.north"])
       
       // Verify nested location object
-      XCTAssertNotNil(flat[1]["location.lat"])
-      XCTAssertNotNil(flat[1]["location.lon"])
+      XCTAssertNotNil(flat[0]["location.lat"])
+      XCTAssertNotNil(flat[0]["location.lon"])
     }
   }
 
 
+
+  // MARK: - Field list
+
+  func testFieldsCoverEveryDocument() {
+    let response = """
+    {"hits":{"total":{"value":3},"hits":[
+      {"_source":{"a":1,"n":{"x":1}}},
+      {"_source":{"b":2,"n":{"y":[1,2]}}},
+      {"_source":{"c":"z","n":{"x":3,"z":{"q":true}}}}]}}
+    """
+    let output = Search.getObjects(input: response)
+
+    XCTAssertEqual(output.data.count, 3)
+    XCTAssertEqual(output.hitCount, 3)
+    XCTAssertEqual(output.fields.map(\.squashedString), ["a", "b", "c", "n.x", "n.y", "n.z.q"])
+    XCTAssertEqual(output.fields.last?.fieldParts, ["n", "z", "q"])
+  }
+
+  func testPageWithoutDocumentsKeepsEmptyResult() {
+    // An empty page has always reported no hits, even when the response has a total
+    let empty = Search.getObjects(input: #"{"hits":{"total":{"value":42},"hits":[]}}"#)
+    XCTAssertEqual(empty.hitCount, 0)
+    XCTAssertTrue(empty.data.isEmpty)
+    XCTAssertTrue(empty.fields.isEmpty)
+
+    // Documents without a source still count the hits
+    let noSource = Search.getObjects(input: #"{"hits":{"total":{"value":1},"hits":[{"_id":"x"}]}}"#)
+    XCTAssertEqual(noSource.hitCount, 1)
+    XCTAssertTrue(noSource.data.isEmpty)
+    XCTAssertTrue(noSource.fields.isEmpty)
+  }
+
+  func testParsedJSONGivesSameResultAsRawString() throws {
+    for name in ["response.3", "response.5", "response.6"] {
+      let response = try SearchOpsTests().OpenFile(filename: name)
+      let fromString = Search.getObjects(input: response)
+      let fromJSON = Search.getObjects(json: JsonTools.serialiseJson(response), input: response)
+
+      XCTAssertEqual(fromJSON.hitCount, fromString.hitCount, name)
+      XCTAssertEqual(fromJSON.data.count, fromString.data.count, name)
+      XCTAssertEqual(fromJSON.fields.map(\.squashedString), fromString.fields.map(\.squashedString), name)
+      XCTAssertEqual(fromJSON.fields.map(\.fieldParts), fromString.fields.map(\.fieldParts), name)
+    }
+
+    let unreadable = Search.getObjects(json: nil, input: "not json")
+    XCTAssertNil(unreadable.error)
+    XCTAssertEqual(unreadable.hitCount, 0)
+    XCTAssertTrue(unreadable.data.isEmpty)
+  }
 }

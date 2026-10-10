@@ -15,7 +15,8 @@ struct GenericQueryBuilder : Codable {
               compound : String,
               dateField : String?,
               range : GenericQueryBuilder.Date?,
-              sortBy : [String:String]? = nil) -> Root {
+              sortBy : [String:String]? = nil,
+              filters : [FieldFilter] = []) -> Root {
     
     
     var root = Root()
@@ -86,6 +87,17 @@ struct GenericQueryBuilder : Codable {
       root.query?.bool?.must?.append(rangeMust)
     }
     
+    // Field filters match their value as a phrase, without scoring, so the server can cache them.
+    // Disabled ones are left out, and with none the request is the same as before.
+    let enabledFilters = filters.enabled
+    let keep = enabledFilters.filter { !$0.negated }.map(FilterClause.init)
+    let exclude = enabledFilters.filter { $0.negated }.map(FilterClause.init)
+    if !keep.isEmpty {
+      root.query?.bool?.filter = keep
+    }
+    if !exclude.isEmpty {
+      root.query?.bool?.must_not = exclude
+    }
     
     return root
     
@@ -97,6 +109,7 @@ struct GenericQueryBuilder : Codable {
     var sort : [String: String]?
     var size: Int?
     var from: Int?
+    var aggs: [String: Aggregation]?
     
   }
   
@@ -110,6 +123,16 @@ struct GenericQueryBuilder : Codable {
     
     var must: [Must]? = nil
     var should: [Should]? = nil
+    var filter: [FilterClause]? = nil
+    var must_not: [FilterClause]? = nil
+  }
+  
+  struct FilterClause : Codable, Equatable {
+    var match_phrase: [String: String]
+    
+    init(_ filter: FieldFilter) {
+      match_phrase = [filter.field: filter.value]
+    }
   }
   
   struct Should : Codable {
@@ -134,6 +157,24 @@ struct GenericQueryBuilder : Codable {
   struct Date : Codable {
     var lte: String?
     var gte: String?
+  }
+  
+  struct Aggregation : Codable, Equatable {
+    var date_histogram: DateHistogram?
+  }
+  
+  struct DateHistogram : Codable, Equatable {
+    var field: String
+    var fixed_interval: String?
+    var interval: String?
+    var min_doc_count: Int?
+    var extended_bounds: Bounds?
+    var time_zone: String?
+  }
+  
+  struct Bounds : Codable, Equatable {
+    var min: Int64
+    var max: Int64
   }
   
 }

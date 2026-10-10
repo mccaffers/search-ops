@@ -13,28 +13,13 @@ struct macosSearchTopButtonsView: View {
   @Binding var macosSearchRouterPath : macosSearchRouterPath
   @Binding var selection: macosSearchViewEnum
   @Binding var showFilterSidebar :  Bool
-  @Binding var resultsLayout: macosSearchResultsLayout
  
   var hostName : String? = nil
   var index: String? = nil
+  /// Shown instead of the index when the search is a data view's pattern
+  var dataView: DataView? = nil
+  var latency: Duration? = nil
   @Binding var currentWidth: CGFloat
-  
-  func layoutButton(_ layout: macosSearchResultsLayout, systemImage: String, help: String) -> some View {
-    Button {
-      resultsLayout = layout
-    } label: {
-      Image(systemName: systemImage)
-        .font(.system(size: 13))
-        .frame(width: 28, height: 24)
-        .background(resultsLayout == layout ? Color("BackgroundAlt") : Color.clear)
-        .clipShape(.rect(cornerRadius: 4))
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(PlainButtonStyle())
-    .help(help)
-    .accessibilityLabel(help)
-    .accessibilityAddTraits(resultsLayout == layout ? .isSelected : [])
-  }
   
     var body: some View {
       VStack {
@@ -74,7 +59,14 @@ struct macosSearchTopButtonsView: View {
             selection = (selection == .Indices ? .None : .Indices)
           } label: {
             Group {
-              if let index = index {
+              if let dataView = dataView {
+                HStack(spacing: 5) {
+                  Image(systemName: "rectangle.stack")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(Color("LabelBackgroundFocus"))
+                  Text(dataView.name)
+                }
+              } else if let index = index {
                 Text(index)
               } else {
                 Text("Index")
@@ -83,18 +75,26 @@ struct macosSearchTopButtonsView: View {
               .padding(6)
               .background(selection == .Indices ? Color("BackgroundAlt") : Color("Button"))
               .clipShape(.rect(cornerRadius: 5))
+              .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                  .stroke(Color("LabelBackgroundFocus"), lineWidth: dataView == nil ? 0 : 1)
+              )
               .contentShape(Rectangle())
           }.buttonStyle(PlainButtonStyle())
+          .help(dataView.map { "Data view \($0.name): \($0.pattern)" } ?? (index ?? "Choose an index"))
           Spacer()
-          
-          HStack(spacing: 2) {
-            layoutButton(.document, systemImage: "doc.plaintext", help: "Show results as documents")
-            layoutButton(.table, systemImage: "tablecells", help: "Show results as a table")
+
+          if let latency = latency {
+            let latencyColor: Color = latency.isSlowLatency ? .orange : .green
+            Text(latency.latencyLabel)
+              .monospacedDigit()
+              .foregroundColor(latencyColor)
+              .padding(6)
+              .background(latencyColor.opacity(0.18))
+              .clipShape(.rect(cornerRadius: 5))
+              .help("Round-trip time of the last search request")
           }
-          .padding(2)
-          .background(Color("Button"))
-          .clipShape(.rect(cornerRadius: 5))
-          
+
           Button {
             showFilterSidebar.toggle()
             if showFilterSidebar {

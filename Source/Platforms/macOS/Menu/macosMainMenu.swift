@@ -96,7 +96,7 @@ struct macosMainMenu: View {
               serverObjects.refresh()
             },
             iconName: "ellipsis.curlybraces",
-            text: "Dev",
+            text: "API",
             buttonColor : sidebar == .develop ? Color("ButtonHighlighted") : Color("Button")
         )
 

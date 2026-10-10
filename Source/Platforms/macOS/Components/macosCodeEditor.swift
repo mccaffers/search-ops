@@ -15,6 +15,9 @@ import AppKit
 struct macosCodeEditor: NSViewRepresentable {
   @Binding var text: String
   var fontSize: CGFloat = 13
+  /// Off while a SwiftUI overlay covers the editor, AppKit cursor rects ignore SwiftUI
+  /// overlays, so the text cursor would otherwise show through them
+  var isInteractive = true
 
   func makeNSView(context: Context) -> NSScrollView {
     let scrollView = NSTextView.scrollableTextView()
@@ -58,6 +61,13 @@ struct macosCodeEditor: NSViewRepresentable {
     // Only replace the text when it changed externally, otherwise the cursor jumps
     if textView.string != text {
       textView.string = text
+    }
+    if textView.isSelectable != isInteractive {
+      textView.isEditable = isInteractive
+      textView.isSelectable = isInteractive
+      // The clip view shows the text cursor below the last line too
+      nsView.documentCursor = isInteractive ? .iBeam : .arrow
+      textView.window?.invalidateCursorRects(for: textView)
     }
   }
 

@@ -12,8 +12,12 @@ import SwiftUI
 public enum ManageScreen: Equatable {
   case hostList
   case hostOptions
+  case clusterHealth
   case indexList
   case indexDetail
+  case userList
+  case dataViewList
+  case dataViewEditor
 }
 
 @MainActor public class ManageNavigationCoordinator: ObservableObject {
@@ -21,6 +25,8 @@ public enum ManageScreen: Equatable {
   @Published public var selectedHost: HostDetails? = nil
   @Published public var selectedIndex: String? = nil
   @Published public var selectedIndexStats: IndexStatsItem? = nil
+  // nil on the editor means a new data view
+  @Published public var selectedDataViewId: UUID? = nil
 
   public init(
     screen: ManageScreen = .hostList,
@@ -40,8 +46,26 @@ public enum ManageScreen: Equatable {
     screen = .hostOptions
   }
 
+  public func navigateToClusterHealth() {
+    screen = .clusterHealth
+  }
+
   public func navigateToListIndexes() {
     screen = .indexList
+  }
+
+  public func navigateToListUsers() {
+    screen = .userList
+  }
+
+  public func navigateToDataViews() {
+    selectedDataViewId = nil
+    screen = .dataViewList
+  }
+
+  public func editDataView(_ id: UUID?) {
+    selectedDataViewId = id
+    screen = .dataViewEditor
   }
 
   public func selectIndex(_ indexName: String, stats: IndexStatsItem? = nil) {
@@ -56,7 +80,10 @@ public enum ManageScreen: Equatable {
       screen = .indexList
       selectedIndex = nil
       selectedIndexStats = nil
-    case .indexList:
+    case .dataViewEditor:
+      screen = .dataViewList
+      selectedDataViewId = nil
+    case .clusterHealth, .indexList, .userList, .dataViewList:
       screen = .hostOptions
     case .hostOptions:
       screen = .hostList
@@ -70,6 +97,7 @@ public enum ManageScreen: Equatable {
     selectedHost = nil
     selectedIndex = nil
     selectedIndexStats = nil
+    selectedDataViewId = nil
     screen = .hostList
   }
 
@@ -79,6 +107,7 @@ public enum ManageScreen: Equatable {
         screen = .hostList
         selectedIndex = nil
         selectedIndexStats = nil
+        selectedDataViewId = nil
       }
       return
     }
@@ -87,6 +116,7 @@ public enum ManageScreen: Equatable {
       selectedHost = nil
       selectedIndex = nil
       selectedIndexStats = nil
+      selectedDataViewId = nil
       screen = .hostList
       return
     }
@@ -96,6 +126,7 @@ public enum ManageScreen: Equatable {
       selectedHost = nil
       selectedIndex = nil
       selectedIndexStats = nil
+      selectedDataViewId = nil
       screen = .hostList
     }
   }
@@ -171,7 +202,10 @@ struct macosManageHostsView: View {
           macosManageHostOptionsView(
             host: host,
             onBack: { coordinator.goBack() },
-            onListIndexes: { coordinator.navigateToListIndexes() }
+            onClusterHealth: { coordinator.navigateToClusterHealth() },
+            onListIndexes: { coordinator.navigateToListIndexes() },
+            onListUsers: { coordinator.navigateToListUsers() },
+            onDataViews: { coordinator.navigateToDataViews() }
           )
         } else {
           hostListView
@@ -188,6 +222,59 @@ struct macosManageHostsView: View {
               coordinator.selectIndex(indexName, stats: stats)
             }
           )
+        } else {
+          hostListView
+            .onAppear {
+              coordinator.reset()
+            }
+        }
+      case .clusterHealth:
+        if let host = coordinator.selectedHost, !host.isInvalidated {
+          macosClusterHealthView(
+            host: host,
+            onBack: { coordinator.goBack() }
+          )
+        } else {
+          hostListView
+            .onAppear {
+              coordinator.reset()
+            }
+        }
+      case .userList:
+        if let host = coordinator.selectedHost, !host.isInvalidated {
+          macosManageUsersView(
+            host: host,
+            onBack: { coordinator.goBack() }
+          )
+        } else {
+          hostListView
+            .onAppear {
+              coordinator.reset()
+            }
+        }
+      case .dataViewList:
+        if let host = coordinator.selectedHost, !host.isInvalidated {
+          macosManageDataViewsView(
+            host: host,
+            onBack: { coordinator.goBack() },
+            onCreate: { coordinator.editDataView(nil) },
+            onEdit: { id in coordinator.editDataView(id) }
+          )
+        } else {
+          hostListView
+            .onAppear {
+              coordinator.reset()
+            }
+        }
+      case .dataViewEditor:
+        if let host = coordinator.selectedHost, !host.isInvalidated {
+          macosDataViewEditorView(
+            host: host,
+            dataViewId: coordinator.selectedDataViewId,
+            onClose: { coordinator.goBack() }
+          )
+          // A fresh editor for each view, so no draft carries over
+          .id(coordinator.selectedDataViewId)
         } else {
           hostListView
             .onAppear {

@@ -72,11 +72,11 @@ struct macosManageIndexesView: View {
               .font(.system(size: 20, weight: .light))
             if !loading && indexError == nil {
               Text(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "\(allCurrentIndices.count)" : "\(filteredIndices.count) / \(allCurrentIndices.count)")
-                .font(.system(size: 11, weight: .semibold))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
+                .font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
                 .background(Color("Button"))
-                .clipShape(Capsule())
+                .clipShape(RoundedRectangle(cornerRadius: 5))
                 .foregroundColor(Color("TextSecondary"))
             }
           }

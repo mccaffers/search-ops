@@ -12,7 +12,10 @@ import RealmSwift
 @available(macOS 13, *)
 public class RealmManager : RealmManagerProtocol {
   
-  public static let schemaVersion : UInt64 = 7
+  // 8: RealmDataView and RealmFieldLabel. New classes only, so the migration block needs nothing
+  // 9: LogEvent source and truncated flags. Empty and false are right for older events, so nothing to migrate
+  // 10: RealmSearchEvent field filters. Older searches had none, so the empty list needs nothing
+  public static let schemaVersion : UInt64 = 10
   
   // Debug builds only: launching with SEARCHOPS_IN_MEMORY_STORE=1 keeps the database in memory,
   // so the app never reads the encryption key from the Keychain or writes a realm file.

@@ -16,13 +16,21 @@ public class LogDataManager: ObservableObject {
   
   @Published
   public var items: [LogEvent] = []
-  
+
+  // The number of requests kept, the oldest are deleted as new ones are added
+  public static let limit = 50
+
   public init() {
     self.items = readServer()
   }
   
   public func refresh() {
     self.items = readServer()
+  }
+
+  /// The events still in the database, most recent first
+  public var newestFirst: [LogEvent] {
+    items.filter { !$0.isInvalidated }.sorted { $0.date > $1.date }
   }
   
   
@@ -50,26 +58,32 @@ public class LogDataManager: ObservableObject {
   }
   
   
+  // Keeps the newest `limit` events and deletes the rest
   private func rotateLogs() {
     if let realm = RealmManager().getRealm() {
+      let expired = Array(realm.objects(LogEvent.self)
+        .sorted(byKeyPath: "date", ascending: false)
+        .dropFirst(LogDataManager.limit))
+      guard !expired.isEmpty else { return }
       try? realm.write {
-        let realmArrayObject = realm.objects(LogEvent.self)
-        let myArray = Array(realmArrayObject)
-        let limit = (myArray.count - 20)
-        if limit > 1,
-           let oldest = myArray.sorted(by: { $0.date < $1.date }).first {
-          realm.delete(oldest)
-        }
+        LogDataManager.delete(expired, from: realm)
       }
     }
+  }
+
+  // The host details are objects of their own, not embedded, so they're deleted with their event
+  private static func delete(_ events: [LogEvent], from realm: Realm) {
+    let hosts = events.compactMap { $0.host }
+    realm.delete(hosts.compactMap { $0.host })
+    realm.delete(hosts)
+    realm.delete(events)
   }
   
   
   public func deleteAll(){
     if let realm = RealmManager().getRealm() {
       try? realm.write {
-        let allUploadingObjects = realm.objects(LogEvent.self)
-        realm.delete(allUploadingObjects)
+        LogDataManager.delete(Array(realm.objects(LogEvent.self)), from: realm)
       }
     }
     refresh()

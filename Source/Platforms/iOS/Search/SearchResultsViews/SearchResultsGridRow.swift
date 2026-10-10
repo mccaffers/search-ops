@@ -56,35 +56,35 @@ struct SearchResultsGridRow: View {
               
               let values = Results.getValueForKey(fieldParts: item.fieldParts,
                                                   item:renderedObjects.results[index])
-              ForEach(values, id: \.self) { output in
-                if output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                  Text("No Value")
-                    .italic()
-                    .foregroundStyle(Color("TextSecondary"))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 10)
-                } else {
-                  
-                  VStack {
-                    
-                    // TODO properly check if this is mapped as a date field not just look at the string
-                    //                                    if item.squashedString == "date" {
-                    //                                        Text(Utilities.buildDate(input: output))
-                    //                                            .frame(maxWidth: .infinity,  alignment: .leading)
-                    //
-                    //                                    } else {
-                    
-                    Text(output.truncated(to: 100))
-                      .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    
-                    //                                    }
-                    
-                  }
+              // Every value of the field in one cell, eg. "a, b, c", so the row keeps one cell per column
+              let output = Results.joinedValues(values)
+              if output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("No Value")
+                  .italic()
+                  .foregroundStyle(Color("TextSecondary"))
+                  .frame(maxWidth: .infinity, maxHeight: .infinity)
                   .padding(.horizontal, 10)
-                  .padding(.vertical, 5)
+              } else {
+                
+                VStack {
+                  
+                  // TODO properly check if this is mapped as a date field not just look at the string
+                  //                                    if item.squashedString == "date" {
+                  //                                        Text(Utilities.buildDate(input: output))
+                  //                                            .frame(maxWidth: .infinity,  alignment: .leading)
+                  //
+                  //                                    } else {
+                  
+                  Text(output.truncated(to: 100))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                  
+                  
+                  //                                    }
                   
                 }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                
               }
               
               

@@ -32,153 +32,76 @@ public class Results {
     return nil
     
   }
-  public static func UpdateResultsWithFlatArray(searchResults: [[String: Any]]?, resultsFields: RenderedFields, datefield: SquashedFieldsArray? = nil) -> RenderObject? {
+  /// The results with each document flattened into a row of its fields' values, for the table.
+  /// Pass `rows` when the documents were already flattened while reading the response, as `SearchResult.rows` are.
+  public static func UpdateResultsWithFlatArray(searchResults: [[String: Any]]?,
+                                                resultsFields: RenderedFields,
+                                                datefield: SquashedFieldsArray? = nil,
+                                                rows: [OrderedDictionary<String, Any>]? = nil) -> RenderObject? {
       guard let searchResults = searchResults else {
           return nil
       }
 
-      var myArray = [OrderedDictionary<String, Any>]()
-      var flatArray = [OrderedDictionary<String, Any>]()
-
-      for item in searchResults {
-          let orderedItem = OrderedDictionary(uniqueKeys: item.keys, values: item.values)
-          myArray.append(orderedItem)
-
-          var flat = OrderedDictionary<String, Any>()
-          for header in resultsFields.fields {
-              let values = Results.getValueForKey(fieldParts: header.fieldParts, item: orderedItem)
-              if !values.isEmpty {
-                  flat[header.squashedString] = values
-              }
-          }
-          flatArray.append(flat)
-      }
-
       return RenderObject(
           headers: resultsFields.fields.filter { $0.visible },
-          results: myArray,
-          flat: flatArray,
+          results: searchResults.map { OrderedDictionary(uniqueKeys: $0.keys, values: $0.values) },
+          flat: rows ?? DocumentFlattener.flattenPage(searchResults).rows,
           dateField: datefield
       )
   }
 
-
-  
-  // Takes a mutlti-dimensional array and returns a RenderedObject
-  // Extracts all the fields out of the results
-  // This is different to _mapping, as it captures fields that are not mapped
-  public static func _UpdateResultsWithFlatArray(searchResults : [[String: Any]]?, resultsFields:  RenderedFields) -> RenderObject? {
-    
-    var myArray = [OrderedDictionary<String, Any>]()
-    var flat = OrderedDictionary<String, Any>()
-    var flatArray = [OrderedDictionary<String, Any>()]
-    
-    if let searchResults = searchResults {
-      for item in searchResults {
-        myArray.append(OrderedDictionary(uniqueKeys: item.keys, values: item.values))
-        
-        for header in resultsFields.fields {
-          let values = Results.getValueForKey(fieldParts: header.fieldParts,
-                                              item: convertToOrderedDictionary(item))
-          
-//            var flat : [String:String] = [:]
-//          
-          flat[header.squashedString] = values
-//          flat.append(OrderedDictionary(uniqueKeys: header.squashedString, values:values))
-          
-        }
-        flatArray.append(flat)
-        flat = OrderedDictionary<String, Any>()
-      }
-      
-      
-
-      
-      return RenderObject(headers: resultsFields.fields.filter({$0.visible == true}),
-                          results: myArray,
-                          flat: flatArray)
-      
-    }
-    
-    
-    return nil
-    
-  }
-  
-  // Function to convert [String: Any] to OrderedDictionary<String, Any>
-  static func convertToOrderedDictionary(_ dictionary: [String: Any]) -> OrderedDictionary<String, Any> {
-      var orderedDict = OrderedDictionary<String, Any>()
-      for (key, value) in dictionary {
-          orderedDict[key] = value
-      }
-      return orderedDict
-  }
-
-  
-  
-  // Loop through all the inner objects of the results
-  private static func loopInnerObjects(item: SquashedFieldsArray, level: Int, input:  [[String: Any]], originalObject:[String: Any]?=nil) -> [[String : Any]] {
-    
-    var myArray = [[String : Any]]()
-    
-    for resultObjects in input {
-      for key in Array(resultObjects.keys) {
-        if item.fieldParts[level] == key {
-          let innerObject = resultObjects[key]
-          
-          var returnObj = resultObjects
-          if originalObject != nil {
-            returnObj = originalObject!
-          }
-          
-          if innerObject is String {
-            myArray.append(originalObject!)
-          } else if let finalValue = innerObject as? [String: Any] {
-            myArray.append(contentsOf: loopInnerObjects(item:item,
-                                                        level:level+1,
-                                                        input:[finalValue],
-                                                        originalObject:returnObj ))
-          }
-        }
-      }
-    }
-    return myArray
-  }
-  
-  // Extract the value for a key inside of the JSON object
+  /// The values of a field in a document, read the same way `DocumentFlattener` reads them: through objects and
+  /// every element of arrays at any depth, with keys that contain dots matched as well as nested ones.
+  /// `[""]` when the document has no value for the field.
   public static func getValueForKey(fieldParts:[String], item: OrderedDictionary<String, Any>) -> [String] {
-    
-    if fieldParts.count == 1 {
-      let key = fieldParts[0]
-      if let value = item[key] as? String {
-        return [value]
-      } else if let value = item[key] as? Int {
-        return [String(value)]
-      } else if let value = item[key] as? Double {
-        return [value.string]
-      } else if let value = item[key] as? Array<String> {
-        return value
-      } else if let value = item[key] as? Array<Int> {
-        return value.map { String($0) }
-      } else if let value = item[key] as? Array<Double> {
-        return value.compactMap { $0.string }
-      }
-      
-    } else {
-      
-      let firstKey = fieldParts[0]
-      
-      if let innerObj = item[firstKey] as? [String: Any] {
-        return checkInnerObjects(fieldParts: fieldParts, level: 1, obj: innerObj)
-      } else if let innerObj = item[firstKey] as? [Any] {
-        return checkInnerObjects(fieldParts: fieldParts, level: 1, obj: innerObj)
+    let segments = fieldParts.joined(separator: ".").split(separator: ".", omittingEmptySubsequences: false).map(String.init)
+    var values = [String]()
+
+    var key = ""
+    for end in 1...segments.count {
+      key = end == 1 ? segments[0] : key + "." + segments[end - 1]
+      if let child = item[key] {
+        collectValues(child, segments: segments, from: end, into: &values)
       }
     }
-    
-    return [""]
-    
+
+    return values.isEmpty ? [""] : values
+  }
+
+  /// Adds the values under `value` for the field whose name is made of `segments`, from `start` onwards.
+  /// A key can hold one segment, or several joined with dots, eg. `"host.name"`.
+  static func collectValues(_ value: Any, segments: [String], from start: Int, into values: inout [String]) {
+    if let array = value as? [Any] {
+      for element in array {
+        collectValues(element, segments: segments, from: start, into: &values)
+      }
+      return
+    }
+
+    if start == segments.count {
+      if let text = DocumentFlattener.text(for: value) {
+        values.append(text)
+      }
+      return
+    }
+
+    guard let object = value as? [String: Any] else {
+      return
+    }
+    var key = ""
+    for end in (start + 1)...segments.count {
+      key = end == start + 1 ? segments[start] : key + "." + segments[end - 1]
+      if let child = object[key] {
+        collectValues(child, segments: segments, from: end, into: &values)
+      }
+    }
   }
   
+  /// A field's values in one line, eg. "a, b, c", leaving out blank ones. Empty when there are none.
+  public static func joinedValues(_ values: [String]) -> String {
+    values.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: ", ")
+  }
+
   public static func checkIfHeaderExistsInData(headers: [SquashedFieldsArray], item: OrderedDictionary<String, Any>)
   -> Bool {
     
@@ -210,53 +133,6 @@ public class Results {
     return output ?? ""
   }
   
-  
-  
-  public static func checkInnerObjects(fieldParts: [String], level: Int, obj: [String: Any]) -> [String] {
-    
-    //    if fieldParts.count-1 <= level {
-    let key = fieldParts[level]
-    
-    if let innerObj = obj[key] as? [String: Any] {
-      if innerObj.count == 0 {
-        return [""]
-      }
-      return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
-    } else if let innerObj = obj[key] as? [Any] {
-      return checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj)
-    } else if let value = obj[key] as? String {
-      return [value]
-    } else if let value = obj[key] as? Int {
-      return [String(value)]
-    } else if let value = obj[key] as? Double {
-      return [value.string]
-    } else if let value = obj[key] as? Array<String> {
-      return value
-    } else if let value = obj[key] as? Array<Int> {
-      return value.map { String($0) }
-    } else if let value = obj[key] as? Array<Double> {
-      return value.compactMap { $0.string }
-    }
-    //    }
-    
-    return [""]
-  }
-  
-  public static func checkInnerObjects(fieldParts: [String], level: Int, obj: [Any]) -> [String] {
-    
-    var holder = [String]()
-    
-    for item in obj {
-      if let innerObj = item as? [String: Any] {
-        holder.append(contentsOf: checkInnerObjects(fieldParts: fieldParts, level: level, obj: innerObj))
-      } else if let innerObj = item as? [Any] {
-        holder.append(contentsOf: checkInnerObjects(fieldParts: fieldParts, level: level+1, obj: innerObj))
-      }
-      //    }
-    }
-    
-    return holder
-  }
   
   
   public static func SortedFieldsWithDate(input: [SquashedFieldsArray]) ->  [SquashedFieldsArray] {

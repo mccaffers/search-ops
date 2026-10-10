@@ -6,7 +6,7 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 
-import XCTest
+import Foundation
 import Testing
 
 @testable import Search_Ops
@@ -16,146 +16,146 @@ struct SearchOpsUnitTests {
   @Test func testEquality() {
     let field1 = FieldsArray(name: "FieldA")
     let field2 = FieldsArray(name: "FieldA")
-    XCTAssertEqual(field1, field2, "FieldsArray instances with the same name should be equal")
+    #expect(field1 == field2, "FieldsArray instances with the same name should be equal")
   }
 
   @Test func testIndexFilter_emptyAndWhitespaceQuery() {
     let indices = ["logs-2025", "audit", "metrics"]
-    XCTAssertEqual(IndexFilterHelper.filter(indices: indices, query: ""), ["audit", "logs-2025", "metrics"])
-    XCTAssertEqual(IndexFilterHelper.filter(indices: indices, query: "   \n"), ["audit", "logs-2025", "metrics"])
+    #expect(IndexFilterHelper.filter(indices: indices, query: "") == ["audit", "logs-2025", "metrics"])
+    #expect(IndexFilterHelper.filter(indices: indices, query: "   \n") == ["audit", "logs-2025", "metrics"])
   }
 
   @Test func testIndexFilter_caseInsensitiveSubstring() {
     let indices = ["audit-log", "APP-LOGS", "metrics-2025", "system"]
     let filtered = IndexFilterHelper.filter(indices: indices, query: "log")
-    XCTAssertEqual(filtered, ["APP-LOGS", "audit-log"])
+    #expect(filtered == ["APP-LOGS", "audit-log"])
   }
 
   @Test func testIndexFilter_wildcardAsterisk() {
     let indices = ["logs-2025-01", "logs-2024-12", "metrics-logs", "audit"]
     let filteredPrefix = IndexFilterHelper.filter(indices: indices, query: "logs-*")
-    XCTAssertEqual(filteredPrefix, ["logs-2024-12", "logs-2025-01"])
+    #expect(filteredPrefix == ["logs-2024-12", "logs-2025-01"])
 
     let filteredSuffix = IndexFilterHelper.filter(indices: indices, query: "*logs")
-    XCTAssertEqual(filteredSuffix, ["metrics-logs"])
+    #expect(filteredSuffix == ["metrics-logs"])
   }
 
   @Test func testIndexFilter_wildcardQuestionMark() {
     let indices = ["log1", "log2", "log10", "other"]
     let filtered = IndexFilterHelper.filter(indices: indices, query: "log?")
-    XCTAssertEqual(filtered, ["log1", "log2"])
+    #expect(filtered == ["log1", "log2"])
   }
 
   @Test func testIndexFilter_specialCharactersEscaped() {
     let indices = ["app.prod", "appXprod", "data(old)", "data_new"]
     let filteredDot = IndexFilterHelper.filter(indices: indices, query: "app.prod")
-    XCTAssertEqual(filteredDot, ["app.prod"])
+    #expect(filteredDot == ["app.prod"])
 
     let filteredParens = IndexFilterHelper.filter(indices: indices, query: "(old)")
-    XCTAssertEqual(filteredParens, ["data(old)"])
+    #expect(filteredParens == ["data(old)"])
   }
 
   @Test func testIndexFilter_deduplicationAndEmpty() {
     let duplicateIndices = ["audit", "audit", "metrics", "audit"]
-    XCTAssertEqual(IndexFilterHelper.filter(indices: duplicateIndices, query: ""), ["audit", "metrics"])
+    #expect(IndexFilterHelper.filter(indices: duplicateIndices, query: "") == ["audit", "metrics"])
 
     let emptyIndices: [String] = []
-    XCTAssertEqual(IndexFilterHelper.filter(indices: emptyIndices, query: "logs"), [])
+    #expect(IndexFilterHelper.filter(indices: emptyIndices, query: "logs") == [])
   }
 
   @Test func testIndexFilter_noMatches() {
     let indices = ["logs", "metrics", "traces"]
-    XCTAssertEqual(IndexFilterHelper.filter(indices: indices, query: "k8s"), [])
+    #expect(IndexFilterHelper.filter(indices: indices, query: "k8s") == [])
   }
 
   @Test func testIndexFilter_showAllButton() {
-    XCTAssertTrue(IndexFilterHelper.showAllButton(query: ""))
-    XCTAssertTrue(IndexFilterHelper.showAllButton(query: "   "))
-    XCTAssertTrue(IndexFilterHelper.showAllButton(query: "all"))
-    XCTAssertTrue(IndexFilterHelper.showAllButton(query: "_all"))
-    XCTAssertTrue(IndexFilterHelper.showAllButton(query: "_ALL"))
-    XCTAssertTrue(IndexFilterHelper.showAllButton(query: "*all*"))
-    XCTAssertFalse(IndexFilterHelper.showAllButton(query: "logs"))
-    XCTAssertFalse(IndexFilterHelper.showAllButton(query: "audit"))
+    #expect(IndexFilterHelper.showAllButton(query: ""))
+    #expect(IndexFilterHelper.showAllButton(query: "   "))
+    #expect(IndexFilterHelper.showAllButton(query: "all"))
+    #expect(IndexFilterHelper.showAllButton(query: "_all"))
+    #expect(IndexFilterHelper.showAllButton(query: "_ALL"))
+    #expect(IndexFilterHelper.showAllButton(query: "*all*"))
+    #expect(!(IndexFilterHelper.showAllButton(query: "logs")))
+    #expect(!(IndexFilterHelper.showAllButton(query: "audit")))
   }
 
   @Test func testIndexFilter_excludesAllPseudoIndex() {
     let indicesWithAll = ["_all", "audit", "metrics"]
     let filtered = IndexFilterHelper.filter(indices: indicesWithAll, query: "")
-    XCTAssertEqual(filtered, ["audit", "metrics"])
-    XCTAssertFalse(filtered.contains("_all"))
+    #expect(filtered == ["audit", "metrics"])
+    #expect(!(filtered.contains("_all")))
 
     let filteredSearch = IndexFilterHelper.filter(indices: indicesWithAll, query: "all")
-    XCTAssertEqual(filteredSearch, [])
+    #expect(filteredSearch == [])
   }
 
   @Test func testIndexFilter_totalCount() {
-    XCTAssertEqual(IndexFilterHelper.totalCount(indices: []), 1)
-    XCTAssertEqual(IndexFilterHelper.totalCount(indices: ["audit", "metrics"]), 3)
-    XCTAssertEqual(IndexFilterHelper.totalCount(indices: ["audit", "audit", "metrics"]), 3)
-    XCTAssertEqual(IndexFilterHelper.totalCount(indices: ["_all", "audit", "metrics"]), 3)
-    XCTAssertEqual(IndexFilterHelper.totalCount(indices: ["_all", "audit", "audit"]), 2)
-    XCTAssertEqual(IndexFilterHelper.totalCount(indices: [], includeAll: false), 0)
-    XCTAssertEqual(IndexFilterHelper.totalCount(indices: ["audit", "metrics"], includeAll: false), 2)
-    XCTAssertEqual(IndexFilterHelper.totalCount(indices: ["_all", "audit", "metrics"], includeAll: false), 2)
+    #expect(IndexFilterHelper.totalCount(indices: []) == 1)
+    #expect(IndexFilterHelper.totalCount(indices: ["audit", "metrics"]) == 3)
+    #expect(IndexFilterHelper.totalCount(indices: ["audit", "audit", "metrics"]) == 3)
+    #expect(IndexFilterHelper.totalCount(indices: ["_all", "audit", "metrics"]) == 3)
+    #expect(IndexFilterHelper.totalCount(indices: ["_all", "audit", "audit"]) == 2)
+    #expect(IndexFilterHelper.totalCount(indices: [], includeAll: false) == 0)
+    #expect(IndexFilterHelper.totalCount(indices: ["audit", "metrics"], includeAll: false) == 2)
+    #expect(IndexFilterHelper.totalCount(indices: ["_all", "audit", "metrics"], includeAll: false) == 2)
   }
 
   @Test func testIndexFilter_consecutiveWildcards() {
     let indices = ["logs-2025-01", "logs-2024-12", "metrics"]
     let filteredDouble = IndexFilterHelper.filter(indices: indices, query: "logs**01")
-    XCTAssertEqual(filteredDouble, ["logs-2025-01"])
+    #expect(filteredDouble == ["logs-2025-01"])
 
     let filteredTriple = IndexFilterHelper.filter(indices: indices, query: "***metrics***")
-    XCTAssertEqual(filteredTriple, ["metrics"])
+    #expect(filteredTriple == ["metrics"])
   }
 
   @Test func testIndexFilter_complexPatterns() {
     let indices = ["k8s-prod.logs", "k8s-dev.logs", "k8s-prod.metrics", "other"]
     let filtered = IndexFilterHelper.filter(indices: indices, query: "k8s-*.logs")
-    XCTAssertEqual(filtered, ["k8s-dev.logs", "k8s-prod.logs"])
+    #expect(filtered == ["k8s-dev.logs", "k8s-prod.logs"])
 
     let singleChar = IndexFilterHelper.filter(indices: ["cat", "cot", "coat", "cut"], query: "c?t")
-    XCTAssertEqual(singleChar, ["cat", "cot", "cut"])
+    #expect(singleChar == ["cat", "cot", "cut"])
   }
 
   @Test func testIndexFilter_preserveOrderDeduplication() {
     let customOrder = ["zebra-index", "alpha-index", "beta-index", "alpha-index", "_all"]
     let filteredDefault = IndexFilterHelper.filter(indices: customOrder, query: "")
     // Default alphabetical sorting
-    XCTAssertEqual(filteredDefault, ["alpha-index", "beta-index", "zebra-index"])
+    #expect(filteredDefault == ["alpha-index", "beta-index", "zebra-index"])
     
     // preserveOrder: true keeps incoming order and deduplicates, excludes _all
     let filteredPreserved = IndexFilterHelper.filter(indices: customOrder, query: "", preserveOrder: true)
-    XCTAssertEqual(filteredPreserved, ["zebra-index", "alpha-index", "beta-index"])
+    #expect(filteredPreserved == ["zebra-index", "alpha-index", "beta-index"])
     
     // With query filter and preserveOrder
     let withQuery = IndexFilterHelper.filter(indices: customOrder, query: "a-index", preserveOrder: true)
-    XCTAssertEqual(withQuery, ["zebra-index", "alpha-index", "beta-index"])
+    #expect(withQuery == ["zebra-index", "alpha-index", "beta-index"])
   }
 
   @Test func testIndexFilter_displayLimitingAndBoundary() {
-    XCTAssertEqual(IndexFilterHelper.defaultDisplayLimit, 30)
+    #expect(IndexFilterHelper.defaultDisplayLimit == 30)
     
     let empty: [String] = []
-    XCTAssertEqual(IndexFilterHelper.limitIndices(empty), [])
-    XCTAssertFalse(IndexFilterHelper.hasExceededLimit(empty))
+    #expect(IndexFilterHelper.limitIndices(empty) == [])
+    #expect(!(IndexFilterHelper.hasExceededLimit(empty)))
     
     let fifteen = (1...15).map { "index-\($0)" }
-    XCTAssertEqual(IndexFilterHelper.limitIndices(fifteen).count, 15)
-    XCTAssertFalse(IndexFilterHelper.hasExceededLimit(fifteen))
+    #expect(IndexFilterHelper.limitIndices(fifteen).count == 15)
+    #expect(!(IndexFilterHelper.hasExceededLimit(fifteen)))
     
     let thirty = (1...30).map { "index-\($0)" }
-    XCTAssertEqual(IndexFilterHelper.limitIndices(thirty).count, 30)
-    XCTAssertFalse(IndexFilterHelper.hasExceededLimit(thirty))
+    #expect(IndexFilterHelper.limitIndices(thirty).count == 30)
+    #expect(!(IndexFilterHelper.hasExceededLimit(thirty)))
     
     let thirtyOne = (1...31).map { "index-\($0)" }
-    XCTAssertEqual(IndexFilterHelper.limitIndices(thirtyOne).count, 30)
-    XCTAssertEqual(IndexFilterHelper.limitIndices(thirtyOne), Array(thirtyOne.prefix(30)))
-    XCTAssertTrue(IndexFilterHelper.hasExceededLimit(thirtyOne))
+    #expect(IndexFilterHelper.limitIndices(thirtyOne).count == 30)
+    #expect(IndexFilterHelper.limitIndices(thirtyOne) == Array(thirtyOne.prefix(30)))
+    #expect(IndexFilterHelper.hasExceededLimit(thirtyOne))
     
     let fifty = (1...50).map { "index-\($0)" }
-    XCTAssertEqual(IndexFilterHelper.limitIndices(fifty).count, 30)
-    XCTAssertTrue(IndexFilterHelper.hasExceededLimit(fifty))
+    #expect(IndexFilterHelper.limitIndices(fifty).count == 30)
+    #expect(IndexFilterHelper.hasExceededLimit(fifty))
   }
 
   @Test func testIndexActivityService_dateFieldExtraction() {
@@ -198,15 +198,15 @@ struct SearchOpsUnitTests {
     let parsed = IndexActivityService.parseDateFieldsByIndices(from: mockMappingJSON, targetIndices: targetIndices)
     
     // "system-index" was not in targetIndices, so should be ignored
-    XCTAssertNil(parsed["system-index"])
+    #expect(parsed["system-index"] == nil)
     
     let v8Fields = parsed["logs-v8"] ?? []
-    XCTAssertTrue(v8Fields.contains(DateFieldInfo(name: "@timestamp", isNanos: false)))
-    XCTAssertTrue(v8Fields.contains(DateFieldInfo(name: "user.created_at", isNanos: true)))
-    XCTAssertFalse(v8Fields.contains(DateFieldInfo(name: "message", isNanos: false)))
+    #expect(v8Fields.contains(DateFieldInfo(name: "@timestamp", isNanos: false)))
+    #expect(v8Fields.contains(DateFieldInfo(name: "user.created_at", isNanos: true)))
+    #expect(!(v8Fields.contains(DateFieldInfo(name: "message", isNanos: false))))
     
     let v6Fields = parsed["logs-v6"] ?? []
-    XCTAssertTrue(v6Fields.contains(DateFieldInfo(name: "timestamp", isNanos: false)))
+    #expect(v6Fields.contains(DateFieldInfo(name: "timestamp", isNanos: false)))
   }
 
   @Test func testIndexActivityService_datePriority() {
@@ -216,7 +216,7 @@ struct SearchOpsUnitTests {
       DateFieldInfo(name: "updated_at", isNanos: false)
     ]
     let best = IndexActivityService.selectBestDateField(from: fields)
-    XCTAssertEqual(best?.name, "@timestamp")
+    #expect(best?.name == "@timestamp")
     
     let fieldsWithoutAt = [
       DateFieldInfo(name: "created_at", isNanos: false),
@@ -224,7 +224,7 @@ struct SearchOpsUnitTests {
       DateFieldInfo(name: "random_field", isNanos: false)
     ]
     let bestSecond = IndexActivityService.selectBestDateField(from: fieldsWithoutAt)
-    XCTAssertEqual(bestSecond?.name, "updated_at")
+    #expect(bestSecond?.name == "updated_at")
   }
 
   @Test func testIndexActivityService_nanosNormalization() {
@@ -240,7 +240,7 @@ struct SearchOpsUnitTests {
     """.data(using: .utf8)!
     
     let normalized = IndexActivityService.parseSingleMaxTimestamp(data: nanosJSON, isNanos: true)
-    XCTAssertEqual(normalized, 1700000000000.0)
+    #expect(normalized == 1700000000000.0)
     
     let standardDateJSON = """
     {
@@ -253,7 +253,7 @@ struct SearchOpsUnitTests {
     """.data(using: .utf8)!
     
     let standard = IndexActivityService.parseSingleMaxTimestamp(data: standardDateJSON, isNanos: false)
-    XCTAssertEqual(standard, 1700000000000.0)
+    #expect(standard == 1700000000000.0)
   }
 
   @Test func testIndexActivityService_batchedAggregationParsing() {
@@ -284,9 +284,9 @@ struct SearchOpsUnitTests {
     """.data(using: .utf8)!
     
     let timestamps = IndexActivityService.parseBatchedAggResponse(data: batchedJSON, isNanos: false)
-    XCTAssertEqual(timestamps["idx-1"], 1705000000000.0)
-    XCTAssertEqual(timestamps["idx-2"], 1704000000000.0)
-    XCTAssertNil(timestamps["idx-empty"])
+    #expect(timestamps["idx-1"] == 1705000000000.0)
+    #expect(timestamps["idx-2"] == 1704000000000.0)
+    #expect(timestamps["idx-empty"] == nil)
   }
 
   @Test func testIndexActivityService_sortingTieBreakers() {
@@ -300,7 +300,7 @@ struct SearchOpsUnitTests {
     
     let sorted = IndexActivityService.sortIndicesByActivity(indices: indices, timestamps: timestamps)
     
-    XCTAssertEqual(sorted, [
+    #expect(sorted == [
       "active-newer",
       "active-tie-a",
       "active-tie-b",
@@ -312,9 +312,9 @@ struct SearchOpsUnitTests {
 
   @Test func testIndexActivityService_jsonEscaping() {
     let escaped = IndexActivityService.escapeJsonString("field\\with\"special")
-    XCTAssertEqual(escaped, "field\\\\with\\\"special")
+    #expect(escaped == "field\\\\with\\\"special")
     let query = IndexActivityService.buildSingleIndexMaxQuery(field: "field\\with\"special")
-    XCTAssertTrue(query.contains("\"field\\\\with\\\"special\""))
+    #expect(query.contains("\"field\\\\with\\\"special\""))
   }
 
   @Test func testIndexActivityService_secondsNormalization() {
@@ -330,7 +330,7 @@ struct SearchOpsUnitTests {
     """.data(using: .utf8)!
 
     let normalized = IndexActivityService.parseSingleMaxTimestamp(data: secondsJSON, isNanos: false, isSeconds: true)
-    XCTAssertEqual(normalized, 1700000000000.0)
+    #expect(normalized == 1700000000000.0)
   }
 
   @Test func testIndexActivityService_epochSecondsExtraction() {
@@ -357,25 +357,25 @@ struct SearchOpsUnitTests {
     let createdField = fields.first { $0.name == "created" }
     let timestampField = fields.first { $0.name == "timestamp" }
 
-    XCTAssertEqual(createdField?.isSeconds, true)
-    XCTAssertEqual(timestampField?.isSeconds, false)
+    #expect(createdField?.isSeconds == true)
+    #expect(timestampField?.isSeconds == false)
   }
 
   @Test func testSideBarManageCase() {
     var currentSidebar: sideBar = .hidden
-    XCTAssertEqual(currentSidebar, .hidden)
+    #expect(currentSidebar == .hidden)
     currentSidebar = .manage
-    XCTAssertEqual(currentSidebar, .manage)
-    XCTAssertNotEqual(currentSidebar, .hosts)
-    XCTAssertNotEqual(currentSidebar, .settings)
-    XCTAssertNotEqual(currentSidebar, .develop)
+    #expect(currentSidebar == .manage)
+    #expect(currentSidebar != .hosts)
+    #expect(currentSidebar != .settings)
+    #expect(currentSidebar != .develop)
   }
 
 #if os(macOS)
   @Test @MainActor func testManageNavigationCoordinator_initialState() {
     let coordinator = ManageNavigationCoordinator()
-    XCTAssertEqual(coordinator.screen, .hostList)
-    XCTAssertNil(coordinator.selectedHost)
+    #expect(coordinator.screen == .hostList)
+    #expect(coordinator.selectedHost == nil)
   }
 
   @Test @MainActor func testManageNavigationCoordinator_navigationFlow() {
@@ -385,19 +385,47 @@ struct SearchOpsUnitTests {
     host.env = "Prod"
 
     coordinator.selectHost(host)
-    XCTAssertEqual(coordinator.screen, .hostOptions)
-    XCTAssertEqual(coordinator.selectedHost?.name, "Cluster A")
+    #expect(coordinator.screen == .hostOptions)
+    #expect(coordinator.selectedHost?.name == "Cluster A")
 
     coordinator.navigateToListIndexes()
-    XCTAssertEqual(coordinator.screen, .indexList)
+    #expect(coordinator.screen == .indexList)
 
     coordinator.goBack()
-    XCTAssertEqual(coordinator.screen, .hostOptions)
-    XCTAssertEqual(coordinator.selectedHost?.name, "Cluster A")
+    #expect(coordinator.screen == .hostOptions)
+    #expect(coordinator.selectedHost?.name == "Cluster A")
 
     coordinator.goBack()
-    XCTAssertEqual(coordinator.screen, .hostList)
-    XCTAssertNil(coordinator.selectedHost)
+    #expect(coordinator.screen == .hostList)
+    #expect(coordinator.selectedHost == nil)
+  }
+
+  @Test @MainActor func testManageNavigationCoordinator_listUsersFlow() {
+    let coordinator = ManageNavigationCoordinator()
+    let host = HostDetails()
+    host.name = "Cluster A"
+
+    coordinator.selectHost(host)
+    coordinator.navigateToListUsers()
+    #expect(coordinator.screen == .userList)
+
+    coordinator.goBack()
+    #expect(coordinator.screen == .hostOptions)
+    #expect(coordinator.selectedHost?.name == "Cluster A")
+  }
+
+  @Test @MainActor func testManageNavigationCoordinator_clusterHealthFlow() {
+    let coordinator = ManageNavigationCoordinator()
+    let host = HostDetails()
+    host.name = "Cluster A"
+
+    coordinator.selectHost(host)
+    coordinator.navigateToClusterHealth()
+    #expect(coordinator.screen == .clusterHealth)
+
+    coordinator.goBack()
+    #expect(coordinator.screen == .hostOptions)
+    #expect(coordinator.selectedHost?.name == "Cluster A")
   }
 
   @Test @MainActor func testManageNavigationCoordinator_validateCurrentHost() {
@@ -412,13 +440,13 @@ struct SearchOpsUnitTests {
 
     // When host1 exists in active list, coordinator remains on indexList
     coordinator.validateCurrentHost(against: [host1, host2])
-    XCTAssertEqual(coordinator.screen, .indexList)
-    XCTAssertEqual(coordinator.selectedHost?.name, "Cluster 1")
+    #expect(coordinator.screen == .indexList)
+    #expect(coordinator.selectedHost?.name == "Cluster 1")
 
     // When host1 is removed from active list, coordinator resets to hostList
     coordinator.validateCurrentHost(against: [host2])
-    XCTAssertEqual(coordinator.screen, .hostList)
-    XCTAssertNil(coordinator.selectedHost)
+    #expect(coordinator.screen == .hostList)
+    #expect(coordinator.selectedHost == nil)
   }
 
   @Test @MainActor func testManageNavigationCoordinator_validateInvalidatedHost() {
@@ -427,23 +455,23 @@ struct SearchOpsUnitTests {
     host.name = "Cluster 1"
 
     coordinator.selectHost(host)
-    XCTAssertEqual(coordinator.screen, .hostOptions)
+    #expect(coordinator.screen == .hostOptions)
 
     // When active list doesn't include host, resets to hostList
     coordinator.validateCurrentHost(against: [])
-    XCTAssertEqual(coordinator.screen, .hostList)
-    XCTAssertNil(coordinator.selectedHost)
+    #expect(coordinator.screen == .hostList)
+    #expect(coordinator.selectedHost == nil)
   }
 
   @Test @MainActor func testManageNavigationCoordinator_goBackAtRoot() {
     let coordinator = ManageNavigationCoordinator()
-    XCTAssertEqual(coordinator.screen, .hostList)
-    XCTAssertNil(coordinator.selectedHost)
+    #expect(coordinator.screen == .hostList)
+    #expect(coordinator.selectedHost == nil)
 
     // goBack at root should be a no-op
     coordinator.goBack()
-    XCTAssertEqual(coordinator.screen, .hostList)
-    XCTAssertNil(coordinator.selectedHost)
+    #expect(coordinator.screen == .hostList)
+    #expect(coordinator.selectedHost == nil)
   }
 
   @Test @MainActor func testManageNavigationCoordinator_reset() {
@@ -453,12 +481,54 @@ struct SearchOpsUnitTests {
 
     coordinator.selectHost(host)
     coordinator.navigateToListIndexes()
-    XCTAssertEqual(coordinator.screen, .indexList)
-    XCTAssertNotNil(coordinator.selectedHost)
+    #expect(coordinator.screen == .indexList)
+    #expect(coordinator.selectedHost != nil)
 
     coordinator.reset()
-    XCTAssertEqual(coordinator.screen, .hostList)
-    XCTAssertNil(coordinator.selectedHost)
+    #expect(coordinator.screen == .hostList)
+    #expect(coordinator.selectedHost == nil)
+  }
+
+  @Test @MainActor func testManageNavigationCoordinator_dataViewsFlow() {
+    let coordinator = ManageNavigationCoordinator()
+    let host = HostDetails()
+    host.name = "Cluster A"
+    let viewId = UUID()
+
+    coordinator.selectHost(host)
+    coordinator.navigateToDataViews()
+    #expect(coordinator.screen == .dataViewList)
+
+    coordinator.editDataView(viewId)
+    #expect(coordinator.screen == .dataViewEditor)
+    #expect(coordinator.selectedDataViewId == viewId)
+
+    coordinator.goBack()
+    #expect(coordinator.screen == .dataViewList)
+    #expect(coordinator.selectedDataViewId == nil)
+
+    // nil opens the editor for a new view
+    coordinator.editDataView(nil)
+    #expect(coordinator.screen == .dataViewEditor)
+    #expect(coordinator.selectedDataViewId == nil)
+
+    coordinator.goBack()
+    coordinator.goBack()
+    #expect(coordinator.screen == .hostOptions)
+    #expect(coordinator.selectedHost?.name == "Cluster A")
+  }
+
+  @Test @MainActor func testManageNavigationCoordinator_removedHostClosesDataViewEditor() {
+    let coordinator = ManageNavigationCoordinator()
+    let host = HostDetails()
+
+    coordinator.selectHost(host)
+    coordinator.navigateToDataViews()
+    coordinator.editDataView(UUID())
+
+    coordinator.validateCurrentHost(against: [])
+    #expect(coordinator.screen == .hostList)
+    #expect(coordinator.selectedDataViewId == nil)
   }
 #endif
 
@@ -479,8 +549,8 @@ struct SearchOpsUnitTests {
     }
     """
     let result = Results.getIndexArray(errorJson)
-    XCTAssertEqual(result.error, "no such index [missing-index]")
-    XCTAssertTrue(result.data.isEmpty)
+    #expect(result.error == "no such index [missing-index]")
+    #expect(result.data.isEmpty)
   }
 
   @Test func testGetIndexArray_elasticErrorWithoutRootCause() {
@@ -494,8 +564,8 @@ struct SearchOpsUnitTests {
     }
     """
     let result = Results.getIndexArray(errorJson)
-    XCTAssertEqual(result.error, "action [indices:admin/aliases/get] is unauthorized for user [viewer]")
-    XCTAssertTrue(result.data.isEmpty)
+    #expect(result.error == "action [indices:admin/aliases/get] is unauthorized for user [viewer]")
+    #expect(result.data.isEmpty)
   }
 
   @Test func testGetIndexArray_elasticErrorString() {
@@ -505,9 +575,9 @@ struct SearchOpsUnitTests {
     }
     """
     let result = Results.getIndexArray(errorJson)
-    XCTAssertEqual(result.error, "Incorrect HTTP method for uri [/_aliases] and method [POST], allowed: [GET, HEAD]")
-    XCTAssertFalse(result.data.contains("error"), "Should not treat 'error' field as an index name")
-    XCTAssertTrue(result.data.isEmpty)
+    #expect(result.error == "Incorrect HTTP method for uri [/_aliases] and method [POST], allowed: [GET, HEAD]")
+    #expect(!(result.data.contains("error")), "Should not treat 'error' field as an index name")
+    #expect(result.data.isEmpty)
   }
 
   @Test func testGetIndexArray_alternativeErrorFormat() {
@@ -518,8 +588,8 @@ struct SearchOpsUnitTests {
     }
     """
     let result = Results.getIndexArray(errorJson)
-    XCTAssertEqual(result.error, "Cluster unavailable")
-    XCTAssertTrue(result.data.isEmpty)
+    #expect(result.error == "Cluster unavailable")
+    #expect(result.data.isEmpty)
   }
 
   @Test func testGetIndexArray_successAndHiddenFilter() {
@@ -531,10 +601,10 @@ struct SearchOpsUnitTests {
     }
     """
     let result = Results.getIndexArray(successJson)
-    XCTAssertNil(result.error)
-    XCTAssertTrue(result.data.contains("logs-2025.01"))
-    XCTAssertTrue(result.data.contains("metrics-2025.01"))
-    XCTAssertFalse(result.data.contains(".kibana_1"))
+    #expect(result.error == nil)
+    #expect(result.data.contains("logs-2025.01"))
+    #expect(result.data.contains("metrics-2025.01"))
+    #expect(!(result.data.contains(".kibana_1")))
   }
 
   @Test func testHostDetails_generateCopy_deepCopyIndependence() {
@@ -551,12 +621,12 @@ struct SearchOpsUnitTests {
     original.customHeaders.append(header)
 
     let copy = original.generateCopy()
-    XCTAssertEqual(copy.name, "Cluster Original")
-    XCTAssertEqual(copy.host?.url, "https://es.example.com")
-    XCTAssertFalse(copy.host === original.host, "HostURL should be an independent instance")
-    XCTAssertFalse(copy.customHeaders === original.customHeaders, "Headers list should be an independent instance")
-    XCTAssertEqual(copy.customHeaders.count, 1)
-    XCTAssertEqual(copy.customHeaders.first?.header, "X-Test")
+    #expect(copy.name == "Cluster Original")
+    #expect(copy.host?.url == "https://es.example.com")
+    #expect(!(copy.host === original.host), "HostURL should be an independent instance")
+    #expect(!(copy.customHeaders === original.customHeaders), "Headers list should be an independent instance")
+    #expect(copy.customHeaders.count == 1)
+    #expect(copy.customHeaders.first?.header == "X-Test")
   }
 
   @Test func testGetIndexArray_hiddenDataPopulated() {
@@ -570,9 +640,9 @@ struct SearchOpsUnitTests {
     }
     """
     let result = Results.getIndexArray(inputJson)
-    XCTAssertNil(result.error)
-    XCTAssertEqual(Set(result.data), Set(["logs-2025.01", "metrics-prod"]))
-    XCTAssertEqual(Set(result.hiddenData), Set([".kibana_1", ".security-7", ".ds-ilm-history-5-2025"]))
+    #expect(result.error == nil)
+    #expect(Set(result.data) == Set(["logs-2025.01", "metrics-prod"]))
+    #expect(Set(result.hiddenData) == Set([".kibana_1", ".security-7", ".ds-ilm-history-5-2025"]))
   }
 
   @Test func testParseIndexStats_success() {
@@ -614,23 +684,23 @@ struct SearchOpsUnitTests {
     }
     """
     let stats = Results.parseIndexStats(statsJson)
-    XCTAssertEqual(stats.count, 2)
+    #expect(stats.count == 2)
 
     let myIndex = stats["my-index"]
-    XCTAssertNotNil(myIndex)
-    XCTAssertEqual(myIndex?.docCount, 100)
-    XCTAssertEqual(myIndex?.storageBytes, 1024)
-    XCTAssertEqual(myIndex?.totalDocCount, 200)
-    XCTAssertEqual(myIndex?.totalStorageBytes, 2048)
-    XCTAssertEqual(myIndex?.deletedDocCount, 5)
+    #expect(myIndex != nil)
+    #expect(myIndex?.docCount == 100)
+    #expect(myIndex?.storageBytes == 1024)
+    #expect(myIndex?.totalDocCount == 200)
+    #expect(myIndex?.totalStorageBytes == 2048)
+    #expect(myIndex?.deletedDocCount == 5)
 
     let kibanaIndex = stats[".kibana_1"]
-    XCTAssertNotNil(kibanaIndex)
-    XCTAssertEqual(kibanaIndex?.docCount, 42)
-    XCTAssertEqual(kibanaIndex?.storageBytes, 51200)
-    XCTAssertEqual(kibanaIndex?.totalDocCount, 42)
-    XCTAssertEqual(kibanaIndex?.totalStorageBytes, 51200)
-    XCTAssertEqual(kibanaIndex?.deletedDocCount, 0)
+    #expect(kibanaIndex != nil)
+    #expect(kibanaIndex?.docCount == 42)
+    #expect(kibanaIndex?.storageBytes == 51200)
+    #expect(kibanaIndex?.totalDocCount == 42)
+    #expect(kibanaIndex?.totalStorageBytes == 51200)
+    #expect(kibanaIndex?.deletedDocCount == 0)
   }
 
   @Test func testParseIndexStats_skipsMetaKeys() {
@@ -654,11 +724,11 @@ struct SearchOpsUnitTests {
     }
     """
     let stats = Results.parseIndexStats(statsJson)
-    XCTAssertEqual(stats.count, 1)
-    XCTAssertNotNil(stats["valid-index"])
-    XCTAssertNil(stats["_all"])
-    XCTAssertNil(stats["_shards"])
-    XCTAssertNil(stats["_other_meta"])
+    #expect(stats.count == 1)
+    #expect(stats["valid-index"] != nil)
+    #expect(stats["_all"] == nil)
+    #expect(stats["_shards"] == nil)
+    #expect(stats["_other_meta"] == nil)
   }
 
   @Test func testParseIndexStats_missingOrClosedIndex() {
@@ -679,19 +749,19 @@ struct SearchOpsUnitTests {
     }
     """
     let stats = Results.parseIndexStats(statsJson)
-    XCTAssertEqual(stats.count, 2)
-    XCTAssertEqual(stats["open-index"]?.docCount, 10)
-    XCTAssertEqual(stats["open-index"]?.storageBytes, 2048)
+    #expect(stats.count == 2)
+    #expect(stats["open-index"]?.docCount == 10)
+    #expect(stats["open-index"]?.storageBytes == 2048)
 
     let closed = stats["closed-index"]
-    XCTAssertNotNil(closed)
-    XCTAssertNil(closed?.docCount)
-    XCTAssertNil(closed?.storageBytes)
-    XCTAssertNil(closed?.formattedDocCount)
-    XCTAssertNil(closed?.formattedStorageSize)
+    #expect(closed != nil)
+    #expect(closed?.docCount == nil)
+    #expect(closed?.storageBytes == nil)
+    #expect(closed?.formattedDocCount == nil)
+    #expect(closed?.formattedStorageSize == nil)
 
     // Index not in stats JSON at all
-    XCTAssertNil(stats["missing-index"])
+    #expect(stats["missing-index"] == nil)
   }
 
   @Test func testParseIndexStats_onlyTotalOrOnlyPrimaries() {
@@ -714,30 +784,30 @@ struct SearchOpsUnitTests {
     }
     """
     let stats = Results.parseIndexStats(statsJson)
-    XCTAssertEqual(stats["only-primaries"]?.docCount, 75)
-    XCTAssertEqual(stats["only-primaries"]?.storageBytes, 8192)
-    XCTAssertNil(stats["only-primaries"]?.totalDocCount)
+    #expect(stats["only-primaries"]?.docCount == 75)
+    #expect(stats["only-primaries"]?.storageBytes == 8192)
+    #expect(stats["only-primaries"]?.totalDocCount == nil)
 
-    XCTAssertEqual(stats["only-total"]?.docCount, 150)
-    XCTAssertEqual(stats["only-total"]?.storageBytes, 16384)
-    XCTAssertEqual(stats["only-total"]?.totalDocCount, 150)
+    #expect(stats["only-total"]?.docCount == 150)
+    #expect(stats["only-total"]?.storageBytes == 16384)
+    #expect(stats["only-total"]?.totalDocCount == 150)
   }
 
   @Test func testIndexStatsItem_formatters() {
     let zeroDocs = IndexStatsItem(docCount: 0, storageBytes: 0)
-    XCTAssertEqual(zeroDocs.formattedDocCount, "0 docs")
-    XCTAssertEqual(zeroDocs.formattedStorageSize, "0 bytes")
+    #expect(zeroDocs.formattedDocCount == "0 docs")
+    #expect(zeroDocs.formattedStorageSize == "0 bytes")
 
     let oneDoc = IndexStatsItem(docCount: 1, storageBytes: 1_200_000)
-    XCTAssertEqual(oneDoc.formattedDocCount, "1 doc")
-    XCTAssertEqual(oneDoc.formattedStorageSize, "1.2 MB")
+    #expect(oneDoc.formattedDocCount == "1 doc")
+    #expect(oneDoc.formattedStorageSize == "1.2 MB")
 
     let tenThousandDocs = IndexStatsItem(docCount: 10_000, storageBytes: 10_485_760)
-    XCTAssertEqual(tenThousandDocs.formattedDocCount, "10,000 docs")
+    #expect(tenThousandDocs.formattedDocCount == "10,000 docs")
 
     let nilItem = IndexStatsItem(docCount: nil, storageBytes: nil)
-    XCTAssertNil(nilItem.formattedDocCount)
-    XCTAssertNil(nilItem.formattedStorageSize)
+    #expect(nilItem.formattedDocCount == nil)
+    #expect(nilItem.formattedStorageSize == nil)
   }
 
   @Test func testParseIndexStats_errorPayloadReturnsEmpty() {
@@ -757,7 +827,7 @@ struct SearchOpsUnitTests {
     }
     """
     let standardResult = Results.parseIndexStats(standardErrorJson)
-    XCTAssertTrue(standardResult.isEmpty, "Error JSON should return empty dictionary, not an 'error' index entry")
+    #expect(standardResult.isEmpty, "Error JSON should return empty dictionary, not an 'error' index entry")
 
     let alternativeErrorJson = """
     {
@@ -766,72 +836,72 @@ struct SearchOpsUnitTests {
     }
     """
     let alternativeResult = Results.parseIndexStats(alternativeErrorJson)
-    XCTAssertTrue(alternativeResult.isEmpty, "Alternative error JSON should return empty dictionary")
+    #expect(alternativeResult.isEmpty, "Alternative error JSON should return empty dictionary")
 
     let emptyResult = Results.parseIndexStats("")
-    XCTAssertTrue(emptyResult.isEmpty)
+    #expect(emptyResult.isEmpty)
 
     let invalidJsonResult = Results.parseIndexStats("not json at all")
-    XCTAssertTrue(invalidJsonResult.isEmpty)
+    #expect(invalidJsonResult.isEmpty)
   }
 
   @Test func testIndexStatsItem_negativeAndLargeValues() {
     let negativeDocs = IndexStatsItem(docCount: -5, storageBytes: 1024)
-    XCTAssertNil(negativeDocs.formattedDocCount, "Negative doc count should return nil")
-    XCTAssertNotNil(negativeDocs.formattedStorageSize)
+    #expect(negativeDocs.formattedDocCount == nil, "Negative doc count should return nil")
+    #expect(negativeDocs.formattedStorageSize != nil)
 
     let negativeStorage = IndexStatsItem(docCount: 10, storageBytes: -100)
-    XCTAssertEqual(negativeStorage.formattedDocCount, "10 docs")
-    XCTAssertNil(negativeStorage.formattedStorageSize, "Negative storage size should return nil")
+    #expect(negativeStorage.formattedDocCount == "10 docs")
+    #expect(negativeStorage.formattedStorageSize == nil, "Negative storage size should return nil")
 
     let largeDocCount = IndexStatsItem(docCount: 3_000_000_000, storageBytes: 107_374_182_400)
-    XCTAssertEqual(largeDocCount.formattedDocCount, "3,000,000,000 docs")
-    XCTAssertEqual(largeDocCount.formattedStorageSize, "107.37 GB")
+    #expect(largeDocCount.formattedDocCount == "3,000,000,000 docs")
+    #expect(largeDocCount.formattedStorageSize == "107.37 GB")
   }
 
   @Test func testIndexFilter_hiddenIndicesFiltering() {
     let hiddenIndices = [".kibana_1", ".kibana_task_manager", ".security-7", ".ds-ilm-history-5"]
 
     let kibanaMatches = IndexFilterHelper.filter(indices: hiddenIndices, query: "kibana")
-    XCTAssertEqual(Set(kibanaMatches), Set([".kibana_1", ".kibana_task_manager"]))
+    #expect(Set(kibanaMatches) == Set([".kibana_1", ".kibana_task_manager"]))
 
     let wildcardMatches = IndexFilterHelper.filter(indices: hiddenIndices, query: ".*kibana*")
-    XCTAssertEqual(Set(wildcardMatches), Set([".kibana_1", ".kibana_task_manager"]))
+    #expect(Set(wildcardMatches) == Set([".kibana_1", ".kibana_task_manager"]))
 
     let securityMatches = IndexFilterHelper.filter(indices: hiddenIndices, query: "*.security*")
-    XCTAssertEqual(securityMatches, [".security-7"])
+    #expect(securityMatches == [".security-7"])
 
     let noMatches = IndexFilterHelper.filter(indices: hiddenIndices, query: "logs")
-    XCTAssertTrue(noMatches.isEmpty)
+    #expect(noMatches.isEmpty)
   }
 
   // MARK: - ManageIndexes Sorting Tests
 
   @Test func testManageIndexesSortOption_properties() {
     let options = ManageIndexesSortOption.allCases
-    XCTAssertEqual(options.count, 4)
-    XCTAssertEqual(options, [.name, .recent, .size, .docCount])
+    #expect(options.count == 4)
+    #expect(options == [.name, .recent, .size, .docCount])
 
-    XCTAssertEqual(ManageIndexesSortOption.name.id, "Name")
-    XCTAssertEqual(ManageIndexesSortOption.name.iconName, "textformat")
-    XCTAssertTrue(ManageIndexesSortOption.name.defaultAscending)
-    XCTAssertFalse(ManageIndexesSortOption.recent.defaultAscending)
-    XCTAssertFalse(ManageIndexesSortOption.size.defaultAscending)
-    XCTAssertFalse(ManageIndexesSortOption.docCount.defaultAscending)
+    #expect(ManageIndexesSortOption.name.id == "Name")
+    #expect(ManageIndexesSortOption.name.iconName == "textformat")
+    #expect(ManageIndexesSortOption.name.defaultAscending)
+    #expect(!ManageIndexesSortOption.recent.defaultAscending)
+    #expect(!ManageIndexesSortOption.size.defaultAscending)
+    #expect(!ManageIndexesSortOption.docCount.defaultAscending)
 
-    XCTAssertTrue(ManageIndexesSortOption.name.tooltip(isAscending: true).contains("A to Z"))
-    XCTAssertTrue(ManageIndexesSortOption.name.tooltip(isAscending: false).contains("Z to A"))
-    XCTAssertTrue(ManageIndexesSortOption.recent.tooltip(isAscending: false).contains("newest first"))
-    XCTAssertTrue(ManageIndexesSortOption.recent.tooltip(isAscending: true).contains("oldest first"))
-    XCTAssertTrue(ManageIndexesSortOption.size.tooltip(isAscending: false).contains("largest first"))
-    XCTAssertTrue(ManageIndexesSortOption.size.tooltip(isAscending: true).contains("smallest first"))
-    XCTAssertTrue(ManageIndexesSortOption.docCount.tooltip(isAscending: false).contains("highest first"))
-    XCTAssertTrue(ManageIndexesSortOption.docCount.tooltip(isAscending: true).contains("lowest first"))
+    #expect(ManageIndexesSortOption.name.tooltip(isAscending: true).contains("A to Z"))
+    #expect(ManageIndexesSortOption.name.tooltip(isAscending: false).contains("Z to A"))
+    #expect(ManageIndexesSortOption.recent.tooltip(isAscending: false).contains("newest first"))
+    #expect(ManageIndexesSortOption.recent.tooltip(isAscending: true).contains("oldest first"))
+    #expect(ManageIndexesSortOption.size.tooltip(isAscending: false).contains("largest first"))
+    #expect(ManageIndexesSortOption.size.tooltip(isAscending: true).contains("smallest first"))
+    #expect(ManageIndexesSortOption.docCount.tooltip(isAscending: false).contains("highest first"))
+    #expect(ManageIndexesSortOption.docCount.tooltip(isAscending: true).contains("lowest first"))
 
-    XCTAssertFalse(ManageIndexesSortOption.name.inactiveTooltip.isEmpty)
-    XCTAssertFalse(ManageIndexesSortOption.recent.inactiveTooltip.isEmpty)
-    XCTAssertFalse(ManageIndexesSortOption.size.inactiveTooltip.isEmpty)
-    XCTAssertFalse(ManageIndexesSortOption.docCount.inactiveTooltip.isEmpty)
+    #expect(!ManageIndexesSortOption.name.inactiveTooltip.isEmpty)
+    #expect(!ManageIndexesSortOption.recent.inactiveTooltip.isEmpty)
+    #expect(!ManageIndexesSortOption.size.inactiveTooltip.isEmpty)
+    #expect(!ManageIndexesSortOption.docCount.inactiveTooltip.isEmpty)
   }
 
   @Test func testManageIndexesSortHelper_sortByName() {
@@ -842,14 +912,14 @@ struct SearchOpsUnitTests {
       sortOption: .name,
       ascending: true
     )
-    XCTAssertEqual(ascending, ["audit-2024", "audit-2025", "billing", "logs-app", "users"])
+    #expect(ascending == ["audit-2024", "audit-2025", "billing", "logs-app", "users"])
 
     let descending = ManageIndexesSortHelper.sortIndices(
       indices: indices,
       sortOption: .name,
       ascending: false
     )
-    XCTAssertEqual(descending, ["users", "logs-app", "billing", "audit-2025", "audit-2024"])
+    #expect(descending == ["users", "logs-app", "billing", "audit-2025", "audit-2024"])
 
     // Deduplication & empty
     let withDupes = ["logs", "billing", "logs", "billing", "analytics"]
@@ -858,14 +928,14 @@ struct SearchOpsUnitTests {
       sortOption: .name,
       ascending: true
     )
-    XCTAssertEqual(sortedDupes, ["analytics", "billing", "logs"])
+    #expect(sortedDupes == ["analytics", "billing", "logs"])
 
     let empty = ManageIndexesSortHelper.sortIndices(
       indices: [],
       sortOption: .name,
       ascending: true
     )
-    XCTAssertEqual(empty, [])
+    #expect(empty == [])
   }
 
   @Test func testManageIndexesSortHelper_sortBySize() {
@@ -886,7 +956,7 @@ struct SearchOpsUnitTests {
       ascending: false,
       stats: stats
     )
-    XCTAssertEqual(descending, ["huge", "medium", "equal-a", "equal-b", "small", "unknown"])
+    #expect(descending == ["huge", "medium", "equal-a", "equal-b", "small", "unknown"])
 
     // Ascending: smallest to largest, nil stats at bottom, tie broken alphabetically
     let ascending = ManageIndexesSortHelper.sortIndices(
@@ -895,7 +965,7 @@ struct SearchOpsUnitTests {
       ascending: true,
       stats: stats
     )
-    XCTAssertEqual(ascending, ["small", "equal-a", "equal-b", "medium", "huge", "unknown"])
+    #expect(ascending == ["small", "equal-a", "equal-b", "medium", "huge", "unknown"])
   }
 
   @Test func testManageIndexesSortHelper_sortByDocCount() {
@@ -915,7 +985,7 @@ struct SearchOpsUnitTests {
       ascending: false,
       stats: stats
     )
-    XCTAssertEqual(descending, ["million", "hundred-a", "hundred-b", "ten", "zero", "missing-stats"])
+    #expect(descending == ["million", "hundred-a", "hundred-b", "ten", "zero", "missing-stats"])
 
     // Ascending: least docs to most, nil stats at bottom, tie broken alphabetically
     let ascending = ManageIndexesSortHelper.sortIndices(
@@ -924,7 +994,7 @@ struct SearchOpsUnitTests {
       ascending: true,
       stats: stats
     )
-    XCTAssertEqual(ascending, ["zero", "ten", "hundred-a", "hundred-b", "million", "missing-stats"])
+    #expect(ascending == ["zero", "ten", "hundred-a", "hundred-b", "million", "missing-stats"])
   }
 
   @Test func testManageIndexesSortHelper_sortByRecent() {
@@ -944,7 +1014,7 @@ struct SearchOpsUnitTests {
       ascending: false,
       timestamps: timestamps
     )
-    XCTAssertEqual(descending, ["now", "yesterday", "same-a", "same-b", "last-week", "no-activity"])
+    #expect(descending == ["now", "yesterday", "same-a", "same-b", "last-week", "no-activity"])
 
     // Ascending: oldest activity first, nil activity at bottom, tie broken alphabetically
     let ascending = ManageIndexesSortHelper.sortIndices(
@@ -953,7 +1023,7 @@ struct SearchOpsUnitTests {
       ascending: true,
       timestamps: timestamps
     )
-    XCTAssertEqual(ascending, ["last-week", "same-a", "same-b", "yesterday", "now", "no-activity"])
+    #expect(ascending == ["last-week", "same-a", "same-b", "yesterday", "now", "no-activity"])
   }
 
   @Test func testManageIndexesSortHelper_formatters() {
@@ -961,21 +1031,21 @@ struct SearchOpsUnitTests {
     let oneHourAgoMs = (1_726_800_000.0 - 3600.0) * 1000.0
 
     let relString = ManageIndexesSortHelper.formatRelativeActivity(timestamp: oneHourAgoMs, relativeTo: referenceTime, locale: Locale(identifier: "en_US"))
-    XCTAssertFalse(relString.isEmpty)
-    XCTAssertTrue(relString.contains("hr") || relString.contains("hour") || relString.contains("1"))
+    #expect(!relString.isEmpty)
+    #expect(relString.contains("hr") || relString.contains("hour") || relString.contains("1"))
 
     let fullString = ManageIndexesSortHelper.formatFullActivity(timestamp: oneHourAgoMs, locale: Locale(identifier: "en_US"))
-    XCTAssertFalse(fullString.isEmpty)
+    #expect(!fullString.isEmpty)
 
     // Invalid timestamps
-    XCTAssertEqual(ManageIndexesSortHelper.formatRelativeActivity(timestamp: 0), "Unknown")
-    XCTAssertEqual(ManageIndexesSortHelper.formatRelativeActivity(timestamp: -100), "Unknown")
-    XCTAssertEqual(ManageIndexesSortHelper.formatRelativeActivity(timestamp: Double.nan), "Unknown")
-    XCTAssertEqual(ManageIndexesSortHelper.formatRelativeActivity(timestamp: 1e15), "Unknown")
-    XCTAssertEqual(ManageIndexesSortHelper.formatFullActivity(timestamp: 0), "Unknown")
-    XCTAssertEqual(ManageIndexesSortHelper.formatFullActivity(timestamp: -500), "Unknown")
-    XCTAssertEqual(ManageIndexesSortHelper.formatFullActivity(timestamp: Double.infinity), "Unknown")
-    XCTAssertEqual(ManageIndexesSortHelper.formatFullActivity(timestamp: Double.greatestFiniteMagnitude), "Unknown")
+    #expect(ManageIndexesSortHelper.formatRelativeActivity(timestamp: 0) == "Unknown")
+    #expect(ManageIndexesSortHelper.formatRelativeActivity(timestamp: -100) == "Unknown")
+    #expect(ManageIndexesSortHelper.formatRelativeActivity(timestamp: Double.nan) == "Unknown")
+    #expect(ManageIndexesSortHelper.formatRelativeActivity(timestamp: 1e15) == "Unknown")
+    #expect(ManageIndexesSortHelper.formatFullActivity(timestamp: 0) == "Unknown")
+    #expect(ManageIndexesSortHelper.formatFullActivity(timestamp: -500) == "Unknown")
+    #expect(ManageIndexesSortHelper.formatFullActivity(timestamp: Double.infinity) == "Unknown")
+    #expect(ManageIndexesSortHelper.formatFullActivity(timestamp: Double.greatestFiniteMagnitude) == "Unknown")
   }
 
   @Test func testManageIndexesSortHelper_negativeAndCorruptStats() {
@@ -995,7 +1065,7 @@ struct SearchOpsUnitTests {
       ascending: true,
       stats: stats
     )
-    XCTAssertEqual(docAscending, ["valid-zero", "negative-size", "valid-positive", "corrupt-both", "negative-docs"])
+    #expect(docAscending == ["valid-zero", "negative-size", "valid-positive", "corrupt-both", "negative-docs"])
 
     // Size Ascending: valid 0, valid 5000, valid 10000, then negative/corrupt at bottom alphabetically
     let sizeAscending = ManageIndexesSortHelper.sortIndices(
@@ -1004,7 +1074,7 @@ struct SearchOpsUnitTests {
       ascending: true,
       stats: stats
     )
-    XCTAssertEqual(sizeAscending, ["valid-zero", "negative-docs", "valid-positive", "corrupt-both", "negative-size"])
+    #expect(sizeAscending == ["valid-zero", "negative-docs", "valid-positive", "corrupt-both", "negative-size"])
 
     // Recent with corrupt timestamps
     let timestamps: [String: Double] = [
@@ -1021,8 +1091,8 @@ struct SearchOpsUnitTests {
       timestamps: timestamps
     )
     // Only valid-positive is valid, others are placed at bottom ordered alphabetically
-    XCTAssertEqual(recentDesc.first, "valid-positive")
-    XCTAssertEqual(Set(recentDesc.dropFirst()), Set(["corrupt-both", "negative-docs", "negative-size", "valid-zero"]))
+    #expect(recentDesc.first == "valid-positive")
+    #expect(Set(recentDesc.dropFirst()) == Set(["corrupt-both", "negative-docs", "negative-size", "valid-zero"]))
   }
 
 #if os(macOS)
@@ -1032,40 +1102,40 @@ struct SearchOpsUnitTests {
     host.name = "Prod Cluster"
     coordinator.selectHost(host)
     coordinator.navigateToListIndexes()
-    XCTAssertEqual(coordinator.screen, .indexList)
+    #expect(coordinator.screen == .indexList)
 
     let stats = IndexStatsItem(docCount: 500, storageBytes: 1024)
     coordinator.selectIndex("logs-2026", stats: stats)
-    XCTAssertEqual(coordinator.screen, .indexDetail)
-    XCTAssertEqual(coordinator.selectedIndex, "logs-2026")
-    XCTAssertEqual(coordinator.selectedIndexStats?.docCount, 500)
+    #expect(coordinator.screen == .indexDetail)
+    #expect(coordinator.selectedIndex == "logs-2026")
+    #expect(coordinator.selectedIndexStats?.docCount == 500)
 
     // goBack from indexDetail returns to indexList and clears index selection
     coordinator.goBack()
-    XCTAssertEqual(coordinator.screen, .indexList)
-    XCTAssertNil(coordinator.selectedIndex)
-    XCTAssertNil(coordinator.selectedIndexStats)
-    XCTAssertEqual(coordinator.selectedHost?.name, "Prod Cluster")
+    #expect(coordinator.screen == .indexList)
+    #expect(coordinator.selectedIndex == nil)
+    #expect(coordinator.selectedIndexStats == nil)
+    #expect(coordinator.selectedHost?.name == "Prod Cluster")
 
     // Selecting again, then reset clears everything
     coordinator.selectIndex("logs-2026", stats: stats)
-    XCTAssertEqual(coordinator.screen, .indexDetail)
+    #expect(coordinator.screen == .indexDetail)
     coordinator.reset()
-    XCTAssertEqual(coordinator.screen, .hostList)
-    XCTAssertNil(coordinator.selectedHost)
-    XCTAssertNil(coordinator.selectedIndex)
-    XCTAssertNil(coordinator.selectedIndexStats)
+    #expect(coordinator.screen == .hostList)
+    #expect(coordinator.selectedHost == nil)
+    #expect(coordinator.selectedIndex == nil)
+    #expect(coordinator.selectedIndexStats == nil)
   }
 #endif
 
   @Test func testIndexAgeHelperDateMath() {
-    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 30, period: .Days), "now-30d")
-    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 12, period: .Hours), "now-12h")
-    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 5, period: .Minutes), "now-5m")
-    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 2, period: .Weeks), "now-2w")
-    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 6, period: .Months), "now-6M")
-    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 1, period: .Years), "now-1y")
-    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 45, period: .Seconds), "now-45s")
+    #expect(IndexAgeHelper.dateMathExpression(value: 30, period: .Days) == "now-30d")
+    #expect(IndexAgeHelper.dateMathExpression(value: 12, period: .Hours) == "now-12h")
+    #expect(IndexAgeHelper.dateMathExpression(value: 5, period: .Minutes) == "now-5m")
+    #expect(IndexAgeHelper.dateMathExpression(value: 2, period: .Weeks) == "now-2w")
+    #expect(IndexAgeHelper.dateMathExpression(value: 6, period: .Months) == "now-6M")
+    #expect(IndexAgeHelper.dateMathExpression(value: 1, period: .Years) == "now-1y")
+    #expect(IndexAgeHelper.dateMathExpression(value: 45, period: .Seconds) == "now-45s")
   }
 
   @Test func testIndexAgeHelperApproximateCutoffDate() {
@@ -1074,33 +1144,33 @@ struct SearchOpsUnitTests {
 
     let cutoffDays = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 10, period: .Days)
     let expectedDays = calendar.date(byAdding: .day, value: -10, to: referenceDate)!
-    XCTAssertEqual(cutoffDays, expectedDays)
+    #expect(cutoffDays == expectedDays)
 
     let cutoffHours = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 5, period: .Hours)
     let expectedHours = calendar.date(byAdding: .hour, value: -5, to: referenceDate)!
-    XCTAssertEqual(cutoffHours, expectedHours)
+    #expect(cutoffHours == expectedHours)
 
     let cutoffWeeks = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 2, period: .Weeks)
     let expectedWeeks = calendar.date(byAdding: .day, value: -14, to: referenceDate)!
-    XCTAssertEqual(cutoffWeeks, expectedWeeks)
+    #expect(cutoffWeeks == expectedWeeks)
 
     let cutoffMonths = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 3, period: .Months)
     let expectedMonths = calendar.date(byAdding: .month, value: -3, to: referenceDate)!
-    XCTAssertEqual(cutoffMonths, expectedMonths)
+    #expect(cutoffMonths == expectedMonths)
 
     let cutoffYears = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 1, period: .Years)
     let expectedYears = calendar.date(byAdding: .year, value: -1, to: referenceDate)!
-    XCTAssertEqual(cutoffYears, expectedYears)
+    #expect(cutoffYears == expectedYears)
   }
 
   @Test func testIndexAgeHelperQueryBuilders() {
     let matchAll = IndexAgeHelper.buildMatchAllDeleteQuery()
-    XCTAssertTrue(matchAll.contains("\"match_all\""))
+    #expect(matchAll.contains("\"match_all\""))
 
     let rangeQuery = IndexAgeHelper.buildRangeDeleteQuery(dateField: "@timestamp", dateMathExpression: "now-30d")
-    XCTAssertTrue(rangeQuery.contains("@timestamp"))
-    XCTAssertTrue(rangeQuery.contains("now-30d"))
-    XCTAssertTrue(rangeQuery.contains("lt"))
+    #expect(rangeQuery.contains("@timestamp"))
+    #expect(rangeQuery.contains("now-30d"))
+    #expect(rangeQuery.contains("lt"))
   }
 
   @Test func testDeleteByQuerySuccessResponseParsing() {
@@ -1119,16 +1189,16 @@ struct SearchOpsUnitTests {
     let data = Data(jsonString.utf8)
     let result = IndexManagementService.parseDeleteResponse(data, httpStatus: 200)
 
-    XCTAssertTrue(result.isSuccess)
-    XCTAssertEqual(result.took, 128)
-    XCTAssertEqual(result.timedOut, false)
-    XCTAssertEqual(result.total, 4200)
-    XCTAssertEqual(result.deleted, 4200)
-    XCTAssertEqual(result.batches, 5)
-    XCTAssertEqual(result.versionConflicts, 0)
-    XCTAssertEqual(result.noops, 0)
-    XCTAssertEqual(result.failures, [])
-    XCTAssertNil(result.errorMessage)
+    #expect(result.isSuccess)
+    #expect(result.took == 128)
+    #expect(result.timedOut == false)
+    #expect(result.total == 4200)
+    #expect(result.deleted == 4200)
+    #expect(result.batches == 5)
+    #expect(result.versionConflicts == 0)
+    #expect(result.noops == 0)
+    #expect(result.failures == [])
+    #expect(result.errorMessage == nil)
   }
 
   @Test func testDeleteByQueryFailureResponseParsing() {
@@ -1156,10 +1226,10 @@ struct SearchOpsUnitTests {
     }
     """
     let result1 = IndexManagementService.parseDeleteResponse(Data(failureJson.utf8), httpStatus: 200)
-    XCTAssertFalse(result1.isSuccess)
-    XCTAssertEqual(result1.deleted, 2)
-    XCTAssertEqual(result1.failures.count, 1)
-    XCTAssertEqual(result1.errorMessage, "[abc]: version conflict, required seqNo [1], primary term [1]")
+    #expect(!result1.isSuccess)
+    #expect(result1.deleted == 2)
+    #expect(result1.failures.count == 1)
+    #expect(result1.errorMessage == "[abc]: version conflict, required seqNo [1], primary term [1]")
 
     let rootCauseJson = """
     {
@@ -1181,39 +1251,39 @@ struct SearchOpsUnitTests {
     }
     """
     let result2 = IndexManagementService.parseDeleteResponse(Data(rootCauseJson.utf8), httpStatus: 404)
-    XCTAssertFalse(result2.isSuccess)
-    XCTAssertEqual(result2.errorMessage, "no such index [unknown-index]")
+    #expect(!result2.isSuccess)
+    #expect(result2.errorMessage == "no such index [unknown-index]")
 
     let networkError = ResponseError(title: "Request Error", message: "Connection refused", type: .critical)
     let result3 = IndexManagementService.parseDeleteResponse(nil, httpStatus: nil, requestError: networkError)
-    XCTAssertFalse(result3.isSuccess)
-    XCTAssertEqual(result3.errorMessage, "Connection refused")
+    #expect(!result3.isSuccess)
+    #expect(result3.errorMessage == "Connection refused")
   }
 
   @Test func testParseTaskSubmission() {
     let started = IndexManagementService.parseTaskSubmission(Data(#"{"task":"oTUltX4IQMOUUVeiohTt8A:12345"}"#.utf8), httpStatus: 200)
-    XCTAssertEqual(started, .started("oTUltX4IQMOUUVeiohTt8A:12345"))
+    #expect(started == .started("oTUltX4IQMOUUVeiohTt8A:12345"))
 
     let notFound = """
     {"error":{"root_cause":[{"type":"index_not_found_exception","reason":"no such index [missing]"}],"type":"index_not_found_exception","reason":"no such index [missing]"},"status":404}
     """
     guard case .failed(let notFoundResult) = IndexManagementService.parseTaskSubmission(Data(notFound.utf8), httpStatus: 404) else {
-      XCTFail("Expected failed submission"); return
+      Issue.record("Expected failed submission"); return
     }
-    XCTAssertFalse(notFoundResult.isSuccess)
-    XCTAssertEqual(notFoundResult.errorMessage, "no such index [missing]")
+    #expect(!notFoundResult.isSuccess)
+    #expect(notFoundResult.errorMessage == "no such index [missing]")
 
     let networkError = ResponseError(title: "Request Error", message: "Connection refused", type: .critical)
     guard case .failed(let networkResult) = IndexManagementService.parseTaskSubmission(nil, httpStatus: nil, requestError: networkError) else {
-      XCTFail("Expected failed submission"); return
+      Issue.record("Expected failed submission"); return
     }
-    XCTAssertEqual(networkResult.errorMessage, "Connection refused")
+    #expect(networkResult.errorMessage == "Connection refused")
 
     guard case .failed(let missingTaskResult) = IndexManagementService.parseTaskSubmission(Data("{}".utf8), httpStatus: 200) else {
-      XCTFail("Expected failed submission"); return
+      Issue.record("Expected failed submission"); return
     }
-    XCTAssertFalse(missingTaskResult.isSuccess)
-    XCTAssertNotNil(missingTaskResult.errorMessage)
+    #expect(!missingTaskResult.isSuccess)
+    #expect(missingTaskResult.errorMessage != nil)
   }
 
   @Test func testParseTaskStatus_running() {
@@ -1230,9 +1300,9 @@ struct SearchOpsUnitTests {
     }
     """
     guard case .running(let progress) = IndexManagementService.parseTaskStatus(Data(json.utf8), httpStatus: 200) else {
-      XCTFail("Expected running status"); return
+      Issue.record("Expected running status"); return
     }
-    XCTAssertEqual(progress, DeleteTaskProgress(total: 6154, deleted: 3500, batches: 4))
+    #expect(progress == DeleteTaskProgress(total: 6154, deleted: 3500, batches: 4))
   }
 
   @Test func testParseTaskStatus_completed() {
@@ -1244,13 +1314,13 @@ struct SearchOpsUnitTests {
     }
     """
     guard case .completed(let result) = IndexManagementService.parseTaskStatus(Data(json.utf8), httpStatus: 200) else {
-      XCTFail("Expected completed status"); return
+      Issue.record("Expected completed status"); return
     }
-    XCTAssertTrue(result.isSuccess)
-    XCTAssertEqual(result.deleted, 4200)
-    XCTAssertEqual(result.took, 128)
-    XCTAssertNil(result.canceled)
-    XCTAssertNil(result.errorMessage)
+    #expect(result.isSuccess)
+    #expect(result.deleted == 4200)
+    #expect(result.took == 128)
+    #expect(result.canceled == nil)
+    #expect(result.errorMessage == nil)
   }
 
   @Test func testParseTaskStatus_cancelled() {
@@ -1262,11 +1332,11 @@ struct SearchOpsUnitTests {
     }
     """
     guard case .completed(let result) = IndexManagementService.parseTaskStatus(Data(json.utf8), httpStatus: 200) else {
-      XCTFail("Expected completed status"); return
+      Issue.record("Expected completed status"); return
     }
-    XCTAssertFalse(result.isSuccess)
-    XCTAssertEqual(result.canceled, "by user request")
-    XCTAssertEqual(result.errorMessage, "Cancelled after deleting 3500 of 6154")
+    #expect(!result.isSuccess)
+    #expect(result.canceled == "by user request")
+    #expect(result.errorMessage == "Cancelled after deleting 3500 of 6154")
   }
 
   @Test func testParseTaskStatus_completedWithError() {
@@ -1278,10 +1348,10 @@ struct SearchOpsUnitTests {
     }
     """
     guard case .completed(let result) = IndexManagementService.parseTaskStatus(Data(json.utf8), httpStatus: 200) else {
-      XCTFail("Expected completed status"); return
+      Issue.record("Expected completed status"); return
     }
-    XCTAssertFalse(result.isSuccess)
-    XCTAssertEqual(result.errorMessage, "all shards failed")
+    #expect(!result.isSuccess)
+    #expect(result.errorMessage == "all shards failed")
   }
 
   @Test func testParseTaskStatus_untrackableAndPollFailures() {
@@ -1289,23 +1359,23 @@ struct SearchOpsUnitTests {
     {"error":{"root_cause":[{"type":"resource_not_found_exception","reason":"task [n1:1] isn't running and hasn't stored its results"}],"type":"resource_not_found_exception","reason":"task [n1:1] isn't running and hasn't stored its results"},"status":404}
     """
     guard case .untrackable(let err404) = IndexManagementService.parseTaskStatus(Data(notFound.utf8), httpStatus: 404) else {
-      XCTFail("Expected untrackable for 404"); return
+      Issue.record("Expected untrackable for 404"); return
     }
-    XCTAssertEqual(err404.message, "task [n1:1] isn't running and hasn't stored its results")
+    #expect(err404.message == "task [n1:1] isn't running and hasn't stored its results")
 
     guard case .untrackable = IndexManagementService.parseTaskStatus(nil, httpStatus: 403) else {
-      XCTFail("Expected untrackable for 403"); return
+      Issue.record("Expected untrackable for 403"); return
     }
 
     guard case .pollFailed = IndexManagementService.parseTaskStatus(nil, httpStatus: 502) else {
-      XCTFail("Expected pollFailed for 502"); return
+      Issue.record("Expected pollFailed for 502"); return
     }
 
     let networkError = ResponseError(title: "Request Error", message: "Connection refused", type: .critical)
     guard case .pollFailed(let netErr) = IndexManagementService.parseTaskStatus(nil, httpStatus: nil, requestError: networkError) else {
-      XCTFail("Expected pollFailed for network error"); return
+      Issue.record("Expected pollFailed for network error"); return
     }
-    XCTAssertEqual(netErr.message, "Connection refused")
+    #expect(netErr.message == "Connection refused")
   }
 
   @Test func testDateFieldRanking() {
@@ -1315,51 +1385,51 @@ struct SearchOpsUnitTests {
     let field4 = DateFieldInfo(name: "meta.updated_at", isNanos: false, isSeconds: false)
 
     let best = IndexActivityService.selectBestDateField(from: [field1, field4, field2, field3])
-    XCTAssertEqual(best?.name, "@timestamp")
+    #expect(best?.name == "@timestamp")
 
     let bestWithoutAtTimestamp = IndexActivityService.selectBestDateField(from: [field1, field4, field3])
-    XCTAssertEqual(bestWithoutAtTimestamp?.name, "timestamp")
+    #expect(bestWithoutAtTimestamp?.name == "timestamp")
   }
 
   @Test func testIndexAgeHelper_zeroAndNegativeBoundary() {
-    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: 0, period: .Days), "now-1d")
-    XCTAssertEqual(IndexAgeHelper.dateMathExpression(value: -10, period: .Hours), "now-1h")
+    #expect(IndexAgeHelper.dateMathExpression(value: 0, period: .Days) == "now-1d")
+    #expect(IndexAgeHelper.dateMathExpression(value: -10, period: .Hours) == "now-1h")
 
     let referenceDate = Date(timeIntervalSince1970: 1_700_000_000)
     let calendar = Calendar.current
     let cutoffZero = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: 0, period: .Days)
     let expectedOneDayAgo = calendar.date(byAdding: .day, value: -1, to: referenceDate)!
-    XCTAssertEqual(cutoffZero, expectedOneDayAgo)
+    #expect(cutoffZero == expectedOneDayAgo)
 
     let cutoffNegative = IndexAgeHelper.calculateCutoffDate(from: referenceDate, value: -5, period: .Weeks)
     let expectedOneWeekAgo = calendar.date(byAdding: .day, value: -7, to: referenceDate)!
-    XCTAssertEqual(cutoffNegative, expectedOneWeekAgo)
+    #expect(cutoffNegative == expectedOneWeekAgo)
   }
 
   @Test func testParseErrorMessage_htmlAndHttpErrorHandling() {
     let htmlData = Data("<html><head><title>502 Bad Gateway</title></head><body>502 Bad Gateway</body></html>".utf8)
     let err502 = IndexManagementService.parseErrorMessage(from: htmlData, httpStatus: 502)
-    XCTAssertNotNil(err502)
-    XCTAssertEqual(err502?.title, "HTTP Error 502")
-    XCTAssertEqual(err502?.message, "Server returned HTTP 502")
+    #expect(err502 != nil)
+    #expect(err502?.title == "HTTP Error 502")
+    #expect(err502?.message == "Server returned HTTP 502")
 
     let err500 = IndexManagementService.parseErrorMessage(from: nil, httpStatus: 500)
-    XCTAssertNotNil(err500)
-    XCTAssertEqual(err500?.title, "HTTP Error 500")
-    XCTAssertEqual(err500?.message, "Request failed with HTTP status 500")
+    #expect(err500 != nil)
+    #expect(err500?.title == "HTTP Error 500")
+    #expect(err500?.message == "Request failed with HTTP status 500")
 
     let plainData = Data("Service Unavailable".utf8)
     let err503 = IndexManagementService.parseErrorMessage(from: plainData, httpStatus: 503)
-    XCTAssertNotNil(err503)
-    XCTAssertEqual(err503?.message, "Service Unavailable")
+    #expect(err503 != nil)
+    #expect(err503?.message == "Service Unavailable")
 
     let deleteResult502 = IndexManagementService.parseDeleteResponse(htmlData, httpStatus: 502)
-    XCTAssertFalse(deleteResult502.isSuccess)
-    XCTAssertEqual(deleteResult502.errorMessage, "Server returned HTTP 502")
+    #expect(!deleteResult502.isSuccess)
+    #expect(deleteResult502.errorMessage == "Server returned HTTP 502")
 
     let deleteResult500 = IndexManagementService.parseDeleteResponse(nil, httpStatus: 500)
-    XCTAssertFalse(deleteResult500.isSuccess)
-    XCTAssertEqual(deleteResult500.errorMessage, "Request failed with HTTP status 500")
+    #expect(!deleteResult500.isSuccess)
+    #expect(deleteResult500.errorMessage == "Request failed with HTTP status 500")
   }
 
   @Test func testExtractIndexStats_aliasAndConcreteResolution() {
@@ -1369,23 +1439,23 @@ struct SearchOpsUnitTests {
     ]
 
     let exact = IndexManagementService.extractIndexStats(from: stats, for: "logs-2026-01")
-    XCTAssertEqual(exact?.docCount, 100)
-    XCTAssertEqual(exact?.storageBytes, 1000)
+    #expect(exact?.docCount == 100)
+    #expect(exact?.storageBytes == 1000)
 
     let aliasMulti = IndexManagementService.extractIndexStats(from: stats, for: "logs-alias")
-    XCTAssertEqual(aliasMulti?.docCount, 400)
-    XCTAssertEqual(aliasMulti?.storageBytes, 4000)
-    XCTAssertEqual(aliasMulti?.totalDocCount, 800)
-    XCTAssertEqual(aliasMulti?.totalStorageBytes, 8000)
-    XCTAssertEqual(aliasMulti?.deletedDocCount, 20)
+    #expect(aliasMulti?.docCount == 400)
+    #expect(aliasMulti?.storageBytes == 4000)
+    #expect(aliasMulti?.totalDocCount == 800)
+    #expect(aliasMulti?.totalStorageBytes == 8000)
+    #expect(aliasMulti?.deletedDocCount == 20)
 
     let singleMap = ["backing-idx": IndexStatsItem(docCount: 50, storageBytes: 500)]
     let aliasSingle = IndexManagementService.extractIndexStats(from: singleMap, for: "my-alias")
-    XCTAssertEqual(aliasSingle?.docCount, 50)
-    XCTAssertEqual(aliasSingle?.storageBytes, 500)
+    #expect(aliasSingle?.docCount == 50)
+    #expect(aliasSingle?.storageBytes == 500)
 
     let empty = IndexManagementService.extractIndexStats(from: [:], for: "any")
-    XCTAssertNil(empty)
+    #expect(empty == nil)
   }
 
   @Test func testValidateTargetIndex_rejectsUnsafeTargets() {
@@ -1399,11 +1469,11 @@ struct SearchOpsUnitTests {
       "logs 2026", "logs\n"
     ]
     for name in rejected {
-      XCTAssertNotNil(IndexManagementService.validateTargetIndex(name), "Expected '\(name)' to be rejected")
+      #expect(IndexManagementService.validateTargetIndex(name) != nil, "Expected '\(name)' to be rejected")
     }
 
-    XCTAssertEqual(IndexManagementService.validateTargetIndex("_all")?.message, "Deleting from '_all' indices is not allowed")
-    XCTAssertEqual(IndexManagementService.validateTargetIndex("")?.message, "Index name is empty")
+    #expect(IndexManagementService.validateTargetIndex("_all")?.message == "Deleting from '_all' indices is not allowed")
+    #expect(IndexManagementService.validateTargetIndex("")?.message == "Index name is empty")
   }
 
   @Test func testValidateTargetIndex_acceptsConcreteTargets() {
@@ -1417,7 +1487,7 @@ struct SearchOpsUnitTests {
       "logs-alias"
     ]
     for name in accepted {
-      XCTAssertNil(IndexManagementService.validateTargetIndex(name), "Expected '\(name)' to be accepted")
+      #expect(IndexManagementService.validateTargetIndex(name) == nil, "Expected '\(name)' to be accepted")
     }
   }
 
@@ -1426,7 +1496,7 @@ struct SearchOpsUnitTests {
     let expected = IndexManagementService.validateTargetIndex("logs-*")?.message
 
     let allSubmission = await IndexManagementService.deleteAllDocuments(serverDetails: host, index: "logs-*")
-    XCTAssertEqual(allSubmission, .failed(DeleteByQueryResult(errorMessage: expected, isSuccess: false)))
+    #expect(allSubmission == .failed(DeleteByQueryResult(errorMessage: expected, isSuccess: false)))
 
     let ageSubmission = await IndexManagementService.deleteDocumentsByAge(
       serverDetails: host,
@@ -1434,7 +1504,7 @@ struct SearchOpsUnitTests {
       dateField: "@timestamp",
       dateMathExpression: "now-30d"
     )
-    XCTAssertEqual(ageSubmission, .failed(DeleteByQueryResult(errorMessage: "Deleting from '_all' indices is not allowed", isSuccess: false)))
+    #expect(ageSubmission == .failed(DeleteByQueryResult(errorMessage: "Deleting from '_all' indices is not allowed", isSuccess: false)))
   }
 
   // MARK: - IndexDeleteTaskTracker
@@ -1476,19 +1546,19 @@ struct SearchOpsUnitTests {
     let key = IndexDeleteTaskTracker.key(host: host, index: "logs")
     cluster.onSleep = { observedStates.append(tracker.operations[key]!.state) }
 
-    XCTAssertTrue(tracker.start(kind: .byAge, host: host, index: "logs") { _ in .started("n1:1") })
-    XCTAssertEqual(tracker.operations[key]?.state, .submitting)
-    XCTAssertEqual(tracker.operations[key]?.kind, .byAge)
+    #expect(tracker.start(kind: .byAge, host: host, index: "logs") { _ in .started("n1:1") })
+    #expect(tracker.operations[key]?.state == .submitting)
+    #expect(tracker.operations[key]?.kind == .byAge)
 
     await tracker.waitUntilSettled(key)
 
-    XCTAssertEqual(tracker.operations[key]?.state, .finished(completed))
-    XCTAssertEqual(tracker.completions[key], 1)
-    XCTAssertEqual(cluster.fetchCount, 4)
+    #expect(tracker.operations[key]?.state == .finished(completed))
+    #expect(tracker.completions[key] == 1)
+    #expect(cluster.fetchCount == 4)
     // Interval grows by the initial step each poll and is capped at the max
-    XCTAssertEqual(cluster.sleeps, [1, 2, 3, 3])
-    XCTAssertEqual(observedStates.first, .running(taskId: "n1:1", progress: nil))
-    XCTAssertEqual(observedStates.last, .running(taskId: "n1:1", progress: DeleteTaskProgress(total: 4200, deleted: 3000, batches: 3)))
+    #expect(cluster.sleeps == [1, 2, 3, 3])
+    #expect(observedStates.first == .running(taskId: "n1:1", progress: nil))
+    #expect(observedStates.last == .running(taskId: "n1:1", progress: DeleteTaskProgress(total: 4200, deleted: 3000, batches: 3)))
   }
 
   @Test @MainActor func testDeleteTracker_threeConsecutivePollErrorsBecomeUntracked() async {
@@ -1508,15 +1578,15 @@ struct SearchOpsUnitTests {
     await tracker.waitUntilSettled(key)
 
     // The running poll in between resets the failure count, so 5 polls are needed
-    XCTAssertEqual(cluster.fetchCount, 5)
+    #expect(cluster.fetchCount == 5)
     guard case .untracked(let taskId, let message) = tracker.operations[key]?.state else {
-      XCTFail("Expected untracked state"); return
+      Issue.record("Expected untracked state"); return
     }
-    XCTAssertEqual(taskId, "n1:2")
-    XCTAssertTrue(message.contains("Task n1:2 may still be running on the cluster"))
-    XCTAssertTrue(message.contains("Request timed out"))
-    XCTAssertFalse(tracker.isActive(key))
-    XCTAssertEqual(tracker.completions[key], 1)
+    #expect(taskId == "n1:2")
+    #expect(message.contains("Task n1:2 may still be running on the cluster"))
+    #expect(message.contains("Request timed out"))
+    #expect(!(tracker.isActive(key)))
+    #expect(tracker.completions[key] == 1)
   }
 
   @Test @MainActor func testDeleteTracker_forbiddenTasksApiBecomesUntrackedImmediately() async {
@@ -1529,12 +1599,12 @@ struct SearchOpsUnitTests {
     tracker.start(kind: .all, host: host, index: "logs") { _ in .started("n1:3") }
     await tracker.waitUntilSettled(key)
 
-    XCTAssertEqual(cluster.fetchCount, 1)
+    #expect(cluster.fetchCount == 1)
     guard case .untracked(_, let message) = tracker.operations[key]?.state else {
-      XCTFail("Expected untracked state"); return
+      Issue.record("Expected untracked state"); return
     }
-    XCTAssertTrue(message.contains("may still be running"))
-    XCTAssertTrue(message.contains("unauthorized"))
+    #expect(message.contains("may still be running"))
+    #expect(message.contains("unauthorized"))
   }
 
   @Test @MainActor func testDeleteTracker_secondStartOnSameIndexIsRefused() async {
@@ -1545,22 +1615,22 @@ struct SearchOpsUnitTests {
     let key = IndexDeleteTaskTracker.key(host: host, index: "logs")
     var submitCount = 0
 
-    XCTAssertTrue(tracker.start(kind: .all, host: host, index: "logs") { _ in submitCount += 1; return .started("n1:4") })
-    XCTAssertFalse(tracker.start(kind: .byAge, host: host, index: "logs") { _ in submitCount += 1; return .started("n1:5") })
-    XCTAssertEqual(tracker.operations[key]?.kind, .all)
+    #expect(tracker.start(kind: .all, host: host, index: "logs") { _ in submitCount += 1; return .started("n1:4") })
+    #expect(!(tracker.start(kind: .byAge, host: host, index: "logs") { _ in submitCount += 1; return .started("n1:5") }))
+    #expect(tracker.operations[key]?.kind == .all)
 
     // A different index on the same host is independent
     let otherKey = IndexDeleteTaskTracker.key(host: host, index: "metrics")
-    XCTAssertTrue(tracker.start(kind: .all, host: host, index: "metrics") { _ in submitCount += 1; return .started("n1:6") })
+    #expect(tracker.start(kind: .all, host: host, index: "metrics") { _ in submitCount += 1; return .started("n1:6") })
 
     await tracker.waitUntilSettled(key)
     await tracker.waitUntilSettled(otherKey)
-    XCTAssertEqual(submitCount, 2)
+    #expect(submitCount == 2)
 
     // Once finished, a new delete may start
-    XCTAssertTrue(tracker.start(kind: .byAge, host: host, index: "logs") { _ in .started("n1:7") })
+    #expect(tracker.start(kind: .byAge, host: host, index: "logs") { _ in .started("n1:7") })
     await tracker.waitUntilSettled(key)
-    XCTAssertEqual(tracker.completions[key], 2)
+    #expect(tracker.completions[key] == 2)
   }
 
   @Test @MainActor func testDeleteTracker_failedSubmissionFinishesWithoutPolling() async {
@@ -1573,11 +1643,11 @@ struct SearchOpsUnitTests {
     tracker.start(kind: .all, host: host, index: "logs") { _ in .failed(rejected) }
     await tracker.waitUntilSettled(key)
 
-    XCTAssertEqual(tracker.operations[key]?.state, .finished(rejected))
-    XCTAssertEqual(cluster.fetchCount, 0)
+    #expect(tracker.operations[key]?.state == .finished(rejected))
+    #expect(cluster.fetchCount == 0)
 
     tracker.clear(key)
-    XCTAssertNil(tracker.operations[key])
+    #expect(tracker.operations[key] == nil)
   }
 
   @Test @MainActor func testDeleteTracker_cancelMovesToCancellingAndRevertsWhenRejected() async {
@@ -1619,11 +1689,28 @@ struct SearchOpsUnitTests {
     // The second cancel request is fire-and-forget, let it run
     for _ in 0..<10 { await Task.yield() }
 
-    XCTAssertEqual(cancelCalls, 2)
-    XCTAssertEqual(statesAfterCancel.count, 2)
-    XCTAssertEqual(notices, ["Cancel failed: task not cancellable"])
-    XCTAssertEqual(tracker.operations[key]?.state, .finished(cancelled))
-    XCTAssertNil(tracker.operations[key]?.notice)
+    #expect(cancelCalls == 2)
+    #expect(statesAfterCancel.count == 2)
+    #expect(notices == ["Cancel failed: task not cancellable"])
+    #expect(tracker.operations[key]?.state == .finished(cancelled))
+    #expect(tracker.operations[key]?.notice == nil)
+  }
+
+  // MARK: - IndexManagementPreferences
+
+  @Test func testIndexReadOnlyDefaultsToOnUntilChanged() throws {
+    let suiteName = "IndexManagementPreferencesTests-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suiteName))
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+
+    // Nothing stored yet, which is how existing users start after upgrading
+    #expect(IndexManagementPreferences.isReadOnly(defaults))
+
+    defaults.set(false, forKey: IndexManagementPreferences.readOnlyKey)
+    #expect(!IndexManagementPreferences.isReadOnly(defaults))
+
+    defaults.set(true, forKey: IndexManagementPreferences.readOnlyKey)
+    #expect(IndexManagementPreferences.isReadOnly(defaults))
   }
 }
 

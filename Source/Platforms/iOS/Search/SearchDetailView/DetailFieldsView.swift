@@ -34,7 +34,9 @@ struct DetailFieldsView: View {
             let values = Results.getValueForKey(fieldParts: item.fieldParts,
                                                 item:itemDetail.item!)
             
-            ForEach(values, id: \.self) { output in
+            // One card per value, each with its own search button. Identified by position, as an array
+            // can hold the same value more than once.
+            ForEach(Array(values.enumerated()), id: \.offset) { _, output in
                             
               if !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty  {
                 

@@ -22,6 +22,9 @@ public struct macosIndexManageOperationsTabView: View {
   // Delete state lives in the tracker so it survives tab switches and navigation
   @ObservedObject private var tracker = IndexDeleteTaskTracker.shared
 
+  // Read-only mode is toggled in Settings and blocks starting new deletes
+  @AppStorage(IndexManagementPreferences.readOnlyKey) private var isReadOnly: Bool = IndexManagementPreferences.readOnlyDefault
+
   // Confirmation state
   @State private var showDeleteAllAlert: Bool = false
   @State private var showDeleteByAgeAlert: Bool = false
@@ -108,7 +111,7 @@ public struct macosIndexManageOperationsTabView: View {
 
   public var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 12) {
+      VStack(alignment: .leading, spacing: 8) {
         deleteAllDocumentsCard
         deleteDocumentsByAgeCard
       }
@@ -157,6 +160,7 @@ public struct macosIndexManageOperationsTabView: View {
         Text("Delete All Documents")
           .font(.system(size: 15, weight: .medium))
         Spacer()
+        readOnlyPadlock
       }
 
       Text("Permanently deletes all documents from this index using _delete_by_query with a match_all query. Mappings, aliases, and settings remain untouched.")
@@ -195,7 +199,8 @@ public struct macosIndexManageOperationsTabView: View {
           .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(isOperationActive)
+        .disabled(isOperationActive || isReadOnly)
+        .opacity(isReadOnly ? 0.5 : 1)
       }
     }
     .padding(14)
@@ -216,6 +221,7 @@ public struct macosIndexManageOperationsTabView: View {
         Text("Delete Documents by Age")
           .font(.system(size: 15, weight: .medium))
         Spacer()
+        readOnlyPadlock
       }
 
       Text("Deletes documents where a specified date field is older than the configured cutoff window using Elasticsearch date math.")
@@ -341,7 +347,8 @@ public struct macosIndexManageOperationsTabView: View {
               .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
-            .disabled(isOperationActive || selectedDateField.isEmpty || ageValue <= 0)
+            .disabled(isOperationActive || isReadOnly || selectedDateField.isEmpty || ageValue <= 0)
+            .opacity(isReadOnly ? 0.5 : 1)
           }
         }
       }
@@ -355,6 +362,15 @@ public struct macosIndexManageOperationsTabView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color("Button"))
     .clipShape(RoundedRectangle(cornerRadius: 6))
+  }
+
+  // MARK: - Read Only
+
+  @ViewBuilder
+  private var readOnlyPadlock: some View {
+    if isReadOnly {
+      ReadOnlyPadlockButton()
+    }
   }
 
   // MARK: - Operation Status
@@ -497,7 +513,7 @@ public struct macosIndexManageOperationsTabView: View {
   // MARK: - Actions
 
   private func requestConfirmation(_ kind: DeleteOperationKind) {
-    guard !isOperationActive else { return }
+    guard !isOperationActive, !isReadOnly else { return }
     tracker.clear(operationKey)
 
     if requiresTypedConfirmation {
@@ -515,6 +531,9 @@ public struct macosIndexManageOperationsTabView: View {
   }
 
   private func executeDeleteAll() {
+    // A confirmation may still be open when read-only mode is switched on
+    guard !isReadOnly else { return }
+
     let index = indexName
     tracker.start(kind: .all, host: host, index: index) { detachedHost in
       await IndexManagementService.deleteAllDocuments(serverDetails: detachedHost, index: index)
@@ -522,7 +541,7 @@ public struct macosIndexManageOperationsTabView: View {
   }
 
   private func executeDeleteByAge() {
-    guard !selectedDateField.isEmpty else { return }
+    guard !isReadOnly, !selectedDateField.isEmpty else { return }
 
     let index = indexName
     let dateField = selectedDateField
@@ -539,6 +558,36 @@ public struct macosIndexManageOperationsTabView: View {
 
   private func formatDocCount(_ count: Int) -> String {
     Self.decimalFormatter.string(from: NSNumber(value: count)) ?? "\(count)"
+  }
+}
+
+// Each card shows its own padlock, so each one keeps its own popover state
+private struct ReadOnlyPadlockButton: View {
+  @State private var showPopover: Bool = false
+
+  var body: some View {
+    Button(action: {
+      showPopover.toggle()
+    }) {
+      Image(systemName: "lock.fill")
+        .font(.system(size: 13))
+        .foregroundColor(Color("TextSecondary"))
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(PlainButtonStyle())
+    .help("Read only mode is on")
+    .popover(isPresented: $showPopover, arrowEdge: .bottom) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Read only mode is on")
+          .font(.system(size: 12, weight: .semibold))
+        Text("Deletes are blocked. Turn it off in Settings.")
+          .font(.system(size: 11))
+          .foregroundColor(Color("TextSecondary"))
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .padding(10)
+      .frame(width: 220, alignment: .leading)
+    }
   }
 }
 #endif

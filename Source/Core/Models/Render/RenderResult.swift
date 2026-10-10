@@ -7,6 +7,7 @@
 // ---------------------------------------
 
 import Foundation
+import OrderedCollections
 
 @available(macOS 13.0, *)
 @available(iOS 15.0, *)
@@ -21,5 +22,11 @@ public class RenderResult : ObservableObject {
   public var pages : Int = 0
   public var hits : Int = 0
   public var fields : [SquashedFieldsArray]? = nil
+  /// Each document in `results` flattened into its fields' values, in the same order.
+  public var rows : [OrderedDictionary<String, Any>] = []
   public var mapping : [SquashedFieldsArray]? = nil
+  /// Round-trip time of the search request, set whether or not the request succeeded.
+  public var duration : Duration? = nil
+  /// Document counts over the time period, only asked for on the first page
+  public var histogram : SearchHistogram? = nil
 }

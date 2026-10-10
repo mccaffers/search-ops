@@ -44,7 +44,7 @@ class Request {
   }
   
   @MainActor
-  func buildUrl(_ serverDetails: HostDetails, _ endpoint: String) -> String {
+  static func buildUrl(_ serverDetails: HostDetails, _ endpoint: String) -> String {
     var urlBuilder = "";
     
     // If Cloud ID has been defined try to unwrap to get host, port and any endpoints
@@ -126,7 +126,7 @@ class Request {
     
     do {
       
-      let urlBuilder = buildUrl(serverDetails, endpoint)
+      let urlBuilder = Request.buildUrl(serverDetails, endpoint)
       
       if let url = URL(string: urlBuilder) {
         

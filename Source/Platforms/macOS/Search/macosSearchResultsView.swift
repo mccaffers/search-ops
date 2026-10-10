@@ -7,20 +7,25 @@
 // ---------------------------------------
 
 import SwiftUI
-
-enum macosSearchResultsLayout: String {
-  case document
-  case table
-}
+import OrderedCollections
 
 struct macosSearchResultsView: View {
   @Binding var renderedObjects: RenderObject?
   @ObservedObject var viewableFields: RenderedFields
-  @EnvironmentObject var filterObject: FilterObject
   
   var fields : [SquashedFieldsArray]
+  /// Changes each time a field is picked or hidden, as the fields are classes whose `visible` changes in place.
+  var fieldsVersion: UUID
   var showDateHeader: Bool
-  var layout: macosSearchResultsLayout = .table
+  /// The data view's field labels, for the table headers
+  var labels: [String: String] = [:]
+  @Binding var columnWidths: [macosTableColumn: CGFloat]
+  var onHideField: (macosTableColumn) -> Void = { _ in }
+  var onOpenDocument: (OrderedDictionary<String, Any>) -> Void
+  /// Filters the search for a field's value, or against it when negated, from the table's cells
+  var onFilter: ((_ field: String, _ value: String, _ negated: Bool) -> Void)? = nil
+  /// How many field filters are on, so an empty search can point at them
+  var activeFilterCount: Int = 0
   @Binding var selectedHost: HostDetails?
   @Binding var selectedIndex: String
   @State var loadingFields : String = ""
@@ -93,7 +98,7 @@ struct macosSearchResultsView: View {
         }
       } else if renderedObjects == nil || renderedObjects?.results.count == 0 {
         VStack {
-          Text("No results. Try adjusting the query string or date range.")
+          Text(Self.noResultsMessage(activeFilterCount: activeFilterCount))
             .padding(.top, 30)
           Spacer()
         }
@@ -102,21 +107,17 @@ struct macosSearchResultsView: View {
         
         VStack {
           
-          switch layout {
-          case .document:
-            macOSDocumentSearchView(renderedObjects: $renderedObjects,
-                                    resultsFields: viewableFields,
-                                    itemDetail: itemDetail,
-                                    filteredFields: fields,
-                                    showDateHeader: showDateHeader)
-          case .table:
-            macosTableSearchView(renderedObjects: $renderedObjects,
-                                 resultsFields: viewableFields,
-                                 itemDetail: itemDetail,
-                                 filteredFields: fields,
-                                 showDateHeader: showDateHeader)
-          }
-          
+          macosTableSearchView(renderedObjects: $renderedObjects,
+                               resultsFields: viewableFields,
+                               itemDetail: itemDetail,
+                               filteredFields: fields,
+                               fieldsVersion: fieldsVersion,
+                               showDateHeader: showDateHeader,
+                               labels: labels,
+                               setWidths: $columnWidths,
+                               onHideField: onHideField,
+                               onOpenDocument: onOpenDocument,
+                               onFilter: onFilter)
           
           if searchIndicator {
             HStack {
@@ -173,5 +174,17 @@ struct macosSearchResultsView: View {
       }
     }
     
+  }
+}
+
+extension macosSearchResultsView {
+  /// What to try when a search finds nothing. Filters that are on come first, as each one can rule out
+  /// every document by itself.
+  static func noResultsMessage(activeFilterCount: Int) -> String {
+    if activeFilterCount > 0 {
+      let filters = activeFilterCount == 1 ? "the filter" : "a filter"
+      return "No results. Try disabling or removing \(filters), or adjusting the query string or date range."
+    }
+    return "No results. Try adjusting the query string or date range."
   }
 }

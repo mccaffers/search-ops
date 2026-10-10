@@ -62,6 +62,19 @@ class DocumentDetail: ObservableObject {
     }
     return nil
   }
+
+  /// Sorted keys that have a value to show and whose name or displayed value contains `query`,
+  /// ignoring case and accents. A blank query returns every key that has a value to show.
+  public static func filteredKeys(_ document: OrderedDictionary<String, Any>, matching query: String) -> [String] {
+    let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    return document.keys.sorted().filter { key in
+      guard let rawValue = document[key],
+            let displayValue = formatDisplayValue(rawValue) else { return false }
+      return query.isEmpty
+        || key.localizedStandardContains(query)
+        || displayValue.localizedStandardContains(query)
+    }
+  }
 }
 
 #if os(iOS)
@@ -237,6 +250,9 @@ struct SearchMainView: View {
         
       }
       
+      // Match the request size so the page count and offsets are right
+      limitObj.size = SettingsDataManager().documentsPerPage
+
       let response = await SearchRender.call(pageInput: pageInput,
                                              filterObject: filterObject,
                                              host: host,

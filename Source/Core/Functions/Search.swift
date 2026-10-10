@@ -76,14 +76,18 @@ public class Search {
   }
   
   public static func getObjects(input:String) -> SearchResult {
-    
+    getObjects(json: JsonTools.serialiseJson(input), input: input)
+  }
+
+  /// Reads the documents, fields and errors out of a search response that's already been parsed.
+  /// `input` is the raw response, shown when an error can't be read from the JSON.
+  public static func getObjects(json: [String: Any]?, input: String) -> SearchResult {
+
     var hitCount = 0
-    
+
     var parsedObject = SearchResult()
-    
-    var headersDictionary =  [FieldsArray]()
-    
-    if let jsonObj = JsonTools.serialiseJson(input) {
+
+    if let jsonObj = json {
       if let hits = jsonObj["hits"] as? [String: Any] {
         
         if let total = hits["total"] as? [String: Any] {
@@ -101,15 +105,18 @@ public class Search {
           for jsonDict in objects {
             
             if let _source = jsonDict["_source"] as? [String: Any] {
-              // Pass all of the objects to a loop function
               holder.append(_source)
-              
-              // Pass all of the objects to a loop function
-              headersDictionary = Fields.loopFields(_source: _source, headersDictionary: headersDictionary)
-              
-              
             }
-            parsedObject = SearchResult(data:holder, hitCount: hitCount, fields: Fields.makeSquashedArray(key: "", fields: headersDictionary, squashedArray: [SquashedFieldsArray]()))
+          }
+
+          // Flatten the documents and find their fields in one pass. A page with no documents keeps
+          // the empty result, as it always has.
+          if !objects.isEmpty {
+            let page = DocumentFlattener.flattenPage(holder)
+            parsedObject = SearchResult(data: holder,
+                                        hitCount: hitCount,
+                                        fields: page.fields.map { SquashedFieldsArray(squashedString: $0.key, fieldParts: $0.parts) },
+                                        rows: page.rows)
           }
         }
       } else if let errorMessage = jsonObj["error"] as? [String: Any] {

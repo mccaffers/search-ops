@@ -49,12 +49,12 @@ public struct macosFieldTypeBadgeView: View {
       .font(.system(size: 10, weight: .medium, design: .monospaced))
       .padding(.horizontal, 6)
       .padding(.vertical, 2)
-      .background(badgeColor.opacity(0.18))
-      .foregroundColor(badgeColor)
+      .background(badgeColor.opacity(0.3))
+      .foregroundColor(.white)
       .clipShape(RoundedRectangle(cornerRadius: 4))
       .overlay(
         RoundedRectangle(cornerRadius: 4)
-          .stroke(badgeColor.opacity(0.35), lineWidth: 0.8)
+          .stroke(badgeColor.opacity(0.7), lineWidth: 0.8)
       )
   }
 }
@@ -162,25 +162,108 @@ struct macosMappingFieldRowView: View {
   }
 }
 
-public struct macosIndexMappingTabView: View {
+/// Display mode picker plus the field count (structured) or Copy JSON button (raw),
+/// shown in the index detail tab bar beside the Mapping and Manage tabs.
+public struct macosIndexMappingControlsView: View {
   public var fields: [SquashedFieldsArray]
   public var rawJson: String
+  @Binding public var displayMode: MappingDisplayMode
+  public var searchText: String
 
-  @State private var searchText: String = ""
-  @State private var displayMode: MappingDisplayMode = .structured
   @State private var isCopied: Bool = false
   @State private var copyTask: Task<Void, Never>? = nil
 
-  public init(fields: [SquashedFieldsArray], rawJson: String) {
+  public init(
+    fields: [SquashedFieldsArray],
+    rawJson: String,
+    displayMode: Binding<MappingDisplayMode>,
+    searchText: String
+  ) {
     self.fields = fields
     self.rawJson = rawJson
+    self._displayMode = displayMode
+    self.searchText = searchText
   }
 
   private var prettifiedJson: String {
     rawJson.prettifyJSON()
   }
 
-  private var filteredFields: [SquashedFieldsArray] {
+  public var body: some View {
+    HStack(spacing: 8) {
+      SwiftUI.Picker("", selection: $displayMode) {
+        ForEach(MappingDisplayMode.allCases, id: \.self) { mode in
+          Text(mode.rawValue).tag(mode)
+        }
+      }
+      .pickerStyle(SegmentedPickerStyle())
+      .frame(width: 240)
+
+      if displayMode == .structured {
+        let filteredCount = macosIndexMappingTabView.filter(fields, by: searchText).count
+        Text(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "\(fields.count) fields" : "\(filteredCount) / \(fields.count) fields")
+          .font(.system(size: 13, weight: .semibold))
+          .padding(.horizontal, 12)
+          .padding(.vertical, 5)
+          .background(Color("Button"))
+          .clipShape(RoundedRectangle(cornerRadius: 5))
+          .foregroundColor(Color("TextSecondary"))
+      } else {
+        Button(action: copyJsonToClipboard) {
+          HStack(spacing: 4) {
+            Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
+              .font(.system(size: 11))
+            Text(isCopied ? "Copied!" : "Copy JSON")
+              .font(.system(size: 11))
+          }
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(Color("Button"))
+          .clipShape(RoundedRectangle(cornerRadius: 5))
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(prettifiedJson.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      }
+    }
+  }
+
+  private func copyJsonToClipboard() {
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(prettifiedJson, forType: .string)
+    isCopied = true
+
+    copyTask?.cancel()
+    copyTask = Task {
+      try? await Task.sleep(nanoseconds: 2_000_000_000)
+      if !Task.isCancelled {
+        await MainActor.run {
+          isCopied = false
+        }
+      }
+    }
+  }
+}
+
+public struct macosIndexMappingTabView: View {
+  public var fields: [SquashedFieldsArray]
+  public var rawJson: String
+  public var displayMode: MappingDisplayMode
+  @Binding public var searchText: String
+
+  public init(
+    fields: [SquashedFieldsArray],
+    rawJson: String,
+    displayMode: MappingDisplayMode,
+    searchText: Binding<String>
+  ) {
+    self.fields = fields
+    self.rawJson = rawJson
+    self.displayMode = displayMode
+    self._searchText = searchText
+  }
+
+  static func filter(_ fields: [SquashedFieldsArray], by searchText: String) -> [SquashedFieldsArray] {
     let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     if trimmed.isEmpty {
       return fields
@@ -191,68 +274,37 @@ public struct macosIndexMappingTabView: View {
     }
   }
 
+  private var prettifiedJson: String {
+    rawJson.prettifyJSON()
+  }
+
+  private var filteredFields: [SquashedFieldsArray] {
+    Self.filter(fields, by: searchText)
+  }
+
   public var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      // Controls Bar
-      HStack(spacing: 10) {
-        if displayMode == .structured {
-          HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-              .foregroundColor(Color("TextSecondary"))
-              .font(.system(size: 12))
-            TextField("Filter fields...", text: $searchText)
-              .textFieldStyle(PlainTextFieldStyle())
-              .font(.system(size: 12))
-            if !searchText.isEmpty {
-              Button(action: { searchText = "" }) {
-                Image(systemName: "xmark.circle.fill")
-                  .foregroundColor(Color("TextSecondary"))
-                  .font(.system(size: 11))
-              }
-              .buttonStyle(PlainButtonStyle())
-            }
-          }
-          .padding(.horizontal, 8)
-          .padding(.vertical, 5)
-          .background(Color("Button"))
-          .clipShape(RoundedRectangle(cornerRadius: 5))
-        }
-
-        Spacer()
-
-        SwiftUI.Picker("", selection: $displayMode) {
-          ForEach(MappingDisplayMode.allCases, id: \.self) { mode in
-            Text(mode.rawValue).tag(mode)
-          }
-        }
-        .pickerStyle(SegmentedPickerStyle())
-        .frame(width: 240)
-
-        if displayMode == .structured {
-          Text(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "\(fields.count) fields" : "\(filteredFields.count) / \(fields.count) fields")
-            .font(.system(size: 11, weight: .semibold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color("Button"))
-            .clipShape(Capsule())
+    VStack(alignment: .leading, spacing: 8) {
+      if displayMode == .structured {
+        HStack(spacing: 6) {
+          Image(systemName: "magnifyingglass")
             .foregroundColor(Color("TextSecondary"))
-        } else {
-          Button(action: copyJsonToClipboard) {
-            HStack(spacing: 4) {
-              Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
-                .font(.system(size: 11))
-              Text(isCopied ? "Copied!" : "Copy JSON")
+            .font(.system(size: 12))
+          TextField("Filter fields...", text: $searchText)
+            .textFieldStyle(PlainTextFieldStyle())
+            .font(.system(size: 12))
+          if !searchText.isEmpty {
+            Button(action: { searchText = "" }) {
+              Image(systemName: "xmark.circle.fill")
+                .foregroundColor(Color("TextSecondary"))
                 .font(.system(size: 11))
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color("Button"))
-            .clipShape(RoundedRectangle(cornerRadius: 5))
-            .contentShape(Rectangle())
+            .buttonStyle(PlainButtonStyle())
           }
-          .buttonStyle(PlainButtonStyle())
-          .disabled(prettifiedJson.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color("Button"))
+        .clipShape(RoundedRectangle(cornerRadius: 5))
       }
 
       // Main Content Area
@@ -297,22 +349,6 @@ public struct macosIndexMappingTabView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color("Button").opacity(0.4))
             .clipShape(RoundedRectangle(cornerRadius: 6))
-        }
-      }
-    }
-  }
-
-  private func copyJsonToClipboard() {
-    NSPasteboard.general.clearContents()
-    NSPasteboard.general.setString(prettifiedJson, forType: .string)
-    isCopied = true
-
-    copyTask?.cancel()
-    copyTask = Task {
-      try? await Task.sleep(nanoseconds: 2_000_000_000)
-      if !Task.isCancelled {
-        await MainActor.run {
-          isCopied = false
         }
       }
     }

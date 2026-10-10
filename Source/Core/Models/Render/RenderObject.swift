@@ -12,6 +12,8 @@ import OrderedCollections
 @available(macOS 10.15, *)
 @available(iOS 15.0, *)
 public struct RenderObject {
+  /// New for each set of results, so views can tell a new search from a redraw of the same results.
+  public let id = UUID()
   public var headers : [SquashedFieldsArray]
   public var results : [OrderedDictionary<String, Any>]
   public var flat : [OrderedDictionary<String, Any>]? = nil

@@ -12,9 +12,11 @@ import SwiftUI
 struct macosManageHostOptionsView: View {
   var host: HostDetails
   var onBack: () -> Void
+  var onClusterHealth: () -> Void
   var onListIndexes: () -> Void
+  var onListUsers: () -> Void
+  var onDataViews: () -> Void
 
-  @State private var isListIndexesHovered: Bool = false
   @State private var isBackHovered: Bool = false
 
   var body: some View {
@@ -54,38 +56,30 @@ struct macosManageHostOptionsView: View {
 
       // Options List
       VStack(alignment: .leading, spacing: 8) {
-        Button(action: onListIndexes) {
-          HStack(spacing: 12) {
-            Image(systemName: "list.bullet.rectangle")
-              .font(.system(size: 16))
-              .foregroundColor(Color.accentColor)
-              .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 2) {
-              Text("List indexes")
-                .font(.system(size: 14, weight: .medium))
-              Text("View all indices available on this cluster")
-                .font(.caption)
-                .foregroundColor(Color("TextSecondary"))
-            }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-              .font(.system(size: 12, weight: .semibold))
-              .foregroundColor(Color("TextSecondary"))
-          }
-          .padding(.vertical, 10)
-          .padding(.horizontal, 12)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .background(isListIndexesHovered ? Color("ButtonHighlighted") : Color("Button"))
-          .clipShape(.rect(cornerRadius: 5))
-          .contentShape(Rectangle())
-        }
-        .buttonStyle(PlainButtonStyle())
-        .onHover { hovering in
-          isListIndexesHovered = hovering
-        }
+        macosManageHostOptionRow(
+          icon: "waveform.path.ecg",
+          title: "Cluster health",
+          subtitle: "Status, shards, nodes and resource usage",
+          action: onClusterHealth
+        )
+        macosManageHostOptionRow(
+          icon: "list.bullet.rectangle",
+          title: "List indexes",
+          subtitle: "View all indices available on this cluster",
+          action: onListIndexes
+        )
+        macosManageHostOptionRow(
+          icon: "person.2",
+          title: "List users",
+          subtitle: "View all users configured on this cluster",
+          action: onListUsers
+        )
+        macosManageHostOptionRow(
+          icon: "rectangle.stack",
+          title: "Data views",
+          subtitle: "Saved index patterns with field labels",
+          action: onDataViews
+        )
       }
 
       Spacer()
@@ -94,11 +88,55 @@ struct macosManageHostOptionsView: View {
   }
 }
 
+struct macosManageHostOptionRow: View {
+  var icon: String
+  var title: String
+  var subtitle: String
+  var action: () -> Void
+
+  @State private var isHovered: Bool = false
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 12) {
+        Image(systemName: icon)
+          .font(.system(size: 16))
+          .foregroundColor(Color.accentColor)
+          .frame(width: 24)
+
+        VStack(alignment: .leading, spacing: 2) {
+          Text(title)
+            .font(.system(size: 14, weight: .medium))
+          Text(subtitle)
+            .font(.caption)
+            .foregroundColor(Color("TextSecondary"))
+        }
+
+        Spacer()
+
+        Image(systemName: "chevron.right")
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundColor(Color("TextSecondary"))
+      }
+      .padding(.vertical, 10)
+      .padding(.horizontal, 12)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(isHovered ? Color("ButtonHighlighted") : Color("Button"))
+      .clipShape(.rect(cornerRadius: 5))
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(PlainButtonStyle())
+    .onHover { hovering in
+      isHovered = hovering
+    }
+  }
+}
+
 #Preview {
   let host = HostDetails()
   host.name = "Production Cluster"
   host.env = "Production"
-  return macosManageHostOptionsView(host: host, onBack: {}, onListIndexes: {})
+  return macosManageHostOptionsView(host: host, onBack: {}, onClusterHealth: {}, onListIndexes: {}, onListUsers: {}, onDataViews: {})
     .frame(width: 400, height: 500)
     .padding()
 }

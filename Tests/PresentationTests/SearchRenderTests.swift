@@ -6,6 +6,7 @@
 // ---------------------------------------
 
 import XCTest
+import Combine
 import RealmSwift
 import OrderedCollections
 
@@ -95,6 +96,24 @@ final class SearchRenderTests: XCTestCase  {
     XCTAssertNotNil(result.error)
     XCTAssertEqual(result.error?.title, "query_shard_exception")
     XCTAssertEqual(result.error?.message, "Failed to parse query [test]")
+    XCTAssertNotNil(result.duration, "A failed search still reports its round-trip time")
+  }
+
+  func testCallReportsDurationOnSuccess() async throws {
+    let mockResponse = """
+    {
+      "took": 3,
+      "hits": {
+        "total": { "value": 1, "relation": "eq" },
+        "hits": [ { "_id": "1", "_source": { "message": "hello" } } ]
+      }
+    }
+    """
+    Request.mockedSession = MockURLSession(response: mockResponse)
+    let result = await SearchRender.call(pageInput: 1, filterObject: filterObject, host: hostDetails, index: "testIndex", limitObj: limitObj)
+
+    XCTAssertNil(result.error)
+    XCTAssertNotNil(result.duration)
   }
 
   func testCallWithParsingException() async throws {
@@ -136,6 +155,207 @@ final class SearchRenderTests: XCTestCase  {
     XCTAssertEqual(result.error?.message, "Something broke")
   }
   
+  // MARK: - Reading a response once
+
+  /// Hands out its responses in turn, repeating the last, and keeps the body of each request.
+  final class SequenceURLSession: URLSessionProtocol {
+    var responses: [String]
+    var requestBodies = [String]()
+
+    init(_ responses: [String]) {
+      self.responses = responses
+    }
+
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+      requestBodies.append(request.httpBody.map { String(decoding: $0, as: UTF8.self) } ?? "")
+      let body = responses.count > 1 ? responses.removeFirst() : responses[0]
+      let response = HTTPURLResponse(url: request.url ?? URL(fileURLWithPath: "example.org"),
+                                     statusCode: 200, httpVersion: nil, headerFields: nil)!
+      return (Data(body.utf8), response)
+    }
+  }
+
+  let histogramRequest = SearchHistogramRequest(field: "@timestamp",
+                                                from: Date(timeIntervalSince1970: 1_779_999_900),
+                                                to: Date(timeIntervalSince1970: 1_779_999_990),
+                                                interval: HistogramInterval(seconds: 30, expression: "30s", title: "30 seconds"),
+                                                legacyInterval: false)
+
+  let documentsWithHistogram = """
+  {"took":3,"hits":{"total":{"value":7,"relation":"eq"},"hits":[
+    {"_id":"1","_source":{"message":"hello","user":{"name":"ryan"}}},
+    {"_id":"2","_source":{"message":"bye","user":{"id":4}}}]},
+   "aggregations":{"over_time":{"buckets":[
+    {"key":1779999900000,"doc_count":4},{"key":1779999930000,"doc_count":0},{"key":1779999960000,"doc_count":3}]}}}
+  """
+
+  let aggregationError = """
+  {"error":{"root_cause":[{"type":"illegal_argument_exception",
+    "reason":"Field [created] of type [keyword] is not supported for aggregation [date_histogram]"}]},"status":400}
+  """
+
+  func testCallReadsDocumentsAndHistogramFromOneResponse() async throws {
+    let session = SequenceURLSession([documentsWithHistogram])
+    Request.mockedSession = session
+    defer { Request.mockedSession = nil }
+
+    let result = await SearchRender.call(pageInput: 1, filterObject: filterObject, host: hostDetails,
+                                         index: "testIndex", limitObj: limitObj, histogram: histogramRequest)
+
+    XCTAssertNil(result.error)
+    XCTAssertEqual(session.requestBodies.count, 1)
+    XCTAssertEqual(result.results.count, 2)
+    XCTAssertEqual(result.hits, 7)
+    XCTAssertEqual(result.fields?.map(\.squashedString), ["message", "user.id", "user.name"])
+    XCTAssertEqual(result.rows.map { $0.keys.elements }, [["message", "user.name"], ["message", "user.id"]])
+    XCTAssertEqual(result.rows.first?["user.name"] as? [String], ["ryan"])
+    XCTAssertEqual(result.rows.last?["user.id"] as? [String], ["4"])
+    XCTAssertEqual(result.histogram?.buckets.map(\.count), [4, 0, 3])
+  }
+
+  func testCallRetriesWithoutHistogramWhenAggregationFails() async throws {
+    let documentsOnly = """
+    {"took":1,"hits":{"total":{"value":1,"relation":"eq"},"hits":[{"_id":"1","_source":{"message":"hello"}}]}}
+    """
+    let session = SequenceURLSession([aggregationError, documentsOnly])
+    Request.mockedSession = session
+    defer { Request.mockedSession = nil }
+
+    let result = await SearchRender.call(pageInput: 1, filterObject: filterObject, host: hostDetails,
+                                         index: "testIndex", limitObj: limitObj, histogram: histogramRequest)
+
+    // Asked with the histogram, then again without it
+    XCTAssertEqual(session.requestBodies.map { $0.contains(SearchHistogram.aggregationName) }, [true, false])
+    XCTAssertNil(result.error, "The retry's documents replace the aggregation error")
+    XCTAssertEqual(result.results.count, 1)
+    XCTAssertEqual(result.hits, 1)
+    XCTAssertNil(result.histogram)
+  }
+
+  /// A page of wide documents: ten groups of 28 fields, plus arrays, about 6 KB each.
+  static func widePage(documents: Int) -> String {
+    let hits = (0..<documents).map { i -> [String: Any] in
+      var source: [String: Any] = ["@timestamp": "2026-10-06T00:00:31Z"]
+      for group in 0..<10 {
+        var fields: [String: Any] = ["tags": ["a", "b", "c"], "items": [["id": i, "name": "n\(i)"], ["id": i + 1]]]
+        for field in 0..<28 {
+          fields["f\(field)"] = field % 3 == 0 ? "value-\(i)-\(field)" : Double(i * field) / 7.0
+        }
+        source["group\(group)"] = fields
+      }
+      return ["_id": "\(i)", "_source": source]
+    }
+    let page: [String: Any] = ["hits": ["total": ["value": 10_000], "hits": hits]]
+    return String(decoding: try! JSONSerialization.data(withJSONObject: page), as: UTF8.self)
+  }
+
+  /// Times taken on the main thread, to find how long it went without a turn.
+  @MainActor final class MainThreadTicks {
+    var times = [UInt64]()
+
+    var longestGap: UInt64 {
+      zip(times, times.dropFirst()).map { $1 - $0 }.max() ?? 0
+    }
+  }
+
+  @MainActor
+  func testCallKeepsMainThreadFreeWhileReading() async throws {
+    Request.mockedSession = SequenceURLSession([Self.widePage(documents: 500)])
+    defer { Request.mockedSession = nil }
+
+    let ticks = MainThreadTicks()
+    let ticker = Task { @MainActor in
+      while !Task.isCancelled {
+        ticks.times.append(DispatchTime.now().uptimeNanoseconds)
+        try? await Task.sleep(nanoseconds: 2_000_000)
+      }
+    }
+    let start = DispatchTime.now().uptimeNanoseconds
+    ticks.times.append(start)
+
+    let result = await SearchRender.call(pageInput: 1, filterObject: filterObject, host: hostDetails,
+                                         index: "testIndex", limitObj: limitObj)
+
+    let end = DispatchTime.now().uptimeNanoseconds
+    ticks.times.append(end)
+    ticker.cancel()
+
+    XCTAssertNil(result.error)
+    XCTAssertEqual(result.results.count, 500)
+    XCTAssertEqual(result.rows.count, 500)
+    // Reading the page takes most of the search; on the main thread it would leave one long gap
+    let elapsed = Double(end - start)
+    XCTAssertLessThan(Double(ticks.longestGap), elapsed * 0.5,
+                      "Main thread was busy for \(ticks.longestGap / 1_000_000) ms of a \(Int(elapsed / 1_000_000)) ms search")
+  }
+
+  func testCallDoesNotRetryOtherErrors() async throws {
+    let queryError = """
+    {"error":{"root_cause":[{"type":"query_shard_exception","reason":"Failed to parse query [status:(]"}]},"status":400}
+    """
+    let session = SequenceURLSession([queryError])
+    Request.mockedSession = session
+    defer { Request.mockedSession = nil }
+
+    let result = await SearchRender.call(pageInput: 1, filterObject: filterObject, host: hostDetails,
+                                         index: "testIndex", limitObj: limitObj, histogram: histogramRequest)
+
+    XCTAssertEqual(session.requestBodies.count, 1)
+    XCTAssertEqual(result.error?.title, "query_shard_exception")
+    XCTAssertEqual(result.error?.message, "Failed to parse query [status:(]")
+  }
+
+  func testParseReadsResponseOnce() async throws {
+    let response = ServerResponse()
+    response.parsed = documentsWithHistogram
+
+    let maybeParsed = await SearchRender.parse(response, histogram: nil)
+    let parsed = try XCTUnwrap(maybeParsed)
+    let fromString = Search.getObjects(input: documentsWithHistogram)
+
+    XCTAssertNotNil(parsed.json?["aggregations"])
+    XCTAssertEqual(parsed.result.hitCount, fromString.hitCount)
+    XCTAssertEqual(parsed.result.data.count, fromString.data.count)
+    XCTAssertEqual(parsed.result.fields.map(\.squashedString), fromString.fields.map(\.squashedString))
+    XCTAssertFalse(SearchRender.failedOnHistogram(parsed))
+  }
+
+  func testParseSkipsResponsesWithRequestErrors() async {
+    let failed = ServerResponse(error: ResponseError(title: "Request Error", message: "offline", type: .critical))
+    failed.parsed = aggregationError
+    let parsedFailure = await SearchRender.parse(failed, histogram: nil)
+    XCTAssertNil(parsedFailure)
+    XCTAssertFalse(SearchRender.failedOnHistogram(nil))
+
+    let parsedEmpty = await SearchRender.parse(ServerResponse(), histogram: nil)
+    XCTAssertNil(parsedEmpty, "No body, nothing to read")
+  }
+
+  func testFailedOnHistogramOnlyForAggregationErrors() async {
+    let aggregation = ServerResponse()
+    aggregation.parsed = aggregationError
+    let parsedAggregation = await SearchRender.parse(aggregation, histogram: histogramRequest)
+    XCTAssertTrue(SearchRender.failedOnHistogram(parsedAggregation))
+
+    let query = ServerResponse()
+    query.parsed = #"{"error":{"root_cause":[{"type":"t","reason":"no such index [logs]"}]}}"#
+    let parsedQuery = await SearchRender.parse(query, histogram: histogramRequest)
+    XCTAssertFalse(SearchRender.failedOnHistogram(parsedQuery))
+  }
+
+  @MainActor
+  func testReadBuildsHistogramAwayFromMainThread() async {
+    // read checks it isn't on the main thread in Debug builds, even when asked from the main actor
+    let parsed = await SearchRender.read(documentsWithHistogram, histogram: histogramRequest)
+    XCTAssertEqual(parsed.result.data.count, 2)
+    XCTAssertEqual(parsed.result.rows.count, 2)
+    XCTAssertEqual(parsed.histogram?.buckets.map(\.count), [4, 0, 3])
+
+    let withoutHistogram = await SearchRender.read(documentsWithHistogram, histogram: nil)
+    XCTAssertNil(withoutHistogram.histogram, "No histogram unless one was asked for")
+    XCTAssertEqual(withoutHistogram.result.data.count, 2)
+  }
+
   func testSortObjectProperties() {
     // Test the properties of SortObject
     XCTAssertEqual(sortObject.order, .Ascending)
@@ -163,6 +383,27 @@ final class SearchRenderTests: XCTestCase  {
 
     XCTAssertTrue(macosDocumentDetailView.isFieldVisible("fieldC", in: fields, onlyVisibleFields: onlyVisibleFields))
     XCTAssertFalse(macosDocumentDetailView.isFieldVisible("unknown", in: fields, onlyVisibleFields: onlyVisibleFields))
+  }
+
+  func testFieldTypeComesFromMapping() {
+    let count = SquashedFieldsArray(squashedString: "count")
+    count.type = "float"
+    let symbol = SquashedFieldsArray(squashedString: "symbol")
+    symbol.type = "keyword"
+
+    XCTAssertEqual(macosDocumentDetailView.fieldType("count", in: [count, symbol]), "float")
+    XCTAssertEqual(macosDocumentDetailView.fieldType("symbol", in: [count, symbol]), "keyword")
+    XCTAssertNil(macosDocumentDetailView.fieldType("unmapped", in: [count, symbol]))
+  }
+
+  func testFieldTypeSkipsUntypedEntries() {
+    // Toggling an unmapped field adds an untyped entry to fields; the typed one should still win.
+    let untyped = SquashedFieldsArray(squashedString: "user.id")
+    let typed = SquashedFieldsArray(squashedString: "user.id")
+    typed.type = "long"
+
+    XCTAssertEqual(macosDocumentDetailView.fieldType("user.id", in: [untyped], onlyVisibleFields: [typed]), "long")
+    XCTAssertNil(macosDocumentDetailView.fieldType("user.id", in: [untyped]))
   }
 
   func testToggleFieldVisibilityExistingField() {
@@ -258,6 +499,134 @@ final class SearchRenderTests: XCTestCase  {
     XCTAssertEqual(fields.count, 1)
     XCTAssertEqual(fields[0].fieldParts, ["a", "b", "c", "d"])
     XCTAssertTrue(fields[0] === onlyVisibleFields[0])
+  }
+
+  func testSelectionStateOfKeys() {
+    let shown = SquashedFieldsArray(squashedString: "cpu0")
+    shown.visible = true
+    let hidden = SquashedFieldsArray(squashedString: "cpu1")
+    hidden.visible = false
+    let fields = [shown, hidden]
+
+    XCTAssertEqual(macosDocumentDetailView.selectionState(of: ["cpu0"], in: fields), .on)
+    XCTAssertEqual(macosDocumentDetailView.selectionState(of: ["cpu1", "unmapped"], in: fields), .off)
+    XCTAssertEqual(macosDocumentDetailView.selectionState(of: ["cpu0", "cpu1"], in: fields), .mixed)
+    XCTAssertEqual(macosDocumentDetailView.selectionState(of: [], in: fields), .off)
+  }
+
+  func testDocumentFieldsCountLabel() {
+    XCTAssertEqual(DocumentFieldsGrid.countLabel(total: 48, selected: 12), "48 fields · 12 selected")
+    XCTAssertEqual(DocumentFieldsGrid.countLabel(total: 48, selected: 0), "48 fields")
+    XCTAssertEqual(DocumentFieldsGrid.countLabel(total: 1, selected: 1), "1 field · 1 selected")
+  }
+
+  func testToggleAllFieldsVisibilityShowsAllWhenSomeAreHidden() {
+    let shown = SquashedFieldsArray(squashedString: "cpu0")
+    shown.visible = true
+    let hidden = SquashedFieldsArray(squashedString: "cpu1")
+    hidden.visible = false
+    let untouched = SquashedFieldsArray(squashedString: "memory")
+    untouched.visible = false
+    var fields = [shown, hidden, untouched]
+    var onlyVisibleFields = [shown]
+
+    let result = macosDocumentDetailView.toggleAllFieldsVisibility(
+      ["cpu0", "cpu1", "dynamic.tag"], fields: &fields, onlyVisibleFields: &onlyVisibleFields)
+
+    XCTAssertTrue(result)
+    XCTAssertTrue(shown.visible, "An already shown field should stay shown")
+    XCTAssertTrue(hidden.visible)
+    XCTAssertTrue(macosDocumentDetailView.isFieldVisible("dynamic.tag", in: fields), "An unmapped field should be added")
+    XCTAssertFalse(untouched.visible, "Fields outside the keys should not change")
+    XCTAssertEqual(onlyVisibleFields.map(\.squashedString).sorted(), ["cpu0", "cpu1", "dynamic.tag"])
+  }
+
+  func testToggleAllFieldsVisibilityHidesAllWhenAllAreShown() {
+    let first = SquashedFieldsArray(squashedString: "cpu0")
+    first.visible = true
+    let second = SquashedFieldsArray(squashedString: "cpu1")
+    second.visible = true
+    let untouched = SquashedFieldsArray(squashedString: "memory")
+    untouched.visible = true
+    var fields = [first, second, untouched]
+    var onlyVisibleFields = [first, second, untouched]
+
+    let result = macosDocumentDetailView.toggleAllFieldsVisibility(
+      ["cpu0", "cpu1"], fields: &fields, onlyVisibleFields: &onlyVisibleFields)
+
+    XCTAssertFalse(result)
+    XCTAssertFalse(first.visible)
+    XCTAssertFalse(second.visible)
+    XCTAssertTrue(untouched.visible, "Fields outside the keys should not change")
+    XCTAssertEqual(macosDocumentDetailView.selectionState(of: ["cpu0", "cpu1"], in: fields), .off)
+  }
+
+  /// Counts how often each field announces a change.
+  func changeCounts(_ fields: [SquashedFieldsArray]) -> (counts: () -> [Int], cancellables: [AnyCancellable]) {
+    var counts = Array(repeating: 0, count: fields.count)
+    let cancellables = fields.enumerated().map { index, field in
+      field.objectWillChange.sink { counts[index] += 1 }
+    }
+    return ({ counts }, cancellables)
+  }
+
+  func testToggleAllFieldsVisibilityAnnouncesEachChangedFieldOnce() {
+    let shown = SquashedFieldsArray(squashedString: "cpu0")
+    shown.visible = true
+    let hidden = SquashedFieldsArray(squashedString: "cpu1")
+    let hiddenToo = SquashedFieldsArray(squashedString: "cpu2")
+    var fields = [shown, hidden, hiddenToo]
+    var onlyVisibleFields = [shown]
+    let changes = changeCounts(fields)
+
+    macosDocumentDetailView.toggleAllFieldsVisibility(
+      ["cpu0", "cpu1", "cpu2"], fields: &fields, onlyVisibleFields: &onlyVisibleFields)
+
+    XCTAssertEqual(changes.counts(), [0, 1, 1], "Only fields that change should announce it, and only once")
+    withExtendedLifetime(changes.cancellables) {}
+  }
+
+  func testToggleFieldVisibilityAnnouncesOnce() {
+    let field = SquashedFieldsArray(squashedString: "status")
+    var fields = [field]
+    var onlyVisibleFields = [field]
+    let changes = changeCounts(fields)
+
+    macosDocumentDetailView.toggleFieldVisibility("status", fields: &fields, onlyVisibleFields: &onlyVisibleFields)
+
+    XCTAssertEqual(changes.counts(), [1], "The same field in both lists should only announce the change once")
+    withExtendedLifetime(changes.cancellables) {}
+  }
+
+  func testToggleAllFieldsVisibilityUpdatesSeparateCopiesInBothLists() {
+    let mapped = SquashedFieldsArray(squashedString: "cpu0")
+    let inResults = SquashedFieldsArray(squashedString: "cpu0")
+    var fields = [mapped]
+    var onlyVisibleFields = [inResults]
+
+    XCTAssertTrue(macosDocumentDetailView.toggleAllFieldsVisibility(
+      ["cpu0"], fields: &fields, onlyVisibleFields: &onlyVisibleFields))
+    XCTAssertTrue(mapped.visible)
+    XCTAssertTrue(inResults.visible)
+    XCTAssertEqual(onlyVisibleFields.count, 1, "A field already in the list shouldn't be added again")
+
+    XCTAssertFalse(macosDocumentDetailView.toggleAllFieldsVisibility(
+      ["cpu0"], fields: &fields, onlyVisibleFields: &onlyVisibleFields))
+    XCTAssertFalse(mapped.visible)
+    XCTAssertFalse(inResults.visible)
+  }
+
+  func testToggleAllFieldsVisibilityAddsEachUnmappedKeyOnce() {
+    var fields = [SquashedFieldsArray]()
+    var onlyVisibleFields = [SquashedFieldsArray]()
+
+    macosDocumentDetailView.toggleAllFieldsVisibility(
+      ["dynamic.a", "dynamic.b"], fields: &fields, onlyVisibleFields: &onlyVisibleFields)
+
+    XCTAssertEqual(fields.map(\.squashedString), ["dynamic.a", "dynamic.b"])
+    XCTAssertEqual(fields.map(\.fieldParts), [["dynamic", "a"], ["dynamic", "b"]])
+    XCTAssertTrue(zip(fields, onlyVisibleFields).allSatisfy { $0 === $1 && $0.visible },
+                  "Both lists should hold the same shown field for each key")
   }
 
   func testSyncVisibilityPreservesMappedFields() {
@@ -461,6 +830,63 @@ final class SearchRenderTests: XCTestCase  {
     XCTAssertTrue(visB.visible, "Visible field must be marked visible in onlyVisibleFields")
   }
 
+  func testFilterFieldsByMode() {
+    let timestamp = SquashedFieldsArray(squashedString: "timestamp", fieldParts: ["timestamp"])
+    timestamp.visible = true
+    let message = SquashedFieldsArray(squashedString: "message", fieldParts: ["message"])
+    message.visible = true
+    let host = SquashedFieldsArray(squashedString: "host.name", fieldParts: ["host", "name"])
+    let level = SquashedFieldsArray(squashedString: "level", fieldParts: ["level"])
+
+    let fields = [timestamp, message, host, level]
+    let inDocs = [
+      SquashedFieldsArray(squashedString: "message", fieldParts: ["message"]),
+      SquashedFieldsArray(squashedString: "host.name", fieldParts: ["host", "name"]),
+    ]
+
+    func names(_ mode: FieldListMode, _ search: String = "") -> [String] {
+      macosSearchFieldSheetView.filterFields(mode: mode,
+                                             fields: fields,
+                                             onlyVisibleFields: inDocs,
+                                             searchText: search).map { $0.squashedString }
+    }
+
+    XCTAssertEqual(names(.mapped), ["timestamp", "message", "host.name", "level"])
+    XCTAssertEqual(names(.inDocuments), ["message", "host.name"])
+    XCTAssertEqual(names(.selected), ["timestamp", "message"])
+    XCTAssertEqual(names(.selected, "mess"), ["message"])
+    // The search ignores case, so lowercase text finds capitalised field names and vice versa
+    XCTAssertEqual(names(.selected, "MESS"), ["message"])
+    XCTAssertEqual(names(.mapped, "Host"), ["host.name"])
+    // A search with no matches falls back to the whole list, as the other modes do
+    XCTAssertEqual(names(.selected, "zzz"), ["timestamp", "message"])
+
+    message.visible = false
+    XCTAssertEqual(names(.selected), ["timestamp"])
+    timestamp.visible = false
+    XCTAssertEqual(names(.selected), [])
+  }
+
+  func testFilterFieldsMatchesDataViewLabels() {
+    let price = SquashedFieldsArray(squashedString: "FILL_PRICE", fieldParts: ["FILL_PRICE"])
+    let symbol = SquashedFieldsArray(squashedString: "SYMBOL", fieldParts: ["SYMBOL"])
+    let labels = ["FILL_PRICE": "Fill price"]
+
+    func names(_ search: String, labels: [String: String]) -> [String] {
+      macosSearchFieldSheetView.filterFields(mode: .mapped,
+                                             fields: [price, symbol],
+                                             onlyVisibleFields: [],
+                                             searchText: search,
+                                             labels: labels).map { $0.squashedString }
+    }
+
+    // "fill p" is only in the label, so it finds the field by its label
+    XCTAssertEqual(names("fill p", labels: labels), ["FILL_PRICE"])
+    XCTAssertEqual(names("SYMB", labels: labels), ["SYMBOL"])
+    // Without labels nothing matches, so every field is listed, as before
+    XCTAssertEqual(names("fill p", labels: [:]), ["FILL_PRICE", "SYMBOL"])
+  }
+
   func testSetFieldVisibilitySyncsBothArrays() {
     let item = SquashedFieldsArray(squashedString: "timestamp", fieldParts: ["timestamp"])
     item.visible = false
@@ -576,8 +1002,8 @@ final class SearchRenderTests: XCTestCase  {
   }
 
   func testRowVisibilityWithBodyFiltersExcludesMissingFields() {
-    // 1. Body filtered, missing body fields -> should NOT show row (no ghost card)
-    XCTAssertFalse(macOSDocumentSearchView.shouldDisplayRow(
+    // 1. Body filtered, missing body fields -> should NOT show row (no date-only row)
+    XCTAssertFalse(macosTableSearchView.shouldDisplayRow(
       hasBodyContent: false,
       showDateHeader: true,
       hasDateValue: true,
@@ -585,7 +1011,7 @@ final class SearchRenderTests: XCTestCase  {
     ))
 
     // 2. Body filtered, has body fields -> should show row
-    XCTAssertTrue(macOSDocumentSearchView.shouldDisplayRow(
+    XCTAssertTrue(macosTableSearchView.shouldDisplayRow(
       hasBodyContent: true,
       showDateHeader: true,
       hasDateValue: true,
@@ -593,7 +1019,7 @@ final class SearchRenderTests: XCTestCase  {
     ))
 
     // 3. Body filtered, has body fields, date hidden -> should show row
-    XCTAssertTrue(macOSDocumentSearchView.shouldDisplayRow(
+    XCTAssertTrue(macosTableSearchView.shouldDisplayRow(
       hasBodyContent: true,
       showDateHeader: false,
       hasDateValue: false,
@@ -601,7 +1027,7 @@ final class SearchRenderTests: XCTestCase  {
     ))
 
     // 4. Body unfiltered, has body fields -> should show row
-    XCTAssertTrue(macOSDocumentSearchView.shouldDisplayRow(
+    XCTAssertTrue(macosTableSearchView.shouldDisplayRow(
       hasBodyContent: true,
       showDateHeader: true,
       hasDateValue: true,
@@ -609,7 +1035,7 @@ final class SearchRenderTests: XCTestCase  {
     ))
 
     // 5. Body unfiltered, has NO body fields but has date header & value -> should show row
-    XCTAssertTrue(macOSDocumentSearchView.shouldDisplayRow(
+    XCTAssertTrue(macosTableSearchView.shouldDisplayRow(
       hasBodyContent: false,
       showDateHeader: true,
       hasDateValue: true,
@@ -617,7 +1043,7 @@ final class SearchRenderTests: XCTestCase  {
     ))
 
     // 6. Body unfiltered, has NO body fields and date header hidden -> should NOT show row
-    XCTAssertFalse(macOSDocumentSearchView.shouldDisplayRow(
+    XCTAssertFalse(macosTableSearchView.shouldDisplayRow(
       hasBodyContent: false,
       showDateHeader: false,
       hasDateValue: true,
@@ -738,6 +1164,143 @@ final class SearchRenderTests: XCTestCase  {
     XCTAssertEqual(bodyFiltered.count, 1)
     XCTAssertEqual(bodyFiltered[0].squashedString, "event_time")
     XCTAssertFalse(bodyFiltered.contains(where: { $0.squashedString == "@timestamp" }))
+  }
+
+  func testSelectAllFieldsIfFewSelectsEveryFieldBelowLimit() {
+    let fields = (0..<9).map { SquashedFieldsArray(squashedString: "field\($0)", fieldParts: ["field\($0)"]) }
+    let inDocument = SquashedFieldsArray(squashedString: "field3", fieldParts: ["field3"])
+    let unmapped = SquashedFieldsArray(squashedString: "dynamic", fieldParts: ["dynamic"])
+
+    let selected = macosSearchMainView.selectAllFieldsIfFew(fields: fields, onlyVisibleFields: [inDocument, unmapped])
+
+    XCTAssertTrue(selected)
+    XCTAssertTrue(fields.allSatisfy { $0.visible })
+    XCTAssertTrue(inDocument.visible)
+    XCTAssertFalse(unmapped.visible)
+  }
+
+  func testSelectAllFieldsIfFewLeavesTenOrMoreFieldsUnselected() {
+    let fields = (0..<10).map { SquashedFieldsArray(squashedString: "field\($0)", fieldParts: ["field\($0)"]) }
+
+    let selected = macosSearchMainView.selectAllFieldsIfFew(fields: fields, onlyVisibleFields: fields)
+
+    XCTAssertFalse(selected)
+    XCTAssertTrue(fields.allSatisfy { !$0.visible })
+  }
+
+  func testSelectAllFieldsIfFewIgnoresEmptyFields() {
+    XCTAssertFalse(macosSearchMainView.selectAllFieldsIfFew(fields: [], onlyVisibleFields: []))
+  }
+
+  func testOrderSelectedFieldsFollowsDraggedOrder() {
+    let fields = ["@timestamp", "env", "hostname", "level", "message"].map {
+      SquashedFieldsArray(squashedString: $0, fieldParts: [$0])
+    }
+    func names(_ order: [String], pinned: String? = nil) -> [String] {
+      macosSearchFieldSheetView.orderSelectedFields(fields, order: order, pinnedKey: pinned).map { $0.squashedString }
+    }
+
+    // No order yet keeps the mapped order
+    XCTAssertEqual(names([]), ["@timestamp", "env", "hostname", "level", "message"])
+    // Ordered keys come first; the rest keep their mapped order after them, and unknown keys are ignored
+    XCTAssertEqual(names(["message", "gone", "env"]), ["message", "env", "@timestamp", "hostname", "level"])
+    // The date field stays first wherever the order puts it
+    XCTAssertEqual(names(["message", "@timestamp", "env"], pinned: "@timestamp"),
+                   ["@timestamp", "message", "env", "hostname", "level"])
+  }
+
+  func testMoveFieldOntoAnotherRow() {
+    let keys = ["env", "hostname", "level", "message"]
+    // Dragging down lands after the target, dragging up lands before it
+    XCTAssertEqual(macosSearchFieldSheetView.moveField("env", onto: "level", in: keys),
+                   ["hostname", "level", "env", "message"])
+    XCTAssertEqual(macosSearchFieldSheetView.moveField("message", onto: "hostname", in: keys),
+                   ["env", "message", "hostname", "level"])
+    XCTAssertEqual(macosSearchFieldSheetView.moveField("env", onto: "env", in: keys), keys)
+    XCTAssertEqual(macosSearchFieldSheetView.moveField("missing", onto: "env", in: keys), keys)
+  }
+
+  func testSelectedModeAndColumnsUseFieldOrder() {
+    let fields = ["@timestamp", "env", "hostname", "message"].map {
+      SquashedFieldsArray(squashedString: $0, fieldParts: [$0])
+    }
+    fields.forEach { $0.visible = true }
+    fields[2].visible = false
+    let order = ["message", "env"]
+
+    let listed = macosSearchFieldSheetView.filterFields(mode: .selected,
+                                                        fields: fields,
+                                                        onlyVisibleFields: [],
+                                                        searchText: "",
+                                                        fieldOrder: order,
+                                                        dateFieldKey: "@timestamp")
+    XCTAssertEqual(listed.map { $0.squashedString }, ["@timestamp", "message", "env"])
+
+    let columns = macosSearchMainView.computeBodyFilteredFields(fields: fields,
+                                                                activeDateField: fields[0],
+                                                                order: order)
+    XCTAssertEqual(columns.map { $0.squashedString }, ["message", "env"])
+  }
+
+  func testSidebarResizeMeasuresFromTheStartWidth() {
+    // Dragging the left edge left widens the sidebar, right narrows it
+    XCTAssertEqual(macosSearchMainView.resizedSidebarWidth(start: 300, translation: -50), 350)
+    XCTAssertEqual(macosSearchMainView.resizedSidebarWidth(start: 300, translation: 80), 220)
+    XCTAssertEqual(macosSearchMainView.resizedSidebarWidth(start: 300, translation: 0), 300)
+  }
+
+  func testSidebarResizeCapsAtTheMaximumAndHidesBelowTheMinimum() {
+    XCTAssertEqual(macosSearchMainView.resizedSidebarWidth(start: 300, translation: -500), 600)
+    XCTAssertEqual(macosSearchMainView.resizedSidebarWidth(start: 300, translation: 100), 200)
+    XCTAssertNil(macosSearchMainView.resizedSidebarWidth(start: 300, translation: 101))
+  }
+
+  func testDocumentPanelResizeMeasuresFromTheStartWidth() {
+    // Dragging the left edge left widens the panel, right narrows it
+    XCTAssertEqual(macosSearchMainView.resizedDocumentPanelWidth(start: 500, translation: -100, available: 1200), 600)
+    XCTAssertEqual(macosSearchMainView.resizedDocumentPanelWidth(start: 500, translation: 80, available: 1200), 420)
+    XCTAssertEqual(macosSearchMainView.resizedDocumentPanelWidth(start: 500, translation: 0, available: 1200), 500)
+  }
+
+  func testDocumentPanelResizeStopsAtTheMinimumRatherThanClosing() {
+    XCTAssertEqual(macosSearchMainView.resizedDocumentPanelWidth(start: 500, translation: 180, available: 1200), 320)
+    XCTAssertEqual(macosSearchMainView.resizedDocumentPanelWidth(start: 500, translation: 900, available: 1200), 320)
+  }
+
+  func testDocumentPanelResizeLeavesRoomForTheResults() {
+    XCTAssertEqual(macosSearchMainView.resizedDocumentPanelWidth(start: 500, translation: -500, available: 1200), 1000)
+    XCTAssertEqual(macosSearchMainView.resizedDocumentPanelWidth(start: 500, translation: -501, available: 1200), 1000)
+  }
+
+  func testDocumentPanelWidthFollowsItsShareAndKeepsTheMinimumInANarrowArea() {
+    XCTAssertEqual(macosSearchMainView.clampedDocumentPanelWidth(
+      macosSearchMainView.defaultDocumentPanelFraction * 1200, available: 1200), 600)
+    // Too narrow for both, so the panel keeps its minimum
+    XCTAssertEqual(macosSearchMainView.clampedDocumentPanelWidth(250, available: 400), 320)
+  }
+
+  func testFieldColumnResizeMeasuresFromTheStartWidth() {
+    // Dragging the divider right widens the Field column, left narrows it
+    XCTAssertEqual(DocumentFieldsGrid.resizedFieldColumnWidth(start: 264, translation: 100, panelWidth: 800), 364)
+    XCTAssertEqual(DocumentFieldsGrid.resizedFieldColumnWidth(start: 264, translation: -100, panelWidth: 800), 164)
+    XCTAssertEqual(DocumentFieldsGrid.resizedFieldColumnWidth(start: 264, translation: 0, panelWidth: 800), 264)
+  }
+
+  func testFieldColumnResizeStopsAtTheMinimum() {
+    XCTAssertEqual(DocumentFieldsGrid.resizedFieldColumnWidth(start: 264, translation: -124, panelWidth: 800), 140)
+    XCTAssertEqual(DocumentFieldsGrid.resizedFieldColumnWidth(start: 264, translation: -500, panelWidth: 800), 140)
+  }
+
+  func testFieldColumnResizeLeavesRoomForTheValues() {
+    // 600 less 30 padding, 16 spacing and a 120 Value column
+    XCTAssertEqual(DocumentFieldsGrid.resizedFieldColumnWidth(start: 264, translation: 170, panelWidth: 600), 434)
+    XCTAssertEqual(DocumentFieldsGrid.resizedFieldColumnWidth(start: 264, translation: 500, panelWidth: 600), 434)
+  }
+
+  func testFieldColumnKeepsItsMinimumInANarrowPanelAndItsWidthWhenWidenedAgain() {
+    XCTAssertEqual(DocumentFieldsGrid.clampedFieldColumnWidth(264, panelWidth: 250), 140)
+    XCTAssertEqual(DocumentFieldsGrid.clampedFieldColumnWidth(400, panelWidth: 400), 234)
+    XCTAssertEqual(DocumentFieldsGrid.clampedFieldColumnWidth(400, panelWidth: 800), 400)
   }
 #endif
 

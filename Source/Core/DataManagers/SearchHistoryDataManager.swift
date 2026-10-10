@@ -41,6 +41,7 @@ public class SearchHistoryDataManager: ObservableObject {
          let fields = sortObject.field?.eject() {
         filterHistory.sort = SortObject(order: sortObject.order, field: fields)
       }
+      filterHistory.fieldFilters = item.fieldFilters.map { $0.eject() }
       
       event.id = item.id
       event.filter = filterHistory
@@ -52,26 +53,32 @@ public class SearchHistoryDataManager: ObservableObject {
     }
   }
   
+  /// Moves searches saved in the older nested filter object into the fields the history reads,
+  /// so they show their query and time period and aren't mistaken for other searches.
+  /// macOS saved every search that way until field filters were added.
   public func migrateAwayFromFilterObjects() {
-    if let realm = RealmManager().getRealm() {  
-      for item in items {
-        if let filter = item.filter {
-          try? realm.write {
-            // new embedded object
-            if let dateField = filter.dateField?.copy() {
-              item.dateField = dateField
-            }
-            if let absoluteRange = filter.absoluteRange?.copy() {
-              item.absoluteRange = absoluteRange
-            }
-            if let relativeRange = filter.relativeRange?.copy() {
-              item.relativeRange = relativeRange
-            }
-            item.filter = nil
-          }
+    let saved = items.filter { $0.filter != nil }
+    guard !saved.isEmpty, let realm = RealmManager().getRealm() else { return }
+    try? realm.write {
+      for item in saved {
+        guard let filter = item.filter else { continue }
+        // new embedded object
+        if item.query == nil, let query = filter.query {
+          item.query = query.eject()
         }
+        if let dateField = filter.dateField?.copy() {
+          item.dateField = dateField
+        }
+        if let absoluteRange = filter.absoluteRange?.copy() {
+          item.absoluteRange = absoluteRange
+        }
+        if let relativeRange = filter.relativeRange?.copy() {
+          item.relativeRange = relativeRange
+        }
+        item.filter = nil
       }
     }
+    refresh()
   }
   
   /// Checks if two dates are in the same day
@@ -189,6 +196,8 @@ public class SearchHistoryDataManager: ObservableObject {
     // Do relative ranges match
     guard areRelativeRangeTheSame(currentEntry: currentItem, newEntry: newEntry) else { return false }
     guard areAbsoluteRangesTheSame(currentEntry: currentItem, newEntry: newEntry) else { return false }
+    // Do the field filters match
+    guard fieldFiltersMatch(currentEntry: currentItem, newEntry: newEntry) else { return false }
     
     return true
   }
@@ -203,6 +212,12 @@ public class SearchHistoryDataManager: ObservableObject {
     } else {
       return true
     }
+  }
+  
+  /// The same field filters in any order. Searches with different filters are kept apart.
+  public func fieldFiltersMatch(currentEntry: RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {
+    currentEntry.fieldFilters.map { $0.eject() }
+      .hasSameFilters(as: newEntry.fieldFilters.map { $0.eject() })
   }
   
   public func dateFieldMatches(currentEntry:RealmSearchEvent, newEntry: RealmSearchEvent) -> Bool {

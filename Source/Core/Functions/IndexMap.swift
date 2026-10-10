@@ -37,8 +37,9 @@ public class IndexMap {
     }
     
     // Process the parsed data into a structured array if available.
+    // A pattern such as _all maps a field once per index, so merge them into one field per path.
     if let mappingParsed = response.parsed {
-      result = await IndexMap.indexMappingsResponseToArray(mappingParsed)
+      result = IndexMap.mergeByPath(await IndexMap.indexMappingsResponseToArray(mappingParsed))
     }
     
     // Record the duration of the request in the response.
@@ -53,6 +54,32 @@ public class IndexMap {
     return result  // Return the array of structured index mappings.
   }
   
+  /// One field per path, in the order first seen. When indexes disagree on a field's type, the first type wins,
+  /// except that "date" beats "date_nanos", which beats anything else, so the field is still offered as a date field.
+  /// Unlike `DataViewPattern.mergeFields`, the type stays a single value that type checks such as `== "date"` match.
+  public static func mergeByPath(_ fields: [SquashedFieldsArray]) -> [SquashedFieldsArray] {
+    func rank(_ type: String) -> Int {
+      switch type {
+      case "date": return 2
+      case "date_nanos": return 1
+      default: return 0
+      }
+    }
+    var merged = [SquashedFieldsArray]()
+    var byPath = [String: SquashedFieldsArray]()
+    for field in fields {
+      if let existing = byPath[field.squashedString] {
+        if rank(field.type) > rank(existing.type) {
+          existing.type = field.type
+        }
+      } else {
+        byPath[field.squashedString] = field
+        merged.append(field)
+      }
+    }
+    return merged
+  }
+
   public static func indexMappingsResponseToArray(_ input: String) async -> [SquashedFieldsArray] {
     
     let data = Data(input.utf8)

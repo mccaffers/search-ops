@@ -16,6 +16,16 @@ public enum DeleteOperationKind: String, Identifiable, Sendable {
   public var id: String { rawValue }
 }
 
+/// Read-only mode blocks deleting documents from an index, it is on until the user turns it off in Settings
+public enum IndexManagementPreferences {
+  public static let readOnlyKey = "indexManagement.readOnly"
+  public static let readOnlyDefault = true
+
+  public static func isReadOnly(_ defaults: UserDefaults = .standard) -> Bool {
+    defaults.object(forKey: readOnlyKey) as? Bool ?? readOnlyDefault
+  }
+}
+
 /// A delete is tracked per host and index, only one may be active at a time
 public struct DeleteOperationKey: Hashable, Sendable {
   public let hostId: UUID

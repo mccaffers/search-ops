@@ -292,4 +292,40 @@ class ElasticDocumentBuilderTests: XCTestCase {
     let result = DocumentDetail.formatDisplayValue(input)
     XCTAssertEqual(result, "42")
   }
+
+  // Tests for DocumentDetail.filteredKeys
+  private let filterDocument: OrderedDictionary<String, Any> = [
+    "config.MAX_TRADES_PER_MINUTE": NSNumber(value: 60),
+    "batch": "2026-28",
+    "@timestamp": "2026-07-12T13:50:56Z",
+    "tags": ["alpha", "beta"],
+    "config.MAX_LOSS_PERCENT": NSNumber(value: 5),
+    "empty": "   ",
+  ]
+
+  func testFilteredKeys_blankQueryReturnsAllDisplayableKeysSorted() {
+    let expected = ["@timestamp", "batch", "config.MAX_LOSS_PERCENT", "config.MAX_TRADES_PER_MINUTE", "tags"]
+    XCTAssertEqual(DocumentDetail.filteredKeys(filterDocument, matching: ""), expected)
+    XCTAssertEqual(DocumentDetail.filteredKeys(filterDocument, matching: "  \n"), expected)
+  }
+
+  func testFilteredKeys_matchesKeyIgnoringCase() {
+    XCTAssertEqual(DocumentDetail.filteredKeys(filterDocument, matching: "max_loss"), ["config.MAX_LOSS_PERCENT"])
+    XCTAssertEqual(DocumentDetail.filteredKeys(filterDocument, matching: " Config.max "),
+                   ["config.MAX_LOSS_PERCENT", "config.MAX_TRADES_PER_MINUTE"])
+  }
+
+  func testFilteredKeys_matchesDisplayedValue() {
+    XCTAssertEqual(DocumentDetail.filteredKeys(filterDocument, matching: "60"), ["config.MAX_TRADES_PER_MINUTE"])
+    XCTAssertEqual(DocumentDetail.filteredKeys(filterDocument, matching: "2026-"), ["@timestamp", "batch"])
+    XCTAssertEqual(DocumentDetail.filteredKeys(filterDocument, matching: "BETA"), ["tags"])
+  }
+
+  func testFilteredKeys_skipsKeysWithNothingToShow() {
+    XCTAssertEqual(DocumentDetail.filteredKeys(filterDocument, matching: "empty"), [])
+  }
+
+  func testFilteredKeys_noMatchReturnsEmpty() {
+    XCTAssertEqual(DocumentDetail.filteredKeys(filterDocument, matching: "zzz"), [])
+  }
 }

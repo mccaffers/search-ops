@@ -233,4 +233,67 @@ final class DevConsoleTests: XCTestCase {
     XCTAssertEqual(session.lastRequest?.value(forHTTPHeaderField: "Authorization"), "ApiKey abc")
     XCTAssertEqual(session.lastRequest?.value(forHTTPHeaderField: "kbn-xsrf"), "true")
   }
+
+  // MARK: curl export
+
+  @MainActor
+  func testCurlCommandKeepsMethodPathAndBody() throws {
+    let request = try parse("GET /logs-*/_search\n{\n  \"query\": { \"match\": { \"msg\": \"it's\" } }\n}")
+    let command = DevConsoleCurlExporter.command(for: request, host: makeHost())
+
+    XCTAssertEqual(command, """
+    curl -X GET 'http://localhost:9200/logs-*/_search' \\
+      -H 'Content-Type: application/json' \\
+      --data-binary '{
+      "query": { "match": { "msg": "it'\\''s" } }
+    }'
+    """)
+  }
+
+  @MainActor
+  func testCurlCommandLeavesSecretsOut() throws {
+    let request = try parse("GET /_cluster/health")
+
+    let basic = makeHost()
+    basic.authenticationType = .UsernamePassword
+    basic.username = "elastic"
+    basic.password = "s3cret"
+    let basicCommand = DevConsoleCurlExporter.command(for: request, host: basic)
+    XCTAssertTrue(basicCommand.contains("-u 'elastic'"))
+    XCTAssertFalse(basicCommand.contains("s3cret"))
+
+    let apiKey = makeHost()
+    apiKey.authenticationType = .APIKey
+    apiKey.apiKey = "abc123"
+    let apiKeyCommand = DevConsoleCurlExporter.command(for: request, host: apiKey)
+    XCTAssertTrue(apiKeyCommand.contains("-H \"Authorization: ApiKey ${ES_API_KEY}\""))
+    XCTAssertTrue(apiKeyCommand.contains("-H 'kbn-xsrf: true'"))
+    XCTAssertFalse(apiKeyCommand.contains("abc123"))
+
+    let aws = makeHost()
+    aws.authenticationType = .AWSSigV4
+    aws.awsRegion = "eu-west-2"
+    aws.awsAccessKeyId = "AKIDEXAMPLE"
+    aws.awsSecretAccessKey = "wJalrXUtnFEMI"
+    aws.awsSessionToken = "session"
+    let awsCommand = DevConsoleCurlExporter.command(for: request, host: aws)
+    XCTAssertTrue(awsCommand.contains("--aws-sigv4 'aws:amz:eu-west-2:es'"))
+    XCTAssertTrue(awsCommand.contains("${AWS_SESSION_TOKEN}"))
+    XCTAssertFalse(awsCommand.contains("AKIDEXAMPLE"))
+    XCTAssertFalse(awsCommand.contains("wJalrXUtnFEMI"))
+  }
+
+  @MainActor
+  func testCurlCommandAddsCustomHeadersAndInsecureFlag() throws {
+    let host = makeHost()
+    host.host?.selfSignedCertificate = true
+    let header = Headers()
+    header.header = "X-Tenant"
+    header.value = "team-a"
+    host.customHeaders.append(header)
+
+    let command = DevConsoleCurlExporter.command(for: try parse("GET /"), host: host)
+    XCTAssertTrue(command.contains("--insecure"))
+    XCTAssertTrue(command.contains("-H 'X-Tenant: team-a'"))
+  }
 }

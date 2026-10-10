@@ -46,7 +46,9 @@ final class ResponseTests_Complex_v8: XCTestCase {
   func testFieldsResponse6() async throws {
     let response = try SearchOpsTests().OpenFile(filename: "response.6")
     let fields = Fields.getFields(input: response)
-    XCTAssertEqual(fields.count, 32)
+    // The five "data" fields are always {}, so they hold no value and aren't listed
+    XCTAssertEqual(fields.count, 27)
+    XCTAssertFalse(fields.contains(where: { $0.squashedString.hasSuffix("data") }))
   }
   
   func testFieldsResponse8() async throws {
@@ -102,10 +104,10 @@ final class ResponseTests_Complex_v8: XCTestCase {
     let innterExceptionOutput = Results.getValueForKey(fieldParts: innterExceptionField!.fieldParts, item:renderedObjects!.results[0])
     XCTAssert(innterExceptionOutput.contains("System.ArgumentOutOfRangeException"))
     
-    let innerExceptionDataField = renderedObjects!.headers.first(where: {$0.squashedString == "innerException.data"})
-    let innerExceptionDataOutput = Results.getValueForKey(fieldParts: innerExceptionDataField!.fieldParts, item:renderedObjects!.results[0])
-    print(innerExceptionDataOutput)
-    XCTAssertEqual(innerExceptionDataOutput.count, 1)
+    // innerException.data is always {}, so it holds no value and isn't listed
+    XCTAssertNil(renderedObjects!.headers.first(where: {$0.squashedString == "innerException.data"}))
+    let innerExceptionDataOutput = Results.getValueForKey(fieldParts: ["innerException", "data"], item:renderedObjects!.results[0])
+    XCTAssertEqual(innerExceptionDataOutput, [""])
   }
   
   // Verifies correct retrieval of values from arrays within the parsed fields, addressing complexities in JSON array handling.

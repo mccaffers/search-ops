@@ -210,3 +210,48 @@ class HostDetailsTests: XCTestCase {
   
   
 }
+
+class FilterObjectDateRangeSignatureTests: XCTestCase {
+
+  func testSignatureChangesWhenRelativePeriodChanges() {
+    let filter = FilterObject(relativeRange: RelativeRangeFilter(period: .Minutes, value: 5))
+    let before = filter.dateRangeSignature
+
+    filter.relativeRange = RelativeRangeFilter(period: .Days, value: 1)
+
+    XCTAssertNotEqual(before, filter.dateRangeSignature)
+  }
+
+  func testSignatureIsStableForTheSameRelativePeriod() {
+    let filter = FilterObject(relativeRange: RelativeRangeFilter(period: .Minutes, value: 5))
+    let before = filter.dateRangeSignature
+
+    filter.relativeRange = RelativeRangeFilter(period: .Minutes, value: 5)
+
+    XCTAssertEqual(before, filter.dateRangeSignature)
+  }
+
+  func testSignatureChangesWhenAbsoluteRangeIsEditedInPlace() {
+    let from = Date(timeIntervalSince1970: 1_000)
+    let filter = FilterObject(absoluteRange: AbsoluteDateRangeObject(from: from, to: from))
+    let before = filter.dateRangeSignature
+
+    filter.absoluteRange?.to = Date(timeIntervalSince1970: 2_000)
+    XCTAssertNotEqual(before, filter.dateRangeSignature)
+
+    let afterTo = filter.dateRangeSignature
+    filter.absoluteRange?.toNow = true
+    XCTAssertNotEqual(afterTo, filter.dateRangeSignature)
+  }
+
+  func testSignatureChangesWhenSwitchingRangeType() {
+    let filter = FilterObject(relativeRange: RelativeRangeFilter(period: .Hours, value: 1))
+    let before = filter.dateRangeSignature
+
+    filter.relativeRange = nil
+    filter.absoluteRange = AbsoluteDateRangeObject()
+
+    XCTAssertNotEqual(before, filter.dateRangeSignature)
+    XCTAssertNotEqual("none", filter.dateRangeSignature)
+  }
+}

@@ -15,7 +15,7 @@ struct macosSearchHistoryButton: View {
   
   var item : SearchEvent
   @Binding var firstSearchAfterSelectingIndex : Bool
-  var request : (_ selectedHost: HostDetails, _ selectedIndex: String, _ filterObject: FilterObject) -> ()
+  var request : SearchRequestAction
   var width : CGFloat
   var host: HostDetails
   var onDelete: (() -> ())? = nil
@@ -42,9 +42,13 @@ struct macosSearchHistoryButton: View {
           }
           filterObject.query = item.filter?.query
           filterObject.sort = item.filter?.sort
+          filterObject.fieldFilters = item.filter?.fieldFilters ?? []
           //      firstSearchAfterSelectingIndex = false
           
-          request(historySelectedHost, item.index, filterObject)
+          // Recent searches don't store the data view, so find it again by its pattern
+          let dataView = DataViewSelection.view(forHistoryIndex: item.index,
+                                                in: DataViewDataManager().views(hostId: historySelectedHost.id))
+          request(historySelectedHost, item.index, filterObject, dataView)
         }
         
       } label: {

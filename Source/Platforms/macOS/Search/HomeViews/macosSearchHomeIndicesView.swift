@@ -14,6 +14,8 @@ struct macosSearchHomeIndicesView: View {
   
   @Binding var localSelectedHost: HostDetails?
   @Binding var localSelectedIndex : String
+  /// When set, localSelectedIndex is its pattern and only the indexes it includes are shown
+  var selectedDataView: DataView? = nil
   @Binding var indexArray : [String]
   
   @Binding var selectedHost: HostDetails?
@@ -25,7 +27,7 @@ struct macosSearchHomeIndicesView: View {
   
   @ObservedObject var localFilterObject: FilterObject
   
-  var request : (_ selectedHost: HostDetails, _ selectedIndex: String, _ filterObject: FilterObject) -> ()
+  var request : SearchRequestAction
   var mappingsRequest : () async -> ()
   var updateIndexArray : () async -> ()
   
@@ -115,16 +117,11 @@ struct macosSearchHomeIndicesView: View {
             .font(.subheadline)
           
         }
+      } else if let dataView = selectedDataView {
+        dataViewIndices(for: dataView)
       } else if !localSelectedIndex.isEmpty {
         HStack {
-          Button(action: {
-            withAnimation {
-              localSelectedIndex = ""
-              indexFilterText = ""
-              localFilterObject.clear()
-              fields = []
-            }
-          }) {
+          Button(action: clearSelection) {
             Text(localSelectedIndex)
               .padding(10)
               .background(Color("Background"))
@@ -251,16 +248,7 @@ struct macosSearchHomeIndicesView: View {
             // TODO #2 we need to limit the filtered indices to say 30? something sensible, and if filtered display a [Too many to show]
             ForEach(IndexFilterHelper.limitIndices(filteredIndices), id: \.self) { indexName in
               Button(action: {
-                indexFilterText = ""
-                localFilterObject.resetIndexSpecificFilters()
-                withAnimation {
-                  localSelectedIndex = indexName
-                }
-                
-                Task {
-                  // mappings request
-                  await mappingsRequest()
-                }
+                selectIndex(indexName)
               }) {
                 Text(indexName)
                   .padding(10)
@@ -296,6 +284,77 @@ struct macosSearchHomeIndicesView: View {
     }
   }
   
+  /// The data view's pattern, which clears it, and how many indexes it includes (listed on hover)
+  @ViewBuilder
+  private func dataViewIndices(for dataView: DataView) -> some View {
+    let pattern = dataView.normalized().pattern
+    let included = DataViewSelection.matchingIndices(for: pattern, in: indexArray)
+
+    HStack(spacing: 8) {
+      Button(action: clearSelection) {
+        HStack(spacing: 6) {
+          Image(systemName: "rectangle.stack")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(Color("LabelBackgroundFocus"))
+          Text(pattern)
+            .font(.system(size: 13, design: .monospaced))
+          Image(systemName: "xmark")
+            .font(.system(size: 9, weight: .bold))
+            .foregroundColor(Color("TextSecondary"))
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 32)
+        .background(hoveringActiveButton ? Color("ButtonHighlighted") : Color("Background"))
+        .clipShape(.rect(cornerRadius: 5))
+        .overlay(
+          RoundedRectangle(cornerRadius: 5)
+            .stroke(Color("LabelBackgroundFocus"), lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(PlainButtonStyle())
+      .onHover { hover in
+        hoveringActiveButton = hover
+      }
+      .help("Stop using \(dataView.name)")
+
+      Text(included.isEmpty ? "No indexes yet" : (included.count == 1 ? "1 index" : "\(included.count) indexes"))
+        .font(.subheadline)
+        .foregroundColor(Color("TextSecondary"))
+        .help(Self.includedIndicesHelp(included))
+
+      Spacer()
+    }
+  }
+
+  /// The included indexes for the count's tooltip, up to 20 of them
+  static func includedIndicesHelp(_ included: [String]) -> String {
+    guard !included.isEmpty else { return "No indexes match this data view yet" }
+    let shown = included.prefix(20).joined(separator: "\n")
+    return included.count > 20 ? shown + "\n…and \(included.count - 20) more" : shown
+  }
+
+  private func selectIndex(_ indexName: String) {
+    indexFilterText = ""
+    localFilterObject.resetIndexSpecificFilters()
+    withAnimation {
+      localSelectedIndex = indexName
+    }
+    Task {
+      await mappingsRequest()
+    }
+  }
+
+  /// Clears the index, and with it any data view
+  private func clearSelection() {
+    withAnimation {
+      localSelectedIndex = ""
+      indexFilterText = ""
+      localFilterObject.clear()
+      fields = []
+    }
+  }
+
   private func handleRecentActivityToggle() {
     if isLoadingRecentActivity {
       activeSortTask?.cancel()
