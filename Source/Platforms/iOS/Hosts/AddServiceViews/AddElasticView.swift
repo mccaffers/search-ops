@@ -59,6 +59,7 @@ struct AddElasticView: View {
   @State var refresh = UUID()
   
   @State var showNavigationBar = false
+  @State private var connectionType : ConnectionType = .CloudID
   
   static func invalidContents(_ item: HostDetails) -> Bool {
     if item.cloudid.count > 0 || item.host?.url.count ?? 0 > 0 {
@@ -96,12 +97,14 @@ struct AddElasticView: View {
           
           ElasticConnectionDetails(item: $item,
                                    focusedField: _focusedField,
-                                   currentField: $currentField)
+                                   currentField: $currentField,
+                                   selection: $connectionType)
 
           
           HostAddDivider()
           
-          ElasticAuthenticationView(item: $item, focusedField: _focusedField, currentField: $currentField)
+          ElasticAuthenticationView(item: $item, focusedField: _focusedField, currentField: $currentField,
+                                    connectionType: connectionType)
           
           
           HostAddDivider()

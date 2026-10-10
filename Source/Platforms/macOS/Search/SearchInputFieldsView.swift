@@ -56,7 +56,10 @@ struct SearchInputFieldsView: View {
   @Binding var searchIndicator : Bool
   @State var rotationDegrees = 0.0
   
-  @Binding var textFieldWidth : CGFloat
+  var cursorRequest: TextFieldCursorRequest?
+  var onQueryEdit: (String, Int?, Bool) -> Void
+  var onQueryCommand: (CustomNSTextField.Command) -> Bool
+  var onQueryEndEditing: () -> Void
   
   var schedule: TimerInterval?
   
@@ -94,7 +97,12 @@ struct SearchInputFieldsView: View {
   var body: some View {
     HStack(spacing:5) {
       
-      CustomNSTextField(text: $searchText, onSubmit: handleSubmit)
+      CustomNSTextField(text: $searchText,
+                        onSubmit: handleSubmit,
+                        cursorRequest: cursorRequest,
+                        onEdit: onQueryEdit,
+                        onCommand: onQueryCommand,
+                        onEndEditing: onQueryEndEditing)
         .focused($focusedField, equals: identifer)
         .textFieldStyle(PlainTextFieldStyle())
         .padding(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 6))
@@ -116,17 +124,7 @@ struct SearchInputFieldsView: View {
           }
         })
         .showClearButton($searchText)
-        .background(
-          GeometryReader { geometry in
-            Color.clear
-              .onAppear {
-                textFieldWidth = geometry.size.width
-              }
-              .onChange(of: geometry.size.width) { newHeight in
-                textFieldWidth = newHeight
-              }
-          }
-        )
+        .anchorPreference(key: macosQueryFieldBoundsKey.self, value: .bounds) { $0 }
       
       
       Button {

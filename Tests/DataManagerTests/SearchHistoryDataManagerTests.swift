@@ -481,4 +481,92 @@ class SearchHistoryDataManagerTests: XCTestCase {
     
     XCTAssertFalse(dataManager.items.contains { !$0.isInvalidated && $0.id == targetId })
   }
+
+  // MARK: - Saving searches with field filters
+
+  @MainActor
+  private func filterObject(query: String, filters: [FieldFilter] = []) -> FilterObject {
+    let filterObject = FilterObject()
+    filterObject.query = QueryObject()
+    filterObject.query?.values.append(QueryFilterObject(string: query))
+    filterObject.dateField = SquashedFieldsArray(squashedString: "@timestamp")
+    filterObject.relativeRange = RelativeRangeFilter(period: .Hours, value: 6)
+    filterObject.sort = SortObject(order: .Descending, field: SquashedFieldsArray(squashedString: "@timestamp"))
+    filterObject.fieldFilters = filters
+    return filterObject
+  }
+
+  @MainActor
+  private func saved(host: UUID) -> [SearchEvent] {
+    dataManager.refresh()
+    return dataManager.staticList().filter { $0.host == host }
+  }
+
+  @MainActor
+  func testSavedSearchKeepsItsQueryTimePeriodSortAndFilters() throws {
+    let host = UUID()
+    let filters = [FieldFilter(field: "hostname", value: "live-trading"),
+                   FieldFilter(field: "env", value: "demo", negated: true, disabled: true)]
+    dataManager.addNew(item: RealmSearchEvent.make(host: host, index: "logs-*",
+                                                   filterObject: filterObject(query: "error", filters: filters)))
+
+    let events = saved(host: host)
+    XCTAssertEqual(events.count, 1)
+    let restored = try XCTUnwrap(events.first?.filter)
+    XCTAssertEqual(events.first?.index, "logs-*")
+    XCTAssertEqual(restored.query?.values.first?.string, "error")
+    XCTAssertEqual(restored.dateField?.squashedString, "@timestamp")
+    XCTAssertEqual(restored.relativeRange?.value, 6)
+    XCTAssertEqual(restored.relativeRange?.period, .Hours)
+    XCTAssertEqual(restored.sort?.order, .Descending)
+    XCTAssertEqual(restored.sort?.field.squashedString, "@timestamp")
+    XCTAssertTrue(restored.fieldFilters.hasSameFilters(as: filters))
+  }
+
+  @MainActor
+  func testDifferentQueriesOnTheSameIndexAreSavedApart() {
+    let host = UUID()
+    dataManager.addNew(item: RealmSearchEvent.make(host: host, index: "logs-*", filterObject: filterObject(query: "error")))
+    dataManager.refresh()
+    dataManager.addNew(item: RealmSearchEvent.make(host: host, index: "logs-*", filterObject: filterObject(query: "warn")))
+
+    XCTAssertEqual(Set(saved(host: host).compactMap { $0.filter?.query?.values.first?.string }), ["error", "warn"])
+  }
+
+  @MainActor
+  func testDifferentFieldFiltersAreSavedApart() {
+    let host = UUID()
+    let demo = FieldFilter(field: "env", value: "demo")
+    let live = FieldFilter(field: "hostname", value: "live-trading")
+    dataManager.addNew(item: RealmSearchEvent.make(host: host, index: "logs-*", filterObject: filterObject(query: "error")))
+    dataManager.refresh()
+    dataManager.addNew(item: RealmSearchEvent.make(host: host, index: "logs-*",
+                                                   filterObject: filterObject(query: "error", filters: [demo, live])))
+    dataManager.refresh()
+    // The same filters in another order are the same search
+    dataManager.addNew(item: RealmSearchEvent.make(host: host, index: "logs-*",
+                                                   filterObject: filterObject(query: "error", filters: [live, demo])))
+
+    XCTAssertEqual(saved(host: host).map { $0.filter?.fieldFilters.count ?? -1 }.sorted(), [0, 2])
+  }
+
+  @MainActor
+  func testOlderNestedFilterSearchesMoveToTheFieldsTheHistoryReads() throws {
+    let host = UUID()
+    let event = RealmSearchEvent()
+    event.host = host
+    event.index = "logs-*"
+    event.filter = filterObject(query: "error").ejectRealmObject()
+    dataManager.addNew(item: event)
+    dataManager.refresh()
+
+    dataManager.migrateAwayFromFilterObjects()
+
+    let stored = try XCTUnwrap(dataManager.items.first { $0.host == host })
+    XCTAssertNil(stored.filter)
+    let restored = try XCTUnwrap(saved(host: host).first?.filter)
+    XCTAssertEqual(restored.query?.values.first?.string, "error")
+    XCTAssertEqual(restored.dateField?.squashedString, "@timestamp")
+    XCTAssertEqual(restored.relativeRange?.value, 6)
+  }
 }

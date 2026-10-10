@@ -33,6 +33,7 @@ struct macosHostsView: View {
 
       // we want to delete the history if the user deletes the host
       searchHistoryManager.deleteByHost(id: hostID)
+      DataViewDataManager().deleteByHost(id: hostID)
     }
     items = serverObjects.items
     // Action to save or process the new host name

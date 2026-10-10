@@ -31,4 +31,38 @@ public enum AuthenticationTypes: String, PersistableEnum {
   case AuthToken = "Auth Token"
   case APIToken = "API Token"
   case APIKey = "API Key"
+  case AWSSigV4 = "AWS Signature V4"
+
+  // SigV4 signs the host URL, so it isn't offered for Elastic Cloud IDs
+  public static func available(for connectionType: ConnectionType) -> [AuthenticationTypes] {
+    return allCases.filter { $0.isAvailable(for: connectionType) }
+  }
+
+  public func isAvailable(for connectionType: ConnectionType) -> Bool {
+    return self != .AWSSigV4 || connectionType == .URL
+  }
+
+  // Short label for the macOS button row
+  public var shortName: String {
+    switch self {
+    case .AWSSigV4:
+      return "AWS SigV4"
+    default:
+      return rawValue
+    }
+  }
+}
+
+public enum AWSService: String, PersistableEnum {
+  case es
+  case aoss
+
+  public var displayName: String {
+    switch self {
+    case .es:
+      return "OpenSearch Service (es)"
+    case .aoss:
+      return "OpenSearch Serverless (aoss)"
+    }
+  }
 }

@@ -12,36 +12,26 @@ import XCTest
 final class SystemLoggerBufferTests: XCTestCase {
   
   var logWriter: SystemLogBufferWritter!
+  var logsDirectoryURL: URL!
   
   override func setUp() {
     super.setUp()
-    logWriter = SystemLogBufferWritter()
-    // Clean up test files if any from previous tests
-    cleanUpTestFiles()
+    // Each test gets its own folder so parallel test runs can't delete each other's files
+    logsDirectoryURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("SystemLogTests-\(UUID().uuidString)", isDirectory: true)
+    logWriter = SystemLogBufferWritter(logsDirectory: logsDirectoryURL)
+    
+    // The buffer is shared, start each test empty and inside the flush interval
+    // so entries stay in the buffer until the test decides to flush them
+    SystemLogBufferWritter.queue.sync {
+      SystemLogBufferWritter.buffer = ""
+      SystemLogBufferWritter.lastFlushDate = Date()
+    }
   }
   
   override func tearDown() {
-    // Clean up after each test
-    cleanUpTestFiles()
+    try? FileManager.default.removeItem(at: logsDirectoryURL)
     super.tearDown()
-  }
-  
-  /// Cleans up the "log" directory from the caches directory, removing all contained test files and the directory itself.
-  func cleanUpTestFiles() {
-    let fileManager = FileManager.default
-    do {
-      // Fetch the URL for the caches directory.
-      let documentsURL = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-      // Create the full path to the "log" directory.
-      let logDirectoryURL = documentsURL.appendingPathComponent("log")
-      
-      // Check if the "log" directory exists and remove it if it does.
-      if fileManager.fileExists(atPath: logDirectoryURL.path) {
-        try fileManager.removeItem(at: logDirectoryURL)
-      }
-    } catch {
-      print("Failed to clean up the log directory: \(error)")
-    }
   }
   
   /// Tests the logging of a message with the INFO level to ensure the buffer correctly includes
@@ -124,12 +114,12 @@ final class SystemLoggerBufferTests: XCTestCase {
     wait(for: [asyncWait], timeout: 2)
     
     // List files in the log directory and verify that a new file has been created
-    let files = SystemLogManager().listLogFiles()
+    let files = logWriter.listLogFiles()
     XCTAssertEqual(files.count, 1, "There should be exactly one log file in the directory.")
     
     // Verify that the created file contains the expected content
     if let fileName = files.first {
-      if let content = SystemLogManager().readFromFileInDocuments(fileName: fileName) {
+      if let content = logWriter.readFromFileInDocuments(fileName: fileName) {
         XCTAssertTrue(content.contains("First log entry"), "First log entry should be written to the file.")
         XCTAssertTrue(content.contains("Second log entry"), "Second log entry should be written to the file.")
       } else {

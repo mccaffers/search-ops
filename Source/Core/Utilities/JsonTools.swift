@@ -12,7 +12,7 @@ import SwiftyJSON
 public class JsonTools {
   
   public static func serialiseJson(_ input: String) -> [String: Any]? {
-    if input.count == 0 {
+    if input.isEmpty {
       return nil
     }
     
@@ -30,7 +30,7 @@ public class JsonTools {
   }
   
   public static func swiftySerialiser(_ input: String) -> JSON? {
-    if input.count == 0 {
+    if input.isEmpty {
       return nil
     }
     

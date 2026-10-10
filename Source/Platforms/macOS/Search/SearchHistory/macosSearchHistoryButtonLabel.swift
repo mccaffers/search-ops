@@ -16,6 +16,14 @@ struct macosSearchHistoryButtonLabel: View {
   
   var labelTextColor = Color("macosHomeLabels")
 
+  /// One line per filter, eg. "hostname: live-trading" or "NOT env: demo", with "(off)" for disabled ones.
+  static func filtersHelp(_ filters: [FieldFilter]) -> String {
+    filters.map { filter in
+      "\(filter.negated ? "NOT " : "")\(filter.field): \(filter.value)\(filter.disabled ? " (off)" : "")"
+    }
+    .joined(separator: "\n")
+  }
+
   var body: some View {
     VStack (spacing:0){
       
@@ -32,13 +40,20 @@ struct macosSearchHistoryButtonLabel: View {
             .frame(width: width*0.15, alignment:.leading)
           
           
-          if let searchTerm =  item.filter?.query?.values.first?.string {
-            Text(searchTerm)
-              .frame(width: width*0.4, alignment:.leading)
-          } else {
-            Text("*")
-              .frame(width: width*0.4, alignment:.leading)
+          HStack(spacing: 6) {
+            Text(item.filter?.query?.values.first?.string ?? "*")
+              .lineLimit(1)
+              .truncationMode(.tail)
+            
+            if let fieldFilters = item.filter?.fieldFilters, !fieldFilters.isEmpty {
+              Text("· \(fieldFilters.count) \(fieldFilters.count == 1 ? "filter" : "filters")")
+                .font(.system(size: 12))
+                .foregroundColor(Color("TextSecondary"))
+                .fixedSize()
+                .help(macosSearchHistoryButtonLabel.filtersHelp(fieldFilters))
+            }
           }
+          .frame(width: width*0.4, alignment:.leading)
           
           if let dateField = item.filter?.dateField {
             if let relativeRange = item.filter?.relativeRange {

@@ -34,6 +34,9 @@ struct macosSearchHomeViewCollection: View {
   
   @State var localSelectedHost: HostDetails?
   @State var localSelectedIndex : String = ""
+  // The data view chosen on the home screen; localSelectedIndex is then its pattern
+  @State var localSelectedDataView: DataView? = nil
+  @State var dataViews: [DataView] = []
   @State var loadingIndices : Bool = false
   @State var loadingFieldsMapping : Bool = false
   
@@ -47,11 +50,13 @@ struct macosSearchHomeViewCollection: View {
   
   @Binding var sidebar : sideBar
   
-  var request : (_ selectedHost: HostDetails, _ selectedIndex: String, _ filterObject: FilterObject) -> ()
+  var request : SearchRequestAction
   
   func unselectedHost() {
     localSelectedHost = nil
     localSelectedIndex = ""
+    localSelectedDataView = nil
+    dataViews = []
     indexArray = []
     localFilterObject.clear()
 //    withAnimation {
@@ -64,6 +69,7 @@ struct macosSearchHomeViewCollection: View {
       localSelectedHost = host
       showing = .NewSearch
 //    }
+    loadDataViews()
     Task {
       await updateIndexArray()
     }
@@ -101,10 +107,23 @@ struct macosSearchHomeViewCollection: View {
     loadingIndices = false
   }
   
+  /// The host's data views, read again each time so edits made in Manage show up
+  func loadDataViews() {
+    guard let host = localSelectedHost, !host.isInvalidated else {
+      dataViews = []
+      localSelectedDataView = nil
+      return
+    }
+    dataViews = DataViewDataManager().views(hostId: host.id)
+    // Keep the chosen view up to date, or drop it if it was deleted
+    localSelectedDataView = localSelectedDataView.flatMap { chosen in dataViews.first { $0.id == chosen.id } }
+  }
+
   func mappingRequest() async {
     loadingFieldsMapping = true
     if let localSelectedHost = localSelectedHost {
-      fields = await IndexMap.indexMappings(serverDetails: localSelectedHost, index: localSelectedIndex)
+      // A pattern's mapping lists each field once per index; one of each is enough to pick from
+      fields = DataViewPattern.mergeFields(await IndexMap.indexMappings(serverDetails: localSelectedHost, index: localSelectedIndex))
     }
     loadingFieldsMapping = false
     
@@ -135,6 +154,8 @@ struct macosSearchHomeViewCollection: View {
           } else {
             macosSearchHomeView(localSelectedHost: $localSelectedHost,
                                 localSelectedIndex: $localSelectedIndex,
+                                localSelectedDataView: $localSelectedDataView,
+                                dataViews: $dataViews,
                                 localFilterObject: localFilterObject,
                                 indexArray: $indexArray,
                                 showing: $showing,
@@ -173,6 +194,12 @@ struct macosSearchHomeViewCollection: View {
       .padding(.leading, 3)
       .padding(.trailing, 5)
       .padding(.bottom, 5)
+      // Search stays loaded behind the other tabs, so read the data views again on the way back from Manage
+      .onChange(of: sidebar) { newValue in
+        if newValue == .hidden {
+          loadDataViews()
+        }
+      }
       // TODO fix dates reseting to NOW
       .onChange(of: localFilterObject.absoluteRange?.from) { newValue in
         fromDate = localFilterObject.absoluteRange?.from ?? Date.now

@@ -66,7 +66,8 @@ public class SystemLogBufferWritter : SystemLogManager {
   /// - Parameter fileName: The name of the file to which the buffer will be written.
   func flushBuffer() {
     if !SystemLogBufferWritter.buffer.isEmpty {
-      SystemLogManager().appendToFileInDocuments(content: SystemLogBufferWritter.buffer)
+      // Write through this instance so a custom logs folder is respected
+      appendToFileInDocuments(content: SystemLogBufferWritter.buffer)
       SystemLogBufferWritter.buffer = ""  // Clears the buffer after writing.
     }
   }

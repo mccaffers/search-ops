@@ -19,11 +19,12 @@ struct macosSearchRouter: View {
   @State var macosSearchRouterPath : macosSearchRouterPath = .WelcomeScreen
   @State var selectedHost: HostDetails?
   @State var selectedIndex: String = ""
+  // The data view the search was started from; selectedIndex is then its pattern
+  @State var selectedDataView: DataView? = nil
   
   // ContentView needs to know to capture click events
   // and modify the background color for the title bar
   @Binding var selection: macosSearchViewEnum
-  @Binding var showingTextFieldSuggestions : Bool
   @Binding var fullScreen : Bool
   @Binding var sidebar : sideBar
   
@@ -32,14 +33,17 @@ struct macosSearchRouter: View {
   
   @StateObject var filterObject : FilterObject = FilterObject()
   
-  func request(selectedHost: HostDetails, selectedIndex: String, filterObject: FilterObject) {
+  func request(selectedHost: HostDetails, selectedIndex: String, filterObject: FilterObject, dataView: DataView?) {
     self.selectedHost = selectedHost
     self.selectedIndex = selectedIndex
+    self.selectedDataView = DataViewSelection.keep(dataView, forIndex: selectedIndex)
     self.filterObject.dateField = filterObject.dateField
     self.filterObject.relativeRange = filterObject.relativeRange
     self.filterObject.absoluteRange = filterObject.absoluteRange
     self.filterObject.sort = filterObject.sort
     self.filterObject.query = filterObject.query
+    // A new search from the home screen has none, so this clears the last search's chips too
+    self.filterObject.fieldFilters = filterObject.fieldFilters
     macosSearchRouterPath = .MainSearch
   }
   
@@ -56,10 +60,10 @@ struct macosSearchRouter: View {
                           serverObjects: serverObjects,
                           selectedHost:$selectedHost,
                           selectedIndex: $selectedIndex,
+                          selectedDataView: $selectedDataView,
                           filterObject:filterObject, 
                           selection: $selection,
-                          fullScreen: $fullScreen,
-                          showingTextFieldSuggestions: $showingTextFieldSuggestions)
+                          fullScreen: $fullScreen)
     }
   }
 }

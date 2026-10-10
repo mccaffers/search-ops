@@ -7,32 +7,7 @@
 // ---------------------------------------
 
 import SwiftUI
-
-struct FieldButtonHover: View {
-    @State private var isHovered = false
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-              Image(systemName: "chevron.up")
-            .padding(.horizontal, 2)
-            .padding(.vertical, 4)
-            .background(Color.gray)
-            .clipShape(RoundedRectangle(cornerRadius: 5))
-            .opacity(isHovered ? 0.7 : 0.1)
-            .onHover { hovering in
-                withAnimation {
-                    isHovered = hovering
-                }
-            }
-        }
-        .niceButton(
-            foregroundColor: .white,
-            backgroundColor: .clear,
-            pressedColor: .clear
-        )
-    }
-}
+import UniformTypeIdentifiers
 
 struct FieldTypeView: View {
     var type: String
@@ -71,43 +46,14 @@ struct FieldTypeView: View {
     }
 }
 
-
-struct FieldActiveButton: View {
-  var isDate: Bool
-    var isSelected: Bool
-    var action: () -> Void
-  
-  func symbol(active: Bool) -> String {
-    if active {
-      if isDate {
-        return "bolt.circle.fill"
-      } else {
-        return "circle.fill"
-      }
-    } else {
-      if isDate {
-        return "bolt.circle"
-      } else {
-        return "circle"
-      }
-    }
-  }
-
-    var body: some View {
-      Image(systemName: symbol(active:isSelected))
-            .font(.system(size: 14))
-            .contentShape(Rectangle())
-    }
-}
-
 struct FieldButton : View {
   
-  var field: SquashedFieldsArray
-  @Binding var renderedObjects: RenderObject?
+  @ObservedObject var field: SquashedFieldsArray
   var onHide: (SquashedFieldsArray) -> Void
   var onAdd: (SquashedFieldsArray) -> Void
-  
-  @State var isFocused = false
+  var showsDragHandle = false
+  /// The data view's label for the field, shown with the path underneath
+  var label: String? = nil
   
   @State var isHovering = false
   
@@ -122,53 +68,39 @@ struct FieldButton : View {
     Button {
       if field.visible {
         onHide(field)
-//        isFocused = false
       } else {
         onAdd(field)
-//        isFocused = true
       }
-      
-//      if field.type != "date" {
-//        if isFocused {
-//          onHide(field)
-//          isFocused = false
-//        } else {
-//          onAdd(field)
-//          isFocused = true
-//        }
-//      } else {
-//        if renderedObjects?.dateField?.fieldParts != field.fieldParts {
-//            renderedObjects?.dateField = field
-//        } else {
-//            renderedObjects?.dateField = nil
-//        }
-//      }
     } label: {
       HStack(spacing:4) {
-        
-//        FieldActiveButton(isDate: false,
-//                          isSelected: isFocused) {}
-        
-        Text(field.squashedString)
-          .font(.system(size: 12))
-          .padding(.vertical, 8)
+        if showsDragHandle {
+          Image(systemName: "line.3.horizontal")
+            .font(.system(size: 10))
+            .foregroundStyle(Color("TextSecondary"))
+            .opacity(isHovering ? 1 : 0.5)
+            .padding(.trailing, 2)
+        }
+        if let label = label {
+          VStack(alignment: .leading, spacing: 1) {
+            Text(label)
+              .font(.system(size: 12, weight: .medium))
+            Text(field.squashedString)
+              .font(.system(size: 10, design: .monospaced))
+              .foregroundStyle(Color("TextSecondary"))
+          }
+          .padding(.vertical, 6)
+          .help(field.squashedString)
+        } else {
+          Text(field.squashedString)
+            .font(.system(size: 12))
+            .padding(.vertical, 8)
+        }
       
-        
         Spacer()
 
         Group {
-//          if field.type != "date" {
-//            FieldActiveButton(isDate: field.type == "date",
-//                              isSelected: isFocused) {}
-//          } else {
-//            FieldActiveButton(isDate: field.type == "date",
-//                              isSelected: renderedObjects?.dateField?.fieldParts == field.fieldParts) {}
-//          }
-          
-        
           FieldTypeView(type: field.type)
         }
-        
       }
       .padding(.horizontal, 5)
       .background(isHovering ? Color("BackgroundAlt2") : shouldHighlight())
@@ -181,23 +113,55 @@ struct FieldButton : View {
     }
   }
 }
+
+/// Moves the dragged field into the hovered row's place as the drag passes over it.
+struct FieldReorderDropDelegate: DropDelegate {
+  let targetKey: String
+  @Binding var draggingKey: String?
+  let onMove: (_ key: String, _ target: String) -> Void
+
+  func dropEntered(info: DropInfo) {
+    guard let key = draggingKey, key != targetKey else { return }
+    withAnimation(.easeInOut(duration: 0.15)) {
+      onMove(key, targetKey)
+    }
+  }
+
+  func dropUpdated(info: DropInfo) -> DropProposal? {
+    DropProposal(operation: .move)
+  }
+
+  func performDrop(info: DropInfo) -> Bool {
+    draggingKey = nil
+    return true
+  }
+}
+
 struct FieldsList: View {
     var fields: [SquashedFieldsArray]
-    @EnvironmentObject var filterObject: FilterObject
-    @Binding var renderedObjects: RenderObject?
 
     var onHide: (SquashedFieldsArray) -> Void
     var onAdd: (SquashedFieldsArray) -> Void
+    /// Set to let rows be dragged into a new order. Called with the dragged key and the key of the row it's over.
+    var onMove: ((_ key: String, _ target: String) -> Void)? = nil
+    /// A row that stays put and can't be dragged or dropped on, such as the date field.
+    var pinnedKey: String? = nil
+    /// The data view's field labels, shown above the field paths
+    var labels: [String: String] = [:]
+
+  @State private var draggingKey: String?
 
   var body: some View {
     LazyVStack(spacing:0) {
-      ForEach(fields.indices, id: \.self) { index in
+      ForEach(Array(fields.enumerated()), id: \.element.id) { index, field in
+        let canMove = onMove != nil && field.squashedString != pinnedKey
         VStack(spacing: 0) {
           
-          FieldButton(field: fields[index], 
-                      renderedObjects: $renderedObjects,
+          FieldButton(field: field,
                       onHide: onHide,
-                      onAdd: onAdd)
+                      onAdd: onAdd,
+                      showsDragHandle: canMove,
+                      label: DataViewSelection.label(for: field.squashedString, labels: labels))
           if index != (fields.count-1) {
             Rectangle().fill(Color("macosDivider").opacity(0.3))
               .frame(maxWidth: .infinity)
@@ -207,59 +171,33 @@ struct FieldsList: View {
           }
           
         }
+        .opacity(draggingKey == field.squashedString ? 0.4 : 1)
+        .modifier(FieldReorderModifier(key: field.squashedString,
+                                       draggingKey: $draggingKey,
+                                       onMove: canMove ? onMove : nil))
       }
     }
   
   }
+}
 
-    private func renderSortButton(for item: SquashedFieldsArray) -> some View {
-        if item.type == "date" {
-            if let dateField = renderedObjects?.dateField, filterObject.sort != nil {
-                return AnyView(
-                    Button {
-                        if filterObject.sort?.order == .Descending {
-                            filterObject.sort = SortObject(order: .Ascending, field: item)
-                        } else {
-                            filterObject.sort = SortObject(order: .Descending, field: item)
-                        }
-                    } label: {
-                        Image(systemName: filterObject.sort?.order == .Ascending ? "chevron.up" : "chevron.down")
-                        .padding(.horizontal, 2)
-                        .padding(.vertical, 4)
-                            .background(Color.gray)
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
-                    }
-                    .niceButton(
-                        foregroundColor: .white,
-                        backgroundColor: .clear,
-                        pressedColor: .clear
-                    )
-                )
-            } else {
-              return AnyView(EmptyView())
-            }
-        } else {
-          return AnyView(EmptyView())
-        }
-    }
+private struct FieldReorderModifier: ViewModifier {
+  let key: String
+  @Binding var draggingKey: String?
+  let onMove: ((_ key: String, _ target: String) -> Void)?
 
-    private func renderVisibilityButton(for item: SquashedFieldsArray) -> some View {
-        if item.type != "date" {
-          return AnyView(FieldActiveButton(isDate: false, isSelected: item.visible) {
-                if !item.visible {
-                    onAdd(item)
-                } else {
-                    onHide(item)
-                }
-            })
-        } else {
-            return AnyView(FieldActiveButton(isDate: true, isSelected: renderedObjects?.dateField?.fieldParts == item.fieldParts) {
-                if renderedObjects?.dateField?.fieldParts != item.fieldParts {
-                    renderedObjects?.dateField = item
-                } else {
-                    renderedObjects?.dateField = nil
-                }
-            })
+  func body(content: Content) -> some View {
+    if let onMove = onMove {
+      content
+        .onDrag {
+          draggingKey = key
+          return NSItemProvider(object: key as NSString)
         }
+        .onDrop(of: [UTType.text], delegate: FieldReorderDropDelegate(targetKey: key,
+                                                                      draggingKey: $draggingKey,
+                                                                      onMove: onMove))
+    } else {
+      content
     }
+  }
 }

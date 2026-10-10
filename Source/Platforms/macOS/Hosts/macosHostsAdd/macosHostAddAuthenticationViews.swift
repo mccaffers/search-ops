@@ -11,12 +11,18 @@ struct macosHostAddAuthenticationViews: View {
   @Binding var host: HostDetails
   var item: HostDetails? = nil
   var offset: CGFloat
+  var connectionType: ConnectionType
   
   @State private var username: String = ""
   @State private var password: String = ""
   @State private var authToken: String = ""
   @State private var apiToken: String = ""
   @State private var apiKey: String = ""
+  @State private var awsAccessKeyId: String = ""
+  @State private var awsSecretAccessKey: String = ""
+  @State private var awsSessionToken: String = ""
+  @State private var awsRegion: String = ""
+  @State private var awsService: AWSService = .es
   
   @State private var authType: AuthenticationTypes = .None
   
@@ -37,11 +43,11 @@ struct macosHostAddAuthenticationViews: View {
         .foregroundStyle(Color("TextSecondary"))
       
       HStack(spacing: 5) {
-        ForEach(AuthenticationTypes.allCases, id: \.self) { type in
+        ForEach(AuthenticationTypes.available(for: connectionType), id: \.self) { type in
           Button {
             authType = type
           } label: {
-            Text(type.rawValue)
+            Text(type.shortName)
               .padding(10)
               .background(authType == type ? Color("ButtonHighlighted") : Color("Button"))
               .clipShape(RoundedRectangle(cornerRadius: 5))
@@ -51,24 +57,31 @@ struct macosHostAddAuthenticationViews: View {
         }
       }
       .onAppear {
-        if let item = item {
+        // Every field loads from host, the working copy, so unsaved edits
+        // survive the form being rebuilt after Test Connection
+        let currentType = host.authenticationType
+        if item != nil {
           // if there is animation offset, the view is just appearing,
           // lets delay the authentication appearing for 0.3 seconds
           let delay = offset != 0 ? 0.4 : 0
           DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             withAnimation {
-              authType = item.authenticationType
-              host.authenticationType = item.authenticationType
+              authType = currentType
             }
           }
         } else {
-          self.authType = host.authenticationType
+          self.authType = currentType
         }
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .onChange(of: authType) { newValue in
       host.authenticationType = newValue
+    }
+    .onChange(of: connectionType) { newValue in
+      if !authType.isAvailable(for: newValue) {
+        authType = .None
+      }
     }
   }
   
@@ -92,6 +105,8 @@ struct macosHostAddAuthenticationViews: View {
         apiTokenField
       case .APIKey:
         apiKeyField
+      case .AWSSigV4:
+        awsSigV4Fields
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -113,12 +128,7 @@ struct macosHostAddAuthenticationViews: View {
           host.username = newValue
         }
         .onAppear {
-          if let item = item {
-            username = item.username
-            host.username = item.username
-          } else {
-            self.username = host.username
-          }
+          self.username = host.username
         }
       
       SecureField("Password", text: $password)
@@ -135,12 +145,7 @@ struct macosHostAddAuthenticationViews: View {
           host.password = newValue
         }
         .onAppear {
-          if let item = item {
-            password = item.password
-            host.password = item.password
-          } else {
-            self.password = host.password
-          }
+          self.password = host.password
         }
     }
   }
@@ -160,12 +165,7 @@ struct macosHostAddAuthenticationViews: View {
         host.authToken = newValue
       }
       .onAppear {
-        if let item = item {
-          authToken = item.authToken
-          host.authToken = item.authToken
-        } else {
-          self.authToken = host.authToken
-        }
+        self.authToken = host.authToken
       }
   }
   
@@ -184,12 +184,7 @@ struct macosHostAddAuthenticationViews: View {
         host.apiToken = newValue
       }
       .onAppear {
-        if let item = item {
-          apiToken = item.apiToken
-          host.apiToken = item.apiToken
-        } else {
-          self.apiToken = host.apiToken
-        }
+        self.apiToken = host.apiToken
       }
   }
   
@@ -208,12 +203,96 @@ struct macosHostAddAuthenticationViews: View {
         host.apiKey = newValue
       }
       .onAppear {
-        if let item = item {
-          apiKey = item.apiKey
-          host.apiKey = item.apiKey
-        } else {
-          self.apiKey = host.apiKey
-        }
+        self.apiKey = host.apiKey
       }
   }
+  
+  private func authTextField(_ title: String, text: Binding<String>, secure: Bool = false) -> some View {
+    Group {
+      if secure {
+        SecureField(title, text: text)
+      } else {
+        TextField(title, text: text)
+      }
+    }
+    .textFieldStyle(PlainTextFieldStyle())
+    .padding(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 6))
+    .frame(height: 36)
+    .background(Color("Button"))
+    .clipShape(.rect(cornerRadius: 5))
+    .overlay(
+      RoundedRectangle(cornerRadius: 5)
+        .stroke(Color("BackgroundAlt"), lineWidth: 1)
+      )
+  }
+  
+  private var awsSigV4Fields: some View {
+    VStack(alignment: .leading, spacing: 5) {
+      authTextField("Access Key ID", text: $awsAccessKeyId)
+        .onChange(of: awsAccessKeyId) { newValue in
+          host.awsAccessKeyId = newValue
+        }
+      
+      authTextField("Secret Access Key", text: $awsSecretAccessKey, secure: true)
+        .onChange(of: awsSecretAccessKey) { newValue in
+          host.awsSecretAccessKey = newValue
+        }
+      
+      authTextField("Session Token (optional)", text: $awsSessionToken, secure: true)
+        .onChange(of: awsSessionToken) { newValue in
+          host.awsSessionToken = newValue
+        }
+      
+      HStack(spacing: 5) {
+        authTextField("Region (eg. eu-west-2)", text: $awsRegion)
+          .onChange(of: awsRegion) { newValue in
+            host.awsRegion = newValue
+          }
+        
+        HStack(spacing: 5) {
+          ForEach(AWSService.allCases, id: \.self) { service in
+            Button {
+              awsService = service
+            } label: {
+              Text(service.rawValue)
+                .padding(10)
+                .background(awsService == service ? Color("ButtonHighlighted") : Color("Button"))
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .contentShape(Rectangle())
+                .help(service.displayName)
+            }
+            .buttonStyle(PlainButtonStyle())
+          }
+        }
+        .onChange(of: awsService) { newValue in
+          host.awsService = newValue
+        }
+      }
+      
+      Text("Use an IAM user's access keys, or temporary credentials with a session token. Custom headers named Authorization, Host, Content-Type or X-Amz-* aren't sent.")
+        .font(.system(size: 11))
+        .foregroundStyle(Color("TextSecondary"))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .onAppear {
+      awsAccessKeyId = host.awsAccessKeyId
+      awsSecretAccessKey = host.awsSecretAccessKey
+      awsSessionToken = host.awsSessionToken
+      awsRegion = host.awsRegion
+      awsService = host.awsService
+      
+      // Pre-fill region and service from the endpoint, the user can override them
+      if awsRegion.isEmpty, let detected = AWSEndpoint.detect(host.host?.url ?? "") {
+        awsRegion = detected.region
+        awsService = detected.service
+      }
+      
+      host.awsAccessKeyId = awsAccessKeyId
+      host.awsSecretAccessKey = awsSecretAccessKey
+      host.awsSessionToken = awsSessionToken
+      host.awsRegion = awsRegion
+      host.awsService = awsService
+    }
+  }
+
 }

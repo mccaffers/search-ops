@@ -4,11 +4,11 @@
 
 This repository contains the complete open-source iOS and macOS applications for SearchOps. The entire application source code is available on GitHub, including all UI components, business logic, and features for authenticating and querying Elasticsearch & OpenSearch instances.
 
-I'm sharing SearchOps with a **Convenience Pricing Model** - the complete source code is freely available here, providing transparency, with pre-built versions are available on the App Store for those who prefer the convenience of automatic updates and easy installation. 
+I'm sharing SearchOps with a **Convenience Pricing Model** - the complete source code is freely available here, providing transparency, while pre-built versions are available on the App Store for those who prefer the convenience of automatic updates and easy installation. 
 
 <a href="https://apps.apple.com/us/app/search-ops/id6453696339?platform=iphone"><img width=20% src="./AppStore.svg"></a>
 
-> If you get value, I appreciate purchasing via the Apple App Store, which supports further development of the application and gets you automated updates. If you can't purchase right now, feel free to download and compile directly from source from here straight on to your device (iPhone/iPad or macOS). I'm an independent developer building software that I find useful. If you have any feedback or suggestions do send me a message. Thanks for dropping by! <br/> ***@mccaffers (Ryan McCaffery)***
+> If you get value, I appreciate purchasing via the Apple App Store, which supports further development of the application and gets you automated updates. If you can't purchase right now, feel free to download and compile directly from source onto your device (iPhone/iPad or macOS). I'm an independent developer building software that I find useful. If you have any feedback or suggestions do send me a message. Thanks for dropping by! <br/> ***@mccaffers (Ryan McCaffery)***
 
 ## Development
 
@@ -40,6 +40,15 @@ Available on the Apple App Store for iOS and macOS platforms
 
 ## Screenshots
 
+### macOS
+
+<img align="left" width=46% src="./Screenshots/macos-tableview.png" alt="Search results in a table with the mapped fields sidebar" style="padding:10px">
+<img align="left" width=46% src="./Screenshots/macos-document.png" alt="Document panel" style="padding:10px">
+
+<br clear="left"/>
+
+### iOS
+
 <img align="left" width=25% src="./Screenshots/listview.png" style="padding:10px">
 <img align="left" width=25% src="./Screenshots/tableview.png" style="padding:10px">
 <img align="left" width=25% src="./Screenshots/document.png" style="padding:10px">
@@ -69,7 +78,7 @@ Privacy & Transparency:
 * Uses a local on device database (Realm) with encryption on
 
 Local Database
-* This package utilities a local Realm Database (https://github.com/realm/realm-swift). By default, this packages enables encryption and disabled metrics.
+* This package utilizes a local Realm Database (https://github.com/realm/realm-swift). By default, this package enables encryption and disables metrics.
 
 Testing
 * Swift testing with various responses `./Tests/Resources`

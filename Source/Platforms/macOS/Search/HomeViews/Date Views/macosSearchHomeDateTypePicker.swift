@@ -14,6 +14,13 @@ struct macosSearchHomeDateTypePicker: View {
   @Binding var selection: macosSearchViewEnum
   @Binding var fields : [SquashedFieldsArray]
   @Binding var loadingFieldsMapping : Bool
+  /// The chosen data view's time field, to say where the selected date field came from
+  var dataViewTimeField: String? = nil
+
+  private var dateFieldIsFromDataView: Bool {
+    guard let timeField = dataViewTimeField, !timeField.isEmpty else { return false }
+    return localFilterObject.dateField?.squashedString == timeField
+  }
   
   var filteredFields : [SquashedFieldsArray] {
     fields.filter { $0.type == "date"}
@@ -27,9 +34,16 @@ struct macosSearchHomeDateTypePicker: View {
     VStack (alignment:.leading) {
       HStack (alignment:.top){
         VStack (alignment: .leading, spacing:5){
-          Text("Date Fields")
-            .font(.subheadline)
-            .foregroundStyle(Color("TextSecondary"))
+          HStack(spacing: 5) {
+            Text("Date Fields")
+              .font(.subheadline)
+              .foregroundStyle(Color("TextSecondary"))
+            if dateFieldIsFromDataView {
+              Text("· from the data view")
+                .font(.subheadline)
+                .foregroundStyle(Color("LabelBackgroundFocus"))
+            }
+          }
           
           
           if loadingFieldsMapping {

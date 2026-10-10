@@ -36,6 +36,10 @@ struct macosSearchSideBar: View {
   @Binding var selectedIndex: String
   @Binding var updatedFieldsNotification : UUID
   @Binding var renderedObjects: RenderObject?
+  @Binding var fieldOrder: [String]
+  var dateFieldKey: String?
+  /// The data view's field labels
+  var labels: [String: String] = [:]
   @State var refresh : UUID?
   @EnvironmentObject var hostsUpdated : HostUpdatedNotifier
 //  @Binding var sidebar : sideBar
@@ -53,7 +57,15 @@ struct macosSearchSideBar: View {
       return 0.5 - (value * 0.05)
   }
 
-  @State var showMapped = true
+  @State var fieldListMode: FieldListMode = .mapped
+
+  var fieldCount: Int {
+    switch fieldListMode {
+    case .mapped: return fields.count
+    case .inDocuments: return onlyVisibleFields.count
+    case .selected: return fields.filter { $0.visible }.count
+    }
+  }
 
   var body: some View {
     
@@ -88,47 +100,54 @@ struct macosSearchSideBar: View {
             HStack {
 
               HStack(alignment: .bottom, spacing:4){
-                if showMapped {
-                  Text("All mapped fields")
-                  Text(fields.count.string)
-                    .font(.footnote)
-                    .foregroundStyle(Color("TextSecondary"))
-                  
-                } else {
-                  
-                  Text("Only visible fields")
-                  Text(onlyVisibleFields.count.string)
-                    .font(.footnote)
-                    .foregroundStyle(Color("TextSecondary"))
-                }
+                Text(fieldListMode.title)
+                Text(fieldCount.string)
+                  .font(.footnote)
+                  .foregroundStyle(Color("TextSecondary"))
               }.padding(.leading, 2)
              
               Spacer()
               
-              Button {
-                showMapped.toggle()
-                refreshFields = UUID()
-              } label: {
-                Group {
-                  if showMapped {
-                    Image(systemName: "wand.and.stars")
-                  } else {
-                    Text("all")
+              HStack(spacing: 2) {
+                ForEach(FieldListMode.allCases, id: \.self) { mode in
+                  Button {
+                    fieldListMode = mode
+                    refreshFields = UUID()
+                  } label: {
+                    Image(systemName: mode.systemImage)
+                      .font(.system(size: 12))
+                      .frame(width: 26, height: 26)
+                      .background(fieldListMode == mode ? Color("BackgroundAlt3") : Color.clear)
+                      .clipShape(.rect(cornerRadius: 4))
+                      .contentShape(Rectangle())
                   }
+                  .buttonStyle(PlainButtonStyle())
+                  .help(mode.help)
                 }
-                  .font(.system(size: 12))
-                  .padding(.horizontal, 8)
-                  .frame(height: 30)
-                  .background(Color("Button"))
-                  .clipShape(.rect(cornerRadius: 5))
               }
-              .buttonStyle(PlainButtonStyle())
+              .padding(2)
+              .background(Color("Button"))
+              .clipShape(.rect(cornerRadius: 5))
            
             }
             .padding(.top, 5)
             
-            TextField("", text: $fieldsSearchtext)
-              .textFieldStyle(PlainTextFieldStyle())
+            HStack(spacing: 6) {
+              TextField("", text: $fieldsSearchtext)
+                .textFieldStyle(PlainTextFieldStyle())
+
+              if !fieldsSearchtext.isEmpty {
+                Button(action: {
+                  fieldsSearchtext = ""
+                }) {
+                  Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(Color("TextSecondary"))
+                    .font(.system(size: 12))
+                }
+                .buttonStyle(PlainButtonStyle())
+                .help("Clear search")
+              }
+            }
               .padding(EdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 6))
               .frame(height: 30)
               .background(Color("Button"))
@@ -143,11 +162,13 @@ struct macosSearchSideBar: View {
             macosSearchFieldSheetView(loading: searchIndicator,
                                       selectedIndex: selectedIndex,
                                       fields: $fields,
-                                      renderedObjects: $renderedObjects,
                                       updatedFieldsNotification: $updatedFieldsNotification,
                                       onlyVisibleFields: $onlyVisibleFields,
-                                      showMapped:showMapped, 
-                                      fieldsSearchtext: $fieldsSearchtext)
+                                      mode: fieldListMode,
+                                      fieldsSearchtext: $fieldsSearchtext,
+                                      fieldOrder: $fieldOrder,
+                                      dateFieldKey: dateFieldKey,
+                                      labels: labels)
             .id(refreshFields)
            
 

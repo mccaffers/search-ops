@@ -10,7 +10,9 @@ import SwiftUI
 
 struct macosSidebarIndicesDropdownView: View {
   @Binding var selectedIndex: String
+  @Binding var selectedDataView: DataView?
   @State private var indexArray = [String]()
+  @State private var dataViews = [DataView]()
   @Binding var showingScreen: SideBarWrapper
   @Binding var selection: macosSearchViewEnum
   @ObservedObject var filterObject : FilterObject
@@ -31,10 +33,16 @@ struct macosSidebarIndicesDropdownView: View {
         indexError: $indexError,
         selectedIndex: $selectedIndex,
         indexArray: indexArray,
+        dataViews: dataViews,
+        selectedDataView: selectedDataView,
+        dataViewAction: selectDataView,
         searchAction: {
+          // A plain index, so no data view
+          selectedDataView = nil
           firstSearchAfterSelectingIndex = true
           shouldClearTextfield = true
           filterObject.resetIndexSpecificFilters()
+          filterObject.clearFieldFilters()
           filterObject.query = nil
           showingScreen = SideBarWrapper(sender: .Flow, item: .Fields)
           selection = .None
@@ -60,6 +68,29 @@ struct macosSidebarIndicesDropdownView: View {
     }
   }
   
+  /// Searches the view's pattern by its time field, as choosing it on the home screen does
+  private func selectDataView(_ view: DataView) {
+    let pattern = view.normalized().pattern
+    if selectedIndex == pattern && selectedDataView?.id == view.id {
+      selection = .None
+      return
+    }
+    firstSearchAfterSelectingIndex = true
+    shouldClearTextfield = true
+    filterObject.resetIndexSpecificFilters()
+    filterObject.clearFieldFilters()
+    filterObject.query = nil
+    if let timeField = DataViewSelection.timeField(of: view) {
+      filterObject.dateField = timeField
+      filterObject.sort = SortObject(order: .Descending, field: timeField)
+    }
+    selectedDataView = view
+    selectedIndex = pattern
+    showingScreen = SideBarWrapper(sender: .Flow, item: .Fields)
+    selection = .None
+    request()
+  }
+
   @MainActor
   private func updateIndexArray() async {
     do {
@@ -77,6 +108,7 @@ struct macosSidebarIndicesDropdownView: View {
         } else {
           indexArray = indexResult.data
           selectedIndex = indexArray.isEmpty ? "" : selectedIndex
+          dataViews = selectedHost.isInvalidated ? [] : DataViewDataManager().views(hostId: selectedHost.id)
         }
       } else {
         indexError = ResponseError(title: "Response Error", message: "No data received", type: .critical)
@@ -91,6 +123,9 @@ struct macosSidebarIndicesDropdownContentView: View {
   @Binding var indexError: ResponseError?
   @Binding var selectedIndex: String
   var indexArray: [String]
+  var dataViews: [DataView] = []
+  var selectedDataView: DataView? = nil
+  var dataViewAction: (DataView) -> Void = { _ in }
   var searchAction: () -> Void
   var hideAction: () -> ()
   
@@ -98,6 +133,15 @@ struct macosSidebarIndicesDropdownContentView: View {
   
   var filteredIndices: [String] {
     IndexFilterHelper.filter(indices: indexArray, query: searchText)
+  }
+
+  /// Data views whose name or pattern contains the search text
+  var filteredDataViews: [DataView] {
+    let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return dataViews }
+    return dataViews.filter {
+      $0.name.localizedCaseInsensitiveContains(trimmed) || $0.pattern.localizedCaseInsensitiveContains(trimmed)
+    }
   }
   
   var showAll: Bool {
@@ -109,10 +153,12 @@ struct macosSidebarIndicesDropdownContentView: View {
   }
   
   var totalListHeight: CGFloat {
+    // Data view rows have two lines, and each group has a heading
+    let dataViewsHeight: CGFloat = filteredDataViews.isEmpty ? 0 : CGFloat(filteredDataViews.count * 46) + 56
     if totalItemCount == 0 {
-      return 60
+      return 60 + dataViewsHeight
     }
-    return CGFloat(totalItemCount * 40)
+    return CGFloat(totalItemCount * 40) + dataViewsHeight
   }
   
   var maxPopupHeight: CGFloat {
@@ -201,6 +247,9 @@ struct macosSidebarIndicesDropdownContentView: View {
         macosIndiceList(
           selectedIndex: $selectedIndex,
           indexArray: filteredIndices,
+          dataViews: filteredDataViews,
+          selectedDataView: selectedDataView,
+          dataViewAction: dataViewAction,
           showAll: showAll,
           searchAction: searchAction,
           hideAction: hideAction

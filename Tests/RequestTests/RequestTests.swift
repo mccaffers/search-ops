@@ -109,6 +109,25 @@ final class RequestTests: XCTestCase {
     }
   }
   
+  // Tests that an explicit method overrides the body-based GET / POST default.
+  func testMethodOverride() async throws {
+    Request.mockedSession = MockURLSession(response: "{}")
+
+    let esDetails = HostDetails()
+
+    let defaultGet = await Request().invoke(serverDetails: esDetails, endpoint: "/")
+    XCTAssertEqual(defaultGet.method, "GET")
+
+    let defaultPost = await Request().invoke(serverDetails: esDetails, endpoint: "/", json: "{}")
+    XCTAssertEqual(defaultPost.method, "POST")
+
+    let overridden = await Request().invoke(serverDetails: esDetails, endpoint: "/_tasks/n1:1/_cancel", method: "POST")
+    XCTAssertEqual(overridden.method, "POST")
+
+    let overriddenWithBody = await Request().invoke(serverDetails: esDetails, endpoint: "/", json: "{}", method: "PUT")
+    XCTAssertEqual(overriddenWithBody.method, "PUT")
+  }
+
   // Tests the system's error handling by simulating a throwing condition within the request method.
   func testThrowingRequest() async throws {
     // Sets up a mocked session that simulates an exception, such as a network error.

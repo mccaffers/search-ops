@@ -16,8 +16,8 @@ class SystemLoggerDifferentFileSizeTests: XCTestCase {
   
   override func setUp() {
     super.setUp()
-    logManager = SystemLogManager()
     setupTestLogsDirectory()
+    logManager = SystemLogManager(logsDirectory: testLogsDirectory)
   }
   
   override func tearDown() {
@@ -26,8 +26,9 @@ class SystemLoggerDifferentFileSizeTests: XCTestCase {
   }
   
   func setupTestLogsDirectory() {
-    let cachesDirectory = try! fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-    testLogsDirectory = cachesDirectory.appendingPathComponent("log")
+    // Each test gets its own folder so parallel test runs can't collide
+    testLogsDirectory = fileManager.temporaryDirectory
+      .appendingPathComponent("SystemLogTests-\(UUID().uuidString)", isDirectory: true)
     if !fileManager.fileExists(atPath: testLogsDirectory.path) {
       try! fileManager.createDirectory(at: testLogsDirectory, withIntermediateDirectories: true, attributes: nil)
     }

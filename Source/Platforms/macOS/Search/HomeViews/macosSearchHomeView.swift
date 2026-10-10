@@ -15,12 +15,14 @@ struct macosSearchHomeView: View {
   
   @Binding var localSelectedHost: HostDetails?
   @Binding var localSelectedIndex : String
+  @Binding var localSelectedDataView: DataView?
+  @Binding var dataViews: [DataView]
   @ObservedObject var localFilterObject : FilterObject
   
   @Binding var indexArray : [String]
   @Binding var showing : macosSearchWelcomeScreenMainView
   
-  var request : (_ selectedHost: HostDetails, _ selectedIndex: String, _ filterObject: FilterObject) -> ()
+  var request : SearchRequestAction
   
   var unselectedHost : () -> ()
   
@@ -73,23 +75,36 @@ struct macosSearchHomeView: View {
                                    selectedHost: selectedHostFunc)
           
           if showing == .NewSearch {
-            macosSearchHomeIndicesView(localSelectedHost: $localSelectedHost,
-                                       localSelectedIndex: $localSelectedIndex,
-                                       indexArray: $indexArray,
-                                       selectedHost: $localSelectedHost,
-                                       selectedIndex: $localSelectedIndex,
-                                       fields:$fields,
-                                       loadingIndices:$loadingIndices,
-                                       indexError: $indexError,
-                                       localFilterObject: localFilterObject,
-                                       request: request,
-                                       mappingsRequest: mappingRequest,
-                                       updateIndexArray: updateIndexArray)
+            // Hidden once a plain index is picked, and back when it's cleared
+            if !dataViews.isEmpty && (localSelectedIndex.isEmpty || localSelectedDataView != nil) {
+              macosSearchHomeDataViewsView(dataViews: dataViews,
+                                           selectedDataView: localSelectedDataView,
+                                           onSelect: selectDataView,
+                                           onClear: clearIndexSelection,
+                                           onNew: { sidebar = .manage })
+            }
+
+              macosSearchHomeIndicesView(localSelectedHost: $localSelectedHost,
+                                         localSelectedIndex: $localSelectedIndex,
+                                         selectedDataView: localSelectedDataView,
+                                         indexArray: $indexArray,
+                                         selectedHost: $localSelectedHost,
+                                         selectedIndex: $localSelectedIndex,
+                                         fields:$fields,
+                                         loadingIndices:$loadingIndices,
+                                         indexError: $indexError,
+                                         localFilterObject: localFilterObject,
+                                         request: request,
+                                         mappingsRequest: mappingRequest,
+                                         updateIndexArray: updateIndexArray)
+          
+            
             
             macosSearchHomeDateTypePicker(localFilterObject: localFilterObject,
                                           selection:.constant(.None),
                                           fields: $fields,
-                                          loadingFieldsMapping: $loadingFieldsMapping)
+                                          loadingFieldsMapping: $loadingFieldsMapping,
+                                          dataViewTimeField: localSelectedDataView?.timeField)
             .redacted(reason: localSelectedIndex.isEmpty ? .placeholder : [])
             
             if localFilterObject.dateField != nil {
@@ -120,7 +135,7 @@ struct macosSearchHomeView: View {
               Button {
                 Task {
                   if let localSelectedHost = localSelectedHost {
-                    request(localSelectedHost, localSelectedIndex, localFilterObject)
+                    request(localSelectedHost, localSelectedIndex, localFilterObject, localSelectedDataView)
                   }
                   
                 }
@@ -152,14 +167,56 @@ struct macosSearchHomeView: View {
         fields = []
         localSelectedHost = nil
         localSelectedIndex = ""
+        localSelectedDataView = nil
         indexArray = []
         
         // Can't nil the filterObject, but must clear the internal fields
         localFilterObject.clear()
       }
     }
+    .onChange(of: localSelectedIndex) { newValue in
+      // Picking anything other than the view's pattern, eg. one of its indexes, leaves the data view
+      localSelectedDataView = DataViewSelection.keep(localSelectedDataView, forIndex: newValue)
+    }
   }
-  
+
+  /// Searches the view's pattern, then picks its time field once the mapping has loaded
+  private func selectDataView(_ view: DataView) {
+    localFilterObject.resetIndexSpecificFilters()
+    withAnimation {
+      localSelectedIndex = view.normalized().pattern
+    }
+    // Set after the index, so the index change keeps it
+    localSelectedDataView = view
+    Task {
+      await mappingRequest()
+      applyTimeField(of: view)
+    }
+  }
+
+  /// As clicking the field under Date Fields would: a descending sort on it, and no time range yet
+  private func applyTimeField(of view: DataView) {
+    guard localSelectedDataView?.id == view.id, !view.timeField.isEmpty,
+          let field = fields.first(where: { $0.squashedString == view.timeField && $0.type == "date" }) else {
+      return
+    }
+    withAnimation {
+      localFilterObject.dateField = field
+      localFilterObject.sort = SortObject(order: .Descending, field: field)
+    }
+    localFilterObject.relativeRange = nil
+    localFilterObject.absoluteRange = nil
+  }
+
+  /// Clears the data view and index, as the selected index button does
+  private func clearIndexSelection() {
+    withAnimation {
+      localSelectedIndex = ""
+      localSelectedDataView = nil
+      localFilterObject.clear()
+      fields = []
+    }
+  }
 }
 #endif
 

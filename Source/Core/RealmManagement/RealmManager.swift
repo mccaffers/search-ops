@@ -12,32 +12,60 @@ import RealmSwift
 @available(macOS 13, *)
 public class RealmManager : RealmManagerProtocol {
   
-  public static let schemaVersion : UInt64 = 6
+  // 8: RealmDataView and RealmFieldLabel. New classes only, so the migration block needs nothing
+  // 9: LogEvent source and truncated flags. Empty and false are right for older events, so nothing to migrate
+  // 10: RealmSearchEvent field filters. Older searches had none, so the empty list needs nothing
+  public static let schemaVersion : UInt64 = 10
   
+  // Debug builds only: launching with SEARCHOPS_IN_MEMORY_STORE=1 keeps the database in memory,
+  // so the app never reads the encryption key from the Keychain or writes a realm file.
+  // Unsigned dev builds can then run without a Keychain prompt, and nothing entered outlives the app
+  public static let inMemoryStoreVariable = "SEARCHOPS_IN_MEMORY_STORE"
+
   private let realmClient: RealmClientProtocol
   private let realmUtilities: RealmUtilitiesProtocol
-  
+  private let environment: [String: String]
+
   // Enable the injection a different realm client for testing
   public init(realmClient: RealmClientProtocol = RealmClient(),
-              realmUtilities: RealmUtilitiesProtocol = RealmUtilities()) {
+              realmUtilities: RealmUtilitiesProtocol = RealmUtilities(),
+              environment: [String: String] = ProcessInfo.processInfo.environment) {
     self.realmClient = realmClient
     self.realmUtilities = realmUtilities
+    self.environment = environment
+  }
+
+  var inMemoryStoreRequested: Bool {
+#if DEBUG
+    return environment[RealmManager.inMemoryStoreVariable] == "1"
+#else
+    return false
+#endif
   }
   
   @MainActor
   private static var realmInstance: Realm?
     
-  private func getRealmConfig() -> Realm.Configuration {
-      let migrationBlock: MigrationBlock = { migration, oldSchemaVersion in
-          if oldSchemaVersion < 3 {
-              migration.enumerateObjects(ofType: LogFilter.className()) { oldObject, newObject in
-                  newObject!["dateField"] = oldObject!["dateField"] as! RealmSquashedFieldsArray
-              }
-              migration.enumerateObjects(ofType: RealmFilterObject.className()) { oldObject, newObject in
-                  newObject!["dateField"] = oldObject!["dateField"] as! RealmSquashedFieldsArray
-              }
+  static let migrationBlock: MigrationBlock = { migration, oldSchemaVersion in
+      if oldSchemaVersion < 3 {
+          migration.enumerateObjects(ofType: LogFilter.className()) { oldObject, newObject in
+              newObject!["dateField"] = oldObject!["dateField"] as! RealmSquashedFieldsArray
+          }
+          migration.enumerateObjects(ofType: RealmFilterObject.className()) { oldObject, newObject in
+              newObject!["dateField"] = oldObject!["dateField"] as! RealmSquashedFieldsArray
           }
       }
+      if oldSchemaVersion < 7 {
+          // New columns start empty, not at the Swift default, and "" isn't
+          // an AWSService, so reading it would crash. The AWS strings can stay empty.
+          migration.enumerateObjects(ofType: HostDetails.className()) { _, newObject in
+              newObject?["awsService"] = AWSService.es.rawValue
+          }
+      }
+  }
+    
+  private func getRealmConfig() -> Realm.Configuration {
+      let migrationBlock = RealmManager.migrationBlock
       
       do {
           return try Realm.Configuration(
@@ -77,7 +105,7 @@ public class RealmManager : RealmManagerProtocol {
     }
     
     // Use the getKey() function to get the stored encryption key or create a new one
-    if inMemory {
+    if inMemory || inMemoryStoreRequested {
       SystemLogger().message("Loading in memory instance without encryption", level: .warn)
       config = getRealmConfigInMemory()
     } else {

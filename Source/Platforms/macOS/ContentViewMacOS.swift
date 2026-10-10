@@ -15,6 +15,7 @@ public enum sideBar {
   case settings
   case hidden
   case develop
+  case manage
 }
 
 enum macosSearchViewEnum: Hashable {
@@ -106,7 +107,6 @@ struct ContentViewMacOS: View {
   @State var selection: macosSearchViewEnum = .None
   
   @State var refreshMainView = UUID()
-  @State var showingTextFieldSuggestions = false
   
   @StateObject var hostsUpdated = HostUpdatedNotifier()
   @StateObject var searchHistoryManager = SearchHistoryDataManager()
@@ -146,17 +146,11 @@ struct ContentViewMacOS: View {
           ZStack {
             
             macosSearchRouter(selection:$selection, 
-                              showingTextFieldSuggestions: $showingTextFieldSuggestions,
                               fullScreen: $fullScreen,
                               sidebar: $sidebar,
                               serverObjects: serverObjects,
                               searchHistoryManager: searchHistoryManager)
               .opacity(sidebar == .hidden ? 1 : 0)
-              .simultaneousGesture(TapGesture().onEnded({
-                if showingTextFieldSuggestions {
-                  showingTextFieldSuggestions = false
-                }
-              }))
               .id(refreshMainView)
               .onChange(of: hostsUpdated.updated) { newValue in
                 refreshMainView = UUID()
@@ -174,7 +168,13 @@ struct ContentViewMacOS: View {
                              searchHistoryManager: searchHistoryManager,
                              selection: $selection)
             } else if sidebar == .develop {
-              macosDevelopView(fullScreen: $fullScreen)
+              macosDevelopView(fullScreen: $fullScreen,
+                               serverObjects: serverObjects,
+                               hostsUpdated: hostsUpdated)
+            } else if sidebar == .manage {
+              macosManageHostsView(fullScreen: $fullScreen,
+                                   serverObjects: serverObjects,
+                                   hostsUpdated: hostsUpdated)
             }
           }
           .environmentObject(hostsUpdated)
@@ -193,6 +193,12 @@ struct ContentViewMacOS: View {
     })
     .background(Color("Background") )
     .background(WindowConfigurator(minFullScreenContentSize: NSSize(width: 400, height: 300)))
+    .onAppear {
+      // Safety net for data views left behind by a host deleted elsewhere
+      DataViewDataManager().pruneOrphans(validHostIds: Set(serverObjects.items.filter { !$0.isInvalidated }.map(\.id)))
+      // Recent searches saved before field filters kept everything in a nested filter object
+      searchHistoryManager.migrateAwayFromFilterObjects()
+    }
     
   }
 }

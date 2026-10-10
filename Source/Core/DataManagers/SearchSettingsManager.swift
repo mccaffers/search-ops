@@ -16,6 +16,31 @@ public class SettingsDataManager: ObservableObject {
   @Published
   public var settings: ApplicationSettings? = nil
   
+  public static let defaultDocumentsPerPage = 25
+  // Elasticsearch rejects requests where from + size exceeds index.max_result_window (10,000 by default)
+  public static let documentsPerPageRange = 1...10_000
+  // Quick picks offered next to the documents per page field, any other value is a custom one
+  public static let documentsPerPagePresets = [25, 50, 100, 200]
+
+  /// The preset matching a saved documents per page value, or nil when the value is a custom one
+  public static func documentsPerPagePreset(matching value: Int) -> Int? {
+    documentsPerPagePresets.contains(value) ? value : nil
+  }
+
+  /// Parses a documents per page value typed by the user, returning nil when it isn't a whole number in range
+  public static func parseDocumentsPerPage(_ input: String) -> Int? {
+    guard let value = Int(input.trimmingCharacters(in: .whitespaces)),
+          documentsPerPageRange.contains(value) else {
+      return nil
+    }
+    return value
+  }
+  
+  /// The saved documents per page, or the default when no settings could be read
+  public var documentsPerPage: Int {
+    settings?.maximumDocumentsPerPage ?? Self.defaultDocumentsPerPage
+  }
+  
   @MainActor
   public init() {
     self.settings = readServer()

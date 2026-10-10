@@ -234,23 +234,73 @@ final class HostsDataManagerTests: XCTestCase {
   func testUpdateAuthentication_ToNone() {
     // Arrange
     let host = HostDetails()
+    host.authenticationType = .UsernamePassword
     host.username = "testuser"
     host.password = "testpass"
-    host.authToken = "testtoken"
-    host.apiKey = "testapikey"
-    host.apiToken = "testapitoken"
-    
+
     try! realm.write {
       realm.add(host)
     }
-    
+
     // Act
     HostsDataManager.updateAuthentication(item: host, selection: .None)
-    
+
     // Assert
     XCTAssertEqual(host.authenticationType, .None)
-    // Note: The current implementation doesn't clear fields when set to None
-    // If this is desired behavior, you might want to update the implementation
-    // and then update this test accordingly
+    XCTAssertEqual(host.username, "")
+    XCTAssertEqual(host.password, "")
+  }
+
+  @MainActor
+  func testUpdateAuthentication_ToNoneWhenAlreadyNoneKeepsLegacyCredentials() {
+    // Arrange: hosts saved before auth types existed sit on None with credentials
+    let host = HostDetails()
+    host.username = "testuser"
+    host.password = "testpass"
+    host.apiKey = "testapikey"
+
+    try! realm.write {
+      realm.add(host)
+    }
+
+    // Act
+    HostsDataManager.updateAuthentication(item: host, selection: .None)
+
+    // Assert
+    XCTAssertEqual(host.username, "testuser")
+    XCTAssertEqual(host.password, "testpass")
+    XCTAssertEqual(host.apiKey, "testapikey")
+  }
+
+  // Mirrors the macOS edit form: it edits a copy, tidies the connection fields and saves over the original
+  @MainActor
+  func testEditingACopyKeepsFieldsTheFormDoesNotShow() {
+    // Arrange: a host on None with legacy credentials and a leftover Cloud ID
+    let saved = testHostDetail!
+    saved.connectionType = .URL
+    saved.cloudid = "leftover:Y2xvdWQ="
+    saved.username = "testuser"
+    saved.password = "testpass"
+    hostsDataManager.addNew(item: saved)
+    let createdDate = saved.createdDate
+
+    // Act
+    let form = saved.generateCopy()
+    form.name = "Renamed"
+    form.id = saved.id
+    HostsDataManager.setConncetionType(item: form, connection: form.connectionType)
+    hostsDataManager.addNew(item: form)
+
+    // Assert
+    let stored = realm.object(ofType: HostDetails.self, forPrimaryKey: saved.id)
+    XCTAssertEqual(stored?.name, "Renamed")
+    XCTAssertEqual(stored?.authenticationType, AuthenticationTypes.None)
+    XCTAssertEqual(stored?.username, "testuser")
+    XCTAssertEqual(stored?.password, "testpass")
+    XCTAssertEqual(stored?.version, "1.0")
+    XCTAssertEqual(stored?.createdDate, createdDate)
+    XCTAssertEqual(stored?.host?.url, "https://test.com")
+    XCTAssertEqual(stored?.cloudid, "", "The unused Cloud ID should be dropped, it would take priority over the URL")
+    XCTAssertEqual(realm.objects(HostDetails.self).count, 1)
   }
 }

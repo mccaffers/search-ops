@@ -25,27 +25,34 @@ public class Logger {
   ///   - filterObject: An optional object that filters logs based on specified criteria.
   ///   - page: The page number of the logged event, generally used for paginated results.
   ///   - hitCount: The number of hits or interactions recorded for this event.
+  ///   - source: Where the request was made from, eg. `LogEvent.devConsoleSource`. Empty for the app's own requests.
   @MainActor
   public static func event(response: ServerResponse,
                            index: String = "",
                            host: HostDetails,
                            filterObject: FilterObject? = nil,
                            page: Int = 0,
-                           hitCount: Int = 0) {
-    
+                           hitCount: Int = 0,
+                           source: String = "") {
+
     let logEvent = LogEvent()
-    
+
     // Format and assign the duration of the server response, if available.
     if let duration = response.duration {
       logEvent.duration = duration.formatted(.units(allowed: [.milliseconds]))
     }
-    
+
     // Extract and handle error information from the response.
     logEvent.error = response.error?.ejectRealm()
-    logEvent.jsonRes = response.parsed ?? ""
+    let jsonRes = LogEvent.capped(response.parsed ?? "")
+    logEvent.jsonRes = jsonRes.text
+    logEvent.jsonResTruncated = jsonRes.truncated
     logEvent.httpStatus = response.httpStatus
     logEvent.method = response.method ?? ""
     logEvent.index = index
+    logEvent.page = page
+    logEvent.hitCount = hitCount
+    logEvent.source = source
     logEvent.host = LogHostDetails()
     logEvent.host?.name = host.name
     logEvent.host?.env = host.env
@@ -65,7 +72,9 @@ public class Logger {
     
     // Convert and assign the JSON request to a string format.
     if let jsonReq = JSON(response.jsonReq ?? "").rawString() {
-      logEvent.jsonReq = jsonReq
+      let capped = LogEvent.capped(jsonReq)
+      logEvent.jsonReq = capped.text
+      logEvent.jsonReqTruncated = capped.truncated
     }
     
     // Handle the filtering object for logs if provided.

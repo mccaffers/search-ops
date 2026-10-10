@@ -15,7 +15,8 @@ struct ElasticConnectionDetails: View {
   @FocusState var focusedField: String?
   @Binding var currentField: String
   
-  @State private var selection : ConnectionType = ConnectionType.CloudID
+  // Owned by AddElasticView, so the authentication options follow it
+  @Binding var selection : ConnectionType
   
   var body: some View {
     VStack (spacing:15) {

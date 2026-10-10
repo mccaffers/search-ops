@@ -11,27 +11,25 @@ import XCTest
 
 class SystemLogManagerTests: XCTestCase {
   var logManager: SystemLogManager!
+  var logsDirectoryURL: URL!
   
   override func setUp() {
     super.setUp()
-    logManager = SystemLogManager()
-    // Clear any existing files to start fresh
-    logManager.clearLogDirectory()
+    // Each test gets its own folder so parallel test runs can't delete each other's files
+    logsDirectoryURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("SystemLogTests-\(UUID().uuidString)", isDirectory: true)
+    logManager = SystemLogManager(logsDirectory: logsDirectoryURL)
   }
   
   override func tearDown() {
-    // Optionally clear files after tests to clean up
-    logManager.clearLogDirectory()
+    try? FileManager.default.removeItem(at: logsDirectoryURL)
     super.tearDown()
   }
   
   func testFileCreationAndReading() {
     // Append new content to a log file
+    // The write is synchronous, so the file is ready as soon as this returns
     logManager.appendToFileInDocuments(content: "Test log entry")
-    
-    // Allow time for the file system operations to complete
-    // in practice though, we use a buffer and async to do this behind the scenes
-    sleep(1)
     
     // List files in the log directory and verify that a new file has been created
     let files = logManager.listLogFiles()

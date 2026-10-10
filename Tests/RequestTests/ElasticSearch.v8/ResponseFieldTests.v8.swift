@@ -14,11 +14,11 @@ import RealmSwift
 @available(iOS 16.0.0, *)
 final class ResponseFieldTests: XCTestCase {
 
-  // Verifies the correct retrieval and count of fields from a simulated ElasticSearch response.
+  // Verifies the correct retrieval and count of fields from a simulated Elasticsearch response.
   func testFields() async throws {
     // Load the same static response file used in other tests to ensure consistency.
     let response = try SearchOpsTests().OpenFile(filename: "response.1")
-    // Invoke the function that extracts fields from the ElasticSearch response.
+    // Invoke the function that extracts fields from the Elasticsearch response.
     let output = Fields.getFields(input: response)
   
     // Check that the number of fields extracted matches the expected count, confirming the parser's accuracy.

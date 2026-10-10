@@ -14,7 +14,7 @@ import SwiftyJSON
 // This can be due to dependencies on APIs or functionality that are only available starting from this iOS version.
 @available(iOS 16.0.0, *)
 
-// Defines a class for testing ElasticSearch V8 mappings. It's marked final to prevent subclassing,
+// Defines a class for testing Elasticsearch V8 mappings. It's marked final to prevent subclassing,
 // which is a common practice for test classes to encapsulate test logic specifically for this version.
 final class ElasticSearchV8MappingTests: XCTestCase {
 
@@ -27,7 +27,7 @@ final class ElasticSearchV8MappingTests: XCTestCase {
     _ = RealmManager().getRealm(inMemory: true)
   }
   
-  // A test method that is responsible for checking the mapping configuration for ElasticSearch V8.
+  // A test method that is responsible for checking the mapping configuration for Elasticsearch V8.
   // It's an asynchronous method, allowing it to perform async operations such as network calls.
   @MainActor
   func testMappingElasticv8() async throws {
@@ -40,7 +40,7 @@ final class ElasticSearchV8MappingTests: XCTestCase {
     // This approach is crucial for isolating the test from real network conditions and making it reproducible.
     Request.mockedSession = MockURLSession(response: response)
     
-    // Calls the actual method under test, which fetches and parses the index mappings from ElasticSearch V8.
+    // Calls the actual method under test, which fetches and parses the index mappings from Elasticsearch V8.
     // `await` is used here to handle the asynchronous operation within this test.
     let output = await IndexMap.indexMappings(serverDetails: HostDetails(), index: "")
     
@@ -59,7 +59,7 @@ final class ElasticSearchV8MappingTests: XCTestCase {
     // however, using `try?` or proper error handling could be safer to prevent crashes in case of errors.
     let response = try! SearchOpsTests().OpenFile(filename: "_all_mapping_v8_small")
     
-    // Calls the actual method under test, which fetches and parses the index mappings from ElasticSearch V8.
+    // Calls the actual method under test, which fetches and parses the index mappings from Elasticsearch V8.
     // `await` is used here to handle the asynchronous operation within this test.
     let output = await IndexMap.indexMappingsResponseToArray(response)
     
@@ -78,7 +78,7 @@ final class ElasticSearchV8MappingTests: XCTestCase {
     // however, using `try?` or proper error handling could be safer to prevent crashes in case of errors.
     let response = try! SearchOpsTests().OpenFile(filename: "_all_mapping_v8")
     
-    // Calls the actual method under test, which fetches and parses the index mappings from ElasticSearch V8.
+    // Calls the actual method under test, which fetches and parses the index mappings from Elasticsearch V8.
     // `await` is used here to handle the asynchronous operation within this test.
     let output = await IndexMap.indexMappingsResponseToArray(response)
     

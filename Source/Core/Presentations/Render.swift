@@ -21,7 +21,8 @@ public class SearchRender {
                           filterObject: FilterObject,
                           host: HostDetails,
                           index: String,
-                          limitObj: LimitObj) async -> RenderResult {
+                          limitObj: LimitObj,
+                          histogram: SearchHistogramRequest? = nil) async -> RenderResult {
     
     let renderResult = RenderResult() // Initialize the structure to hold search results.
     
@@ -29,19 +30,35 @@ public class SearchRender {
     let from = pageInput == 0 ? 0 : ((pageInput - 1) * limitObj.size)
     
     // Execute the query with specified filters, host details, index, and pagination offset.
-    let response = await Fields.QueryElastic(filterObject: filterObject,
+    var response = await Fields.QueryElastic(filterObject: filterObject,
                                               item: host,
                                               selectedIndex: index,
-                                              from: from)
+                                              from: from,
+                                              histogram: histogram)
     
+    // Read each response once, away from the main thread, and use it for the histogram check,
+    // the documents and the histogram
+    var parsed = await parse(response, histogram: histogram)
+
+    // A histogram the server can't build shouldn't stop the search, so ask again without it
+    if histogram != nil, failedOnHistogram(parsed) {
+      response = await Fields.QueryElastic(filterObject: filterObject,
+                                           item: host,
+                                           selectedIndex: index,
+                                           from: from)
+      parsed = await parse(response, histogram: nil)
+    }
+    
+    renderResult.duration = response.duration
+
     var hitCount : Int = 0 // Initialize the counter for hits returned by the query.
     
     // Handle potential errors in the query response.
     if let error = response.error {
       renderResult.error = error
-    } else if let data = response.parsed {
+    } else if let parsed = parsed {
       // If data is successfully parsed, process it to extract search results.
-      let parsedResponse = Search.getObjects(input: data)
+      let parsedResponse = parsed.result
       
       // Check and handle errors from data parsing.
       if let error = parsedResponse.error {
@@ -56,7 +73,11 @@ public class SearchRender {
         renderResult.hits = parsedResponse.hitCount // Fields.getHits(input: data)
         hitCount = renderResult.hits
         renderResult.fields = parsedResponse.fields // Fields.getFields(input: data)
+        renderResult.rows = parsedResponse.rows
         renderResult.pages = Results.CalculatePages(hits: renderResult.hits, limit: limitObj.size)
+        if let histogram = histogram {
+          renderResult.histogram = parsed.histogram
+        }
       }
     }
     
@@ -73,6 +94,40 @@ public class SearchRender {
     
     
     return renderResult // Return the structured result of the query.
+  }
+  
+  /// A search response read once: its JSON, and the documents, fields, histogram or error found in it.
+  /// It's built by `read` away from the main thread and handed over once it's finished. Nothing changes it
+  /// after that, which is what makes sending it between threads safe.
+  struct ParsedSearch: @unchecked Sendable {
+    let json: [String: Any]?
+    let result: SearchResult
+    let histogram: SearchHistogram?
+  }
+
+  /// Reads a response that came back without a request error, or nil when there's nothing to read.
+  @MainActor
+  static func parse(_ response: ServerResponse, histogram: SearchHistogramRequest?) async -> ParsedSearch? {
+    guard response.error == nil, let body = response.parsed else { return nil }
+    return await read(body, histogram: histogram)
+  }
+
+  /// Parses a response body and flattens its documents. A page of wide documents can take hundreds of
+  /// milliseconds, so this runs away from the main thread.
+  static func read(_ body: String, histogram: SearchHistogramRequest?) async -> ParsedSearch {
+#if DEBUG
+    dispatchPrecondition(condition: .notOnQueue(.main))
+#endif
+    let json = JsonTools.serialiseJson(body)
+    return ParsedSearch(json: json,
+                        result: Search.getObjects(json: json, input: body),
+                        histogram: histogram.flatMap { SearchHistogram.parse(json: json, request: $0) })
+  }
+
+  /// Whether the server rejected a search because of its histogram aggregation.
+  static func failedOnHistogram(_ parsed: ParsedSearch?) -> Bool {
+    guard let error = parsed?.result.error else { return false }
+    return SearchHistogram.isAggregationError(error)
   }
   
 }

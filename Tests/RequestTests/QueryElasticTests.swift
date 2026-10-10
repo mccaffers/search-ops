@@ -39,6 +39,18 @@ class FieldsQueryElasticTests: XCTestCase {
     // Add more assertions based on expected behavior for empty filter
   }
   
+  func testQueryElasticSendsFieldFilters() async {
+    let filter = FilterObject()
+    filter.addFieldFilter(field: "hostname", value: "live-trading")
+    filter.addFieldFilter(field: "env", value: "demo", negated: true)
+
+    let response = await Fields.QueryElastic(filterObject: filter, item: mockHostDetails, selectedIndex: "testIndex")
+
+    XCTAssertNil(response.error)
+    XCTAssertTrue(response.jsonReq?.contains("\"filter\":[{\"match_phrase\":{\"hostname\":\"live-trading\"}}]") ?? false)
+    XCTAssertTrue(response.jsonReq?.contains("\"must_not\":[{\"match_phrase\":{\"env\":\"demo\"}}]") ?? false)
+  }
+  
   func testQueryElasticWithDateField() async {
     let filter = FilterObject()
     filter.dateField = SquashedFieldsArray()

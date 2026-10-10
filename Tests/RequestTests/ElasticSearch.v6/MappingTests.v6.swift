@@ -24,7 +24,7 @@ final class ElasticSearchV6MappingTests: XCTestCase {
     _ = RealmManager().getRealm(inMemory: true)
   }
   
-  // This is the actual test method for ElasticSearch V6 mapping.
+  // This is the actual test method for Elasticsearch V6 mapping.
   // It is an asynchronous method, reflecting the asynchronous nature of network requests.
   @MainActor
   func testObjectsElasticv6() async throws {

@@ -181,7 +181,7 @@ final class ResponseErrorTests: XCTestCase {
     let output = await Indicies.indexStats(serverDetails: HostDetails(), index: "")
     
     // Verifies that the response is correctly retrieved and matches the expected JSON structure.
-    XCTAssertEqual(output, jsonResponse)
+    XCTAssertEqual(output.parsed, jsonResponse)
   }
   
   // Tests handling when an error response is received from Elasticsearch.

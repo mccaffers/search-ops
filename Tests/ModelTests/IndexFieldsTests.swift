@@ -131,8 +131,42 @@ final class IndexFieldsTests: XCTestCase {
     
     let response = await IndexMap.indexMappingsResponseToArray(incompleteJsonString)
     XCTAssert(response.isEmpty)
-    
+
   }
-  
-    
+
+  // _all maps @timestamp once per index; the search should only see it once
+  func testMergeByPathKeepsOneFieldPerPathAcrossIndexes() async {
+    let multiIndexJson = """
+        {
+          "trading-1": { "mappings": { "properties": {
+            "@timestamp": { "type": "date" }, "symbol": { "type": "keyword" } } } },
+          "trading-2": { "mappings": { "properties": {
+            "@timestamp": { "type": "date" }, "price": { "type": "float" } } } },
+          "trading-3": { "mappings": { "properties": {
+            "@timestamp": { "type": "date" }, "symbol": { "type": "keyword" } } } }
+        }
+        """
+    let parsed = await IndexMap.indexMappingsResponseToArray(multiIndexJson)
+    XCTAssertEqual(parsed.filter { $0.squashedString == "@timestamp" }.count, 3)
+
+    let merged = IndexMap.mergeByPath(parsed)
+    XCTAssertEqual(merged.map { $0.squashedString }.sorted(), ["@timestamp", "price", "symbol"])
+    XCTAssertEqual(merged.first { $0.squashedString == "@timestamp" }?.type, "date")
+  }
+
+  func testMergeByPathPrefersDateTypes() {
+    func field(_ path: String, _ type: String) -> SquashedFieldsArray {
+      let field = SquashedFieldsArray(squashedString: path, fieldParts: [path])
+      field.type = type
+      return field
+    }
+    let merged = IndexMap.mergeByPath([
+      field("created", "keyword"), field("created", "date_nanos"), field("created", "date"),
+      field("seen", "date_nanos"), field("seen", "long"),
+      field("name", "keyword"), field("name", "text"),
+    ])
+    XCTAssertEqual(merged.map { $0.squashedString }, ["created", "seen", "name"])
+    XCTAssertEqual(merged.map { $0.type }, ["date", "date_nanos", "keyword"])
+  }
+
 }

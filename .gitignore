@@ -95,3 +95,4 @@ sonarqube-generic-coverage.xml
 TestResult*
 TestResult.xcresult/
 Package.resolved
+/.claude/

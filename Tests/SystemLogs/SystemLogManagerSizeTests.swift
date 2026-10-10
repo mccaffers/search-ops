@@ -16,16 +16,12 @@ class SystemLogManagerSizeTests: XCTestCase {
   
   override func setUpWithError() throws {
     super.setUp()
-    logManager = SystemLogManager()
     fileManager = FileManager.default
     
-    let cachesDirectoryURL = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-    logsDirectoryURL = cachesDirectoryURL.appendingPathComponent("log", isDirectory: true)
-    
-    // Ensure the directory is empty before each test
-    if fileManager.fileExists(atPath: logsDirectoryURL.path) {
-      try fileManager.removeItem(at: logsDirectoryURL)
-    }
+    // Each test gets its own empty folder so parallel test runs can't collide
+    logsDirectoryURL = fileManager.temporaryDirectory
+      .appendingPathComponent("SystemLogTests-\(UUID().uuidString)", isDirectory: true)
+    logManager = SystemLogManager(logsDirectory: logsDirectoryURL)
     try fileManager.createDirectory(at: logsDirectoryURL, withIntermediateDirectories: true, attributes: nil)
   }
   

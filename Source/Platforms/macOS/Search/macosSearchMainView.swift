@@ -6,6 +6,7 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 // ---------------------------------------
 import SwiftUI
+import OrderedCollections
 
 #if os(macOS)
 
@@ -15,6 +16,8 @@ struct macosSearchMainView: View {
   @State private var searchText = ""
   @Binding var selectedHost: HostDetails?
   @Binding var selectedIndex: String
+  // Set while searching a data view's pattern, for its name and labels
+  @Binding var selectedDataView: DataView?
   
   @StateObject var resultsFields: RenderedFields = RenderedFields(fields: [SquashedFieldsArray]())
   @State var renderedObjects: RenderObject?
@@ -26,6 +29,11 @@ struct macosSearchMainView: View {
   @State var fields = [SquashedFieldsArray]()
   @State var onlyVisibleFields = [SquashedFieldsArray]()
   @State private var fieldsCacheKey: String = ""
+  @State private var currentActiveDateField: String? = nil
+  /// The order the user dragged the selected fields into, used for the table columns. Reset per host and index.
+  @State private var selectedFieldOrder = [String]()
+  /// Table column widths set by dragging a column border or double-clicking one. Reset per host and index.
+  @State private var tableColumnWidths = [macosTableColumn: CGFloat]()
   
   @State var updatedFieldsNotification : UUID = UUID()
 
@@ -57,8 +65,16 @@ struct macosSearchMainView: View {
   @State private var timeElapsed = 0
   @State private var timer: Timer?
   @State private var schedule: TimerInterval?
+  @State private var dateRangeWhenPickerOpened: String?
   
   @State var searchResponseError : ResponseError?
+  /// Round-trip time of the latest search, kept on screen while the next one runs. Cleared per host and index.
+  @State private var lastLatency: Duration?
+
+  /// Document counts over the time period, from the last first-page search
+  @State var histogram : SearchHistogram?
+  /// Time periods from before each zoom into the histogram, the last one is restored first
+  @State var zoomHistory = [DateRangeSnapshot]()
   
   func convertToTimeInterval(value: Double, unit: TimeUnit) -> TimeInterval {
       switch unit {
@@ -74,7 +90,7 @@ struct macosSearchMainView: View {
   }
   
   func startTimer(intervalObj: TimerInterval) {
-    var interval = convertToTimeInterval(value: intervalObj.value, unit: intervalObj.unit)
+    let interval = convertToTimeInterval(value: intervalObj.value, unit: intervalObj.unit)
     schedule = intervalObj
        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
           timeElapsed += 1
@@ -108,33 +124,49 @@ struct macosSearchMainView: View {
         mappedFields = await IndexMap.indexMappings(serverDetails: selectedHost, index: selectedIndex)
       }
       
+      // Paging keeps the chart from the first page, the counts don't change
+      let isFirstPage = page <= 1
+      var histogramRequest: SearchHistogramRequest? = nil
+      if isFirstPage {
+        let dateFieldKey = filterObject.dateField?.squashedString
+        histogramRequest = SearchHistogram.request(
+          filterObject: filterObject,
+          fieldType: mappedFields.first { $0.squashedString == dateFieldKey }?.type,
+          version: selectedHost.version)
+      }
+      
       let response = await SearchRender.call(pageInput: page,
                                              filterObject: filterObject,
                                              host: selectedHost,
                                              index: selectedIndex,
-                                             limitObj: LimitObj())
+                                             limitObj: LimitObj(size: SettingsDataManager().documentsPerPage),
+                                             histogram: histogramRequest)
       
       guard cacheKey == Self.computeCacheKey(hostId: self.selectedHost?.id, index: self.selectedIndex) else {
         searchIndicator = false
         return
       }
-      
+
+      if let duration = response.duration {
+        lastLatency = duration
+      }
+
       if let error = response.error {
         searchResponseError = error
         renderedObjects = nil
+        histogram = nil
       } else {
         searchResponseError = nil
+        if isFirstPage {
+          histogram = response.histogram
+        }
         
-        var searchEvent = RealmSearchEvent()
-        searchEvent.date = Date.now
-        searchEvent.host = selectedHost.id
-        searchEvent.index = selectedIndex
-        searchEvent.filter = filterObject.ejectRealmObject()
-        
+        let searchEvent = RealmSearchEvent.make(host: selectedHost.id,
+                                                index: selectedIndex,
+                                                filterObject: filterObject)
         SearchHistoryDataManager().addNew(item: searchEvent)
         
         let searchResults = response.results
-        let hitCount = response.hits
         resultsFields.fields = response.fields ?? []
         pageCount = response.pages
         
@@ -172,12 +204,27 @@ struct macosSearchMainView: View {
           fieldsCacheKey = cacheKey
         }
         
+        if !isSameHostAndIndex {
+          selectedFieldOrder = []
+          tableColumnWidths = [:]
+          Self.selectAllFieldsIfFew(fields: fields, onlyVisibleFields: onlyVisibleFields)
+          if let dateField = filterObject.dateField {
+            fields.first { $0.squashedString == dateField.squashedString }?.visible = true
+            onlyVisibleFields.first { $0.squashedString == dateField.squashedString }?.visible = true
+            dateField.visible = true
+            currentActiveDateField = dateField.squashedString
+          } else {
+            currentActiveDateField = nil
+          }
+        }
+        
         searchResultsUpdated = UUID()
         
         
         renderedObjects = Results.UpdateResultsWithFlatArray(searchResults: searchResults,
                                                              resultsFields: viewableFields,
-                                                             datefield: filterObject.dateField)
+                                                             datefield: filterObject.dateField,
+                                                             rows: response.rows)
       }
       
       searchIndicator = false
@@ -186,7 +233,56 @@ struct macosSearchMainView: View {
     }
   }
   
+  /// Searches the window dragged across the histogram, keeping the current period to go back to
+  func applyChartSelection(from: Date, to: Date) {
+    if let current = filterObject.snapshotDateRange() {
+      zoomHistory.append(current)
+    }
+    filterObject.setAbsoluteRange(from: from, to: to)
+    // A fixed period has nothing new to refresh
+    stopTimer()
+    Task {
+      await Request()
+    }
+  }
+  
+  /// Filters the search for a field's value, or against it, from the Document panel or a table cell,
+  /// then closes the panel if it's open and searches again.
+  func addFieldFilter(field: String, value: String, negated: Bool) {
+    filterObject.addFieldFilter(field: field, value: value, negated: negated)
+    selection = .None
+    Task {
+      await Request()
+    }
+  }
+  
+  /// Changes the field filters as a chip asked, then searches again with them.
+  func applyChipAction(_ action: FieldFilterChipAction) {
+    switch action {
+    case .toggleNegated(let id):
+      filterObject.toggleFieldFilterNegated(id)
+    case .toggleDisabled(let id):
+      filterObject.toggleFieldFilterDisabled(id)
+    case .remove(let id):
+      filterObject.removeFieldFilter(id)
+    case .clearAll:
+      filterObject.clearFieldFilters()
+    }
+    Task {
+      await Request()
+    }
+  }
+  
+  func undoChartZoom() {
+    guard let previous = zoomHistory.popLast() else { return }
+    filterObject.restore(previous)
+    Task {
+      await Request()
+    }
+  }
+  
   func handleSubmit() {
+    autocomplete.dismiss()
     if !searchText.isEmpty {
       filterObject.query = QueryObject()
       filterObject.query?.values.append(QueryFilterObject(string: searchText))
@@ -200,10 +296,25 @@ struct macosSearchMainView: View {
   }
   
   @State private var currentWidth: CGFloat = 300
+  /// The sidebar width when the current resize drag began, nil when not dragging.
+  @State private var sidebarResizeStartWidth: CGFloat? = nil
+  /// The Document panel's share of the search area, kept between launches so it scales with the window
+  @AppStorage("macosDocumentPanelFraction") private var documentPanelFraction: Double = macosSearchMainView.defaultDocumentPanelFraction
   
-  @State var textFieldWidth : CGFloat = 0
+  @StateObject private var autocomplete = macosQueryAutocompleteModel()
+  @State private var queryCursorRequest: TextFieldCursorRequest?
+
+  /// Measures each drag from the width it started at, as the handle moves with the sidebar edge.
+  func sidebarResizeChanged(translation: CGFloat) {
+    let startWidth = sidebarResizeStartWidth ?? currentWidth
+    sidebarResizeStartWidth = startWidth
+    if let width = Self.resizedSidebarWidth(start: startWidth, translation: translation) {
+      currentWidth = width
+    } else {
+      showFilterSidebar = false
+    }
+  }
   @State var showFilterSidebar = true
-  @Binding var showingTextFieldSuggestions : Bool
   
   var topButtonsPadding: CGFloat {
     fullScreen ? 5 : 0
@@ -217,10 +328,95 @@ struct macosSearchMainView: View {
     topButtonsPadding + 80
   }
   
-  var suggestionsTopPadding: CGFloat {
-    topButtonsPadding + 85
+  var bodyFilteredFields: [SquashedFieldsArray] {
+    Self.computeBodyFilteredFields(fields: fields,
+                                   activeDateField: filterObject.dateField,
+                                   order: selectedFieldOrder)
+  }
+
+  var showDateHeader: Bool {
+    Self.shouldShowDateHeader(fields: fields, activeDateField: filterObject.dateField)
+  }
+
+  /// Hides a field from the right-click menu of its column, as unticking it in the sidebar does.
+  /// Its set width goes too, so "Reset column widths" isn't left on for a column that's no longer shown.
+  func hideField(_ column: macosTableColumn) {
+    if macosTableSearchView.hideField(column, fields: fields, onlyVisibleFields: onlyVisibleFields) {
+      tableColumnWidths.removeValue(forKey: column)
+      updatedFieldsNotification = UUID()
+    }
+  }
+
+  /// Shows a clicked row in the Document panel, opening the panel in the same update as the click.
+  func openDocument(_ item: OrderedDictionary<String, Any>) {
+    itemDetail.item = item
+    selection = .SearchDocumentView
   }
   
+  /// Arrow keys move through the suggestions, Tab takes the highlighted or top one,
+  /// Return takes a highlighted one or searches, Escape closes them
+  func handleQueryCommand(_ command: CustomNSTextField.Command) -> Bool {
+    guard autocomplete.isVisible else { return false }
+    switch command {
+    case .moveUp:
+      autocomplete.moveUp()
+      return true
+    case .moveDown:
+      autocomplete.moveDown()
+      return true
+    case .tab:
+      return acceptSuggestion(at: autocomplete.highlightedIndex ?? 0)
+    case .newline:
+      guard let index = autocomplete.highlightedIndex else { return false }
+      return acceptSuggestion(at: index)
+    case .cancel:
+      autocomplete.dismiss()
+      return true
+    }
+  }
+
+  @discardableResult
+  func acceptSuggestion(at index: Int) -> Bool {
+    guard let result = autocomplete.complete(at: index, in: searchText) else { return false }
+    searchText = result.text
+    queryCursorRequest = TextFieldCursorRequest(location: result.cursor)
+    // A chosen field goes straight on to its values
+    if result.kind == .field {
+      updateAutocomplete(text: result.text, cursor: result.cursor, textChanged: true)
+    }
+    return true
+  }
+
+  func updateAutocomplete(text: String, cursor: Int?, textChanged: Bool) {
+    autocomplete.update(text: text,
+                        cursor: cursor,
+                        textChanged: textChanged,
+                        fields: fields,
+                        labels: selectedDataView?.labels ?? [:],
+                        scope: valueSuggestionScope,
+                        loadValues: loadRecentValues(field:))
+  }
+
+  /// What value suggestions depend on: the host, index, time field and time period
+  var valueSuggestionScope: String {
+    let hostId = selectedHost.flatMap { $0.isInvalidated ? nil : $0.id.uuidString } ?? ""
+    return [hostId, selectedIndex, filterObject.dateField?.squashedString ?? "", filterObject.dateRangeSignature]
+      .joined(separator: "|")
+  }
+
+  /// The field's 10 most recent distinct values in the current time period
+  func loadRecentValues(field: String) async -> [String] {
+    guard let host = selectedHost, !host.isInvalidated, !selectedIndex.isEmpty else { return [] }
+    let bounds = SearchHistogram.dateBounds(filterObject: filterObject)
+    return await QueryValueSuggestions.fetch(serverDetails: host.generateCopy(),
+                                             index: selectedIndex,
+                                             field: field,
+                                             fieldType: fields.first { $0.squashedString == field }?.type ?? "",
+                                             timeField: filterObject.dateField?.squashedString,
+                                             from: bounds?.from,
+                                             to: bounds?.to)
+  }
+
   var body: some View {
     ZStack {
       Color("Background")
@@ -231,6 +427,8 @@ struct macosSearchMainView: View {
                                     showFilterSidebar: $showFilterSidebar,
                                     hostName: selectedHost?.name,
                                     index: selectedIndex,
+                                    dataView: selectedDataView,
+                                    latency: lastLatency,
                                     currentWidth: $currentWidth)
           .padding(.bottom, 5)
           .padding(.top, topButtonsPadding)
@@ -249,7 +447,14 @@ struct macosSearchMainView: View {
                                       searchText: $searchText,
                                       selection: $selection,
                                       searchIndicator: $searchIndicator,
-                                      textFieldWidth: $textFieldWidth,
+                                      cursorRequest: queryCursorRequest,
+                                      onQueryEdit: updateAutocomplete(text:cursor:textChanged:),
+                                      onQueryCommand: handleQueryCommand(_:),
+                                      onQueryEndEditing: {
+                                        if !autocomplete.pointerInside {
+                                          autocomplete.dismiss()
+                                        }
+                                      },
                                       schedule: schedule,
                                       stopTimer: stopTimer)
                 .id(topBarDateButtonRefresh)
@@ -259,10 +464,35 @@ struct macosSearchMainView: View {
                   }
                 }
                 
+                if !filterObject.fieldFilters.isEmpty {
+                  macosFieldFilterChipsView(filters: filterObject.fieldFilters,
+                                            labels: selectedDataView?.labels ?? [:],
+                                            onAction: applyChipAction(_:))
+                }
+                
+                if let histogram = histogram,
+                   histogram.totalCount > 0,
+                   searchResponseError == nil,
+                   selectedHost != nil {
+                  macosSearchHistogramView(histogram: histogram,
+                                           searchIndicator: searchIndicator,
+                                           onSelectRange: applyChartSelection,
+                                           backTitle: zoomHistory.last?.title,
+                                           onBack: undoChartZoom)
+                }
+                
                 
                 macosSearchResultsView(renderedObjects: $renderedObjects,
                                        viewableFields: resultsFields,
-                                       fields: fields.filter {$0.visible},
+                                       fields: bodyFilteredFields,
+                                       fieldsVersion: updatedFieldsNotification,
+                                       showDateHeader: showDateHeader,
+                                       labels: selectedDataView?.labels ?? [:],
+                                       columnWidths: $tableColumnWidths,
+                                       onHideField: hideField(_:),
+                                       onOpenDocument: openDocument(_:),
+                                       onFilter: addFieldFilter(field:value:negated:),
+                                       activeFilterCount: filterObject.fieldFilters.enabled.count,
                                        selectedHost:$selectedHost,
                                        selectedIndex: $selectedIndex,
                                        itemDetail: itemDetail,
@@ -278,41 +508,12 @@ struct macosSearchMainView: View {
                 })
                 .disabled(selectedHost == nil)
                 .opacity(selectedHost == nil ? 0.5 : 1)
-                .id(updatedFieldsNotification)
         
             }
             
-          Rectangle().fill(.clear)
+          macosSidebarResizeHandle(onDrag: sidebarResizeChanged(translation:),
+                                   onDragEnd: { sidebarResizeStartWidth = nil })
             .frame(maxWidth: 5)
-            .onHover { inside in
-              if inside {
-                NSCursor.resizeLeftRight.push()
-              } else {
-                NSCursor.pop()
-              }
-            }
-            .gesture(DragGesture()
-              .onChanged { value in
-                let position = currentWidth + (value.translation.width * -1)
-                if position > 600 {
-                  currentWidth = 600
-                } else if position < 200 {
-                  showFilterSidebar = false
-                } else {
-                  currentWidth = position
-                }
-              }
-              .onEnded { value in
-                let position = currentWidth + (value.translation.width * -1)
-                if position > 600 {
-                  currentWidth = 600
-                } else if position < 200 {
-                  showFilterSidebar = false
-                } else {
-                  currentWidth = position
-                }
-              }
-            )
             
             if fields.count != 0 {
               if showFilterSidebar {
@@ -324,6 +525,9 @@ struct macosSearchMainView: View {
                                      selectedIndex: $selectedIndex,
                                      updatedFieldsNotification: $updatedFieldsNotification,
                                      renderedObjects: $renderedObjects,
+                                     fieldOrder: $selectedFieldOrder,
+                                     dateFieldKey: filterObject.dateField?.squashedString,
+                                     labels: selectedDataView?.labels ?? [:],
                                      searchIndicator:searchIndicator){
                     Task {
                       await Request()
@@ -387,6 +591,7 @@ struct macosSearchMainView: View {
               
             } else if selection == .Indices {
               macosSidebarIndicesDropdownView(selectedIndex: $selectedIndex,
+                                              selectedDataView: $selectedDataView,
                                               showingScreen: $showingScreen,
                                               selection: $selection,
                                               filterObject: filterObject,
@@ -409,16 +614,30 @@ struct macosSearchMainView: View {
         
        
         if selection == .SearchDocumentView {
-          VStack {
+          // The panel takes its saved share of the search area, half until it's resized
+          GeometryReader { geometry in
+            let available = geometry.size.width
             macosDocumentDetailView(itemDetail: itemDetail,
                                     fields: $fields,
                                     onlyVisibleFields: $onlyVisibleFields,
-                                    updatedFieldsNotification: $updatedFieldsNotification)
-        
+                                    updatedFieldsNotification: $updatedFieldsNotification,
+                                    labels: selectedDataView?.labels ?? [:],
+                                    width: Self.clampedDocumentPanelWidth(documentPanelFraction * available,
+                                                                          available: available),
+                                    availableWidth: available,
+                                    onResized: { width in
+                                      if available > 0 {
+                                        documentPanelFraction = width / available
+                                      }
+                                    },
+                                    onResetWidth: {
+                                      documentPanelFraction = Self.defaultDocumentPanelFraction
+                                    },
+                                    fieldFilters: filterObject.fieldFilters,
+                                    onFilter: addFieldFilter(field:value:negated:),
+                                    onClose: { selection = .None })
+              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
           }
-          .frame(maxWidth: .infinity, alignment:.trailing)
-          
-          
         }
         
         if selection == .SearchScreenRefreshFrequency {
@@ -432,21 +651,16 @@ struct macosSearchMainView: View {
         
       }
       
-      if showingTextFieldSuggestions {
-        
-        VStack {
-          HStack {
-            macosSidebarAutoSuggest(selection: $selection,
-                                    searchText: $searchText,
-                                    fields: $fields,
-                                    lastValue: $lastValue)
-              .frame(maxWidth: textFieldWidth)
-            Spacer()
-          }
-          .padding(.top, suggestionsTopPadding)
-          .padding(.leading, 5)
-          
-        }.frame(maxWidth: .infinity, alignment:.leading)
+    }
+    .overlayPreferenceValue(macosQueryFieldBoundsKey.self) { anchor in
+      GeometryReader { proxy in
+        if let anchor = anchor, autocomplete.isVisible {
+          let field = proxy[anchor]
+          macosQueryAutocompleteView(model: autocomplete, onSelect: { acceptSuggestion(at: $0) })
+            .frame(width: field.width)
+            .padding(.leading, field.minX)
+            .padding(.top, field.maxY + 4)
+        }
       }
     }
     .onDisappear {
@@ -455,9 +669,36 @@ struct macosSearchMainView: View {
     .onAppear {
       Task {
         items = serverObjects.items
+        currentActiveDateField = filterObject.dateField?.squashedString
         await Request()
       }
       
+    }
+    .onChange(of: filterObject.dateField?.squashedString) { _ in
+      if Self.switchDateField(
+        newDateField: filterObject.dateField,
+        currentActiveDateField: &currentActiveDateField,
+        fields: &fields,
+        onlyVisibleFields: &onlyVisibleFields,
+        renderedObjects: &renderedObjects
+      ) {
+        updatedFieldsNotification = UUID()
+      }
+    }
+    .onChange(of: selection) { newValue in
+      if newValue != .None {
+        autocomplete.dismiss()
+      }
+      // Choosing a new time period turns off auto refresh
+      if newValue == .DatePeriod {
+        dateRangeWhenPickerOpened = filterObject.dateRangeSignature
+      } else if let openedWith = dateRangeWhenPickerOpened {
+        dateRangeWhenPickerOpened = nil
+        if openedWith != filterObject.dateRangeSignature {
+          stopTimer()
+          zoomHistory = []
+        }
+      }
     }
     .onChange(of: hostsUpdated.updated) { _ in
       Task {
@@ -468,27 +709,34 @@ struct macosSearchMainView: View {
         }
       }
     }
-    .onChange(of: itemDetail.showingView) { newValue in
-      if newValue {
-        selection = .SearchDocumentView
-      }
-    }
     .onChange(of: filterObject.query?.values.first?.string) { newValue in
       if newValue != searchText {
         lastValue = newValue ?? ""
         searchText = lastValue
       }
     }
-    .onChange(of: selectedIndex) { newValue in
+    // The index list sets the date field and data view itself before changing the index:
+    // reset for an index, or the view's time field for a data view. Doing it here instead
+    // would rely on reading the data view while the change is still being applied.
+    .onChange(of: selectedIndex) { _ in
       searchResponseError = nil
+      lastLatency = nil
+      histogram = nil
+      zoomHistory = []
       currentPage = 0
-      filterObject.resetIndexSpecificFilters()
     }
     .onChange(of: selectedHost?.id) { _ in
+      selectedDataView = nil
       searchResponseError = nil
+      lastLatency = nil
+      histogram = nil
+      zoomHistory = []
       selectedIndex = ""
       currentPage = 0
       filterObject.resetIndexSpecificFilters()
+      // Field filters belong to the old host's fields. Recent searches are restored from the home
+      // screen, where this view isn't shown, so this doesn't clear the filters they bring back
+      filterObject.clearFieldFilters()
     }
     .onChange(of: shouldClearTextfield) { newValue in
       if newValue {
@@ -503,6 +751,36 @@ struct macosSearchMainView: View {
 }
 
 extension macosSearchMainView {
+  public static let minSidebarWidth: CGFloat = 200
+  public static let maxSidebarWidth: CGFloat = 600
+
+  /// The sidebar width after dragging its left edge by `translation`, capped at the maximum.
+  /// Returns nil when it's dragged narrower than the minimum, which hides the sidebar.
+  public static func resizedSidebarWidth(start: CGFloat, translation: CGFloat) -> CGFloat? {
+    let width = start - translation
+    if width < minSidebarWidth {
+      return nil
+    }
+    return min(width, maxSidebarWidth)
+  }
+
+  public static let defaultDocumentPanelFraction: Double = 0.5
+  public static let minDocumentPanelWidth: CGFloat = 320
+  /// The results stay at least this wide beside the Document panel
+  public static let minResultsWidthBesideDocumentPanel: CGFloat = 200
+
+  /// Keeps the Document panel between its minimum and the width that leaves room for the results.
+  /// The minimum wins when the search area is too narrow for both.
+  public static func clampedDocumentPanelWidth(_ width: CGFloat, available: CGFloat) -> CGFloat {
+    max(minDocumentPanelWidth, min(width, available - minResultsWidthBesideDocumentPanel))
+  }
+
+  /// The Document panel width after dragging its left edge by `translation`: left widens it, right narrows it.
+  /// It stops at the minimum rather than closing.
+  public static func resizedDocumentPanelWidth(start: CGFloat, translation: CGFloat, available: CGFloat) -> CGFloat {
+    clampedDocumentPanelWidth(start - translation, available: available)
+  }
+
   public static func computeCacheKey(hostId: UUID?, index: String) -> String {
     "\(hostId?.uuidString ?? "")|\(index)"
   }
@@ -536,6 +814,129 @@ extension macosSearchMainView {
       targetFields.append(field)
       existingTargetKeys.insert(field.squashedString)
     }
+  }
+
+  /// Indexes with fewer mapped fields than this get every field selected on their first search.
+  public static let autoSelectAllFieldsLimit = 10
+
+  /// Selects every field when the index has only a few, so the grid shows each one as a column
+  /// instead of a single Document column. Returns whether the fields were selected.
+  @discardableResult
+  public static func selectAllFieldsIfFew(
+    fields: [SquashedFieldsArray],
+    onlyVisibleFields: [SquashedFieldsArray],
+    limit: Int = autoSelectAllFieldsLimit
+  ) -> Bool {
+    guard !fields.isEmpty, fields.count < limit else { return false }
+    let keys = Set(fields.map { $0.squashedString })
+    fields.forEach { $0.visible = true }
+    onlyVisibleFields.filter { keys.contains($0.squashedString) }.forEach { $0.visible = true }
+    return true
+  }
+
+  /// Computes the list of active body filters by excluding the active date field from visible fields.
+  /// The active date field is presented separately in the card header, not in the body textArray.
+  /// When no body fields are explicitly selected by the user (even if the date field is active by default),
+  /// the body displays all document fields unfiltered. Once one or more body fields are selected,
+  /// the body is filtered strictly to those selected fields, in the column `order` the user dragged them into.
+  public static func computeBodyFilteredFields(
+    fields: [SquashedFieldsArray],
+    activeDateField: SquashedFieldsArray?,
+    order: [String] = []
+  ) -> [SquashedFieldsArray] {
+    macosSearchFieldSheetView.orderSelectedFields(
+      fields.filter { $0.visible && $0.squashedString != activeDateField?.squashedString },
+      order: order)
+  }
+
+  public static func shouldShowDateHeader(
+    fields: [SquashedFieldsArray],
+    activeDateField: SquashedFieldsArray?
+  ) -> Bool {
+    guard let dateField = activeDateField else { return false }
+    return fields.contains { $0.squashedString == dateField.squashedString && $0.visible }
+  }
+
+  @discardableResult
+  public static func switchDateField(
+    newDateField: SquashedFieldsArray?,
+    currentActiveDateField: inout String?,
+    fields: inout [SquashedFieldsArray],
+    onlyVisibleFields: inout [SquashedFieldsArray],
+    renderedObjects: inout RenderObject?
+  ) -> Bool {
+    let newSquashed = newDateField?.squashedString
+    guard newSquashed != currentActiveDateField else { return false }
+    if let oldDateField = currentActiveDateField {
+      fields.first { $0.squashedString == oldDateField }?.visible = false
+      onlyVisibleFields.first { $0.squashedString == oldDateField }?.visible = false
+    }
+    if let newSquashed = newSquashed {
+      fields.first { $0.squashedString == newSquashed }?.visible = true
+      onlyVisibleFields.first { $0.squashedString == newSquashed }?.visible = true
+      newDateField?.visible = true
+    }
+    renderedObjects?.dateField = newDateField
+    currentActiveDateField = newSquashed
+    return true
+  }
+}
+
+/// The grab area on the sidebar's left edge: shows the resize cursor and reports drags.
+/// It needs a content shape, as a clear fill alone gets hover events but not drags.
+struct macosSidebarResizeHandle: View {
+  let onDrag: (_ translation: CGFloat) -> Void
+  let onDragEnd: () -> Void
+  /// Told when the pointer starts or stops hovering or dragging, so a grip can highlight
+  var onActiveChanged: ((Bool) -> Void)? = nil
+  var onDoubleClick: (() -> Void)? = nil
+
+  @State private var isHovered = false
+  @State private var isDragging = false
+  @State private var showsCursor = false
+
+  /// Keeps the resize cursor until both the hover and the drag have ended,
+  /// as the pointer can leave this narrow area part way through a drag.
+  func updateCursor() {
+    let wanted = isHovered || isDragging
+    if wanted && !showsCursor {
+      NSCursor.resizeLeftRight.push()
+    } else if !wanted && showsCursor {
+      NSCursor.pop()
+    }
+    if wanted != showsCursor {
+      onActiveChanged?(wanted)
+    }
+    showsCursor = wanted
+  }
+
+  var body: some View {
+    Color.clear
+      .contentShape(Rectangle())
+      .onHover { hovering in
+        isHovered = hovering
+        updateCursor()
+      }
+      // Global coordinates, as the handle itself moves with the sidebar edge while it's dragged
+      .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global)
+        .onChanged { value in
+          isDragging = true
+          updateCursor()
+          onDrag(value.translation.width)
+        }
+        .onEnded { _ in
+          isDragging = false
+          updateCursor()
+          onDragEnd()
+        })
+      .onTapGesture(count: 2) {
+        onDoubleClick?()
+      }
+      .onDisappear {
+        isHovered = false
+        isDragging = false
+        updateCursor()
+      }
   }
 }
 

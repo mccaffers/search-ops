@@ -13,7 +13,6 @@ struct macosHostAddNameEnvViews: View {
   @State var environment : String = ""
   
   @Binding var host : HostDetails
-  var item: HostDetails? = nil
   var offset: CGFloat
   
   @FocusState var focusedField: String?
@@ -97,22 +96,11 @@ struct macosHostAddNameEnvViews: View {
       }
     })
     .onAppear {
-     
+      // host is the working copy, it keeps unsaved edits when the form is rebuilt
+      hostname = host.name
+      environment = host.env
+      isHostValid = host.isValid()
 
-      if item != nil {
-        if let name = item?.name {
-          hostname = name
-          host.name = name
-        }
-        if let env = item?.env {
-          environment = env
-          host.env = env
-        }
-      } else {
-        hostname = host.name
-        environment = host.env
-      }
-    
       // if there is animation offset, the view is just appearing,
       // lets delay the connection details appearing for 0.5 seconds
       let delay = offset != 0 ? 0.4 : 0

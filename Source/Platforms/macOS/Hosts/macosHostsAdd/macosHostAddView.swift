@@ -32,10 +32,41 @@ struct macosHostAddView: View {
 
   @State var isHostValid = false
   
+  // Shared so the authentication options follow the connection type
+  @State private var connectionType: ConnectionType = .CloudID
+  
+  // Natural height of the form, so the scroll area only shrinks when the window is too short
+  @State private var formHeight: CGFloat? = nil
+
+  init(selection: Binding<macosSearchViewEnum>,
+       hostsUpdated: HostUpdatedNotifier,
+       serverObjects: HostsDataManager,
+       item: HostDetails? = nil,
+       deleteItem: @escaping () async -> ()) {
+    self._selection = selection
+    self.hostsUpdated = hostsUpdated
+    self.serverObjects = serverObjects
+    self.item = item
+    self.deleteItem = deleteItem
+
+    // Editing starts from a full copy of the saved host, as Update overwrites the
+    // whole record and the form only fills in the fields it shows
+    if let item = item, !item.isInvalidated {
+      self._host = State(initialValue: item.generateCopy())
+    }
+  }
+
+  // A leftover Cloud ID takes priority over the host URL in requests,
+  // so drop whichever one the connection type doesn't use
+  func clearUnusedConnectionFields() {
+    HostsDataManager.setConncetionType(item: host, connection: host.connectionType)
+  }
+
   func handleEnterPress() {
     if let item = item {
       host.id = item.id
     }
+    clearUnusedConnectionFields()
     serverObjects.addNew(item: host)
     hostsUpdated.updated = UUID()
     selection = .None
@@ -120,59 +151,87 @@ struct macosHostAddView: View {
   
   
   var mainView: some View {
-    VStack(spacing: 10) {
-      
-      macosHostAddNameEnvViews(host: $host, item: item, offset:offset, isHostValid: $isHostValid)
-      macosHostAddConnectionDetailsView(host: $host, item: item, offset:offset, isHostValid: $isHostValid)
-      macosHostAddAuthenticationViews(host: $host, item: item, offset: offset)
-      
-      HStack {
-        Button {
-          selection = .None
-        } label: {
-          Text("Cancel")
-            .padding(10)
-            .background(Color("BackgroundAlt"))
-            .clipShape(.rect(cornerRadius: 5))
-        }
-        .buttonStyle(PlainButtonStyle())
-        
-        Spacer()
-        
-        Button {
-          withAnimation {
-            currentView = .testConnection
-          }
-        } label: {
-          Text("Test Connection")
-            .padding(10)
-            .background(Color("Button"))
-            .clipShape(.rect(cornerRadius: 5))
-        }
-        .buttonStyle(PlainButtonStyle())
-        .disabled(!isHostValid)
-        
-        Button {
-          handleEnterPress()
-        } label: {
-          Group {
-            if item != nil {
-              Text("Update")
-            } else {
-              Text("Save")
-            }
-          }
-          .padding(10)
-          .background(Color("PositiveButton"))
-          .clipShape(.rect(cornerRadius: 5))
-        }
-        .buttonStyle(PlainButtonStyle())
-        .disabled(!isHostValid)
+    VStack(spacing: 0) {
+      // The fields scroll, the buttons below stay visible
+      ScrollView {
+        formFields
+          .padding(.horizontal, 10)
+          .padding(.top, 10)
+          .background(GeometryReader { proxy in
+            Color.clear.preference(key: HostAddFormHeightKey.self, value: proxy.size.height)
+          })
       }
+      .frame(maxHeight: formHeight)
+      .onPreferenceChange(HostAddFormHeightKey.self) { newValue in
+        formHeight = newValue
+      }
+      
+      actionButtons
+        .padding(10)
     }
-    .padding(.horizontal, 10)
-    .padding(.vertical, 10)
+  }
+  
+  var formFields: some View {
+    VStack(spacing: 10) {
+      macosHostAddNameEnvViews(host: $host, offset:offset, isHostValid: $isHostValid)
+      macosHostAddConnectionDetailsView(host: $host, item: item, offset:offset, connectionType: $connectionType, isHostValid: $isHostValid)
+      macosHostAddAuthenticationViews(host: $host, item: item, offset: offset, connectionType: connectionType)
+    }
+  }
+  
+  var actionButtons: some View {
+    HStack {
+      Button {
+        selection = .None
+      } label: {
+        Text("Cancel")
+          .padding(10)
+          .background(Color("BackgroundAlt"))
+          .clipShape(.rect(cornerRadius: 5))
+      }
+      .buttonStyle(PlainButtonStyle())
+      
+      Spacer()
+      
+      Button {
+        clearUnusedConnectionFields()
+        withAnimation {
+          currentView = .testConnection
+        }
+      } label: {
+        Text("Test Connection")
+          .padding(10)
+          .background(Color("Button"))
+          .clipShape(.rect(cornerRadius: 5))
+      }
+      .buttonStyle(PlainButtonStyle())
+      .disabled(!isHostValid)
+      
+      Button {
+        handleEnterPress()
+      } label: {
+        Group {
+          if item != nil {
+            Text("Update")
+          } else {
+            Text("Save")
+          }
+        }
+        .padding(10)
+        .background(Color("PositiveButton"))
+        .clipShape(.rect(cornerRadius: 5))
+      }
+      .buttonStyle(PlainButtonStyle())
+      .disabled(!isHostValid)
+    }
   }
   
 
+}
+
+private struct HostAddFormHeightKey: PreferenceKey {
+  static var defaultValue: CGFloat = 0
+  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    value = max(value, nextValue())
+  }
 }

@@ -23,6 +23,11 @@ public class HostDetails : Object  {
   @Persisted public var authToken: String = ""
   @Persisted public var apiToken: String = ""
   @Persisted public var apiKey: String = ""
+  @Persisted public var awsAccessKeyId: String = ""
+  @Persisted public var awsSecretAccessKey: String = ""
+  @Persisted public var awsSessionToken: String = ""
+  @Persisted public var awsRegion: String = ""
+  @Persisted public var awsService = AWSService.es
   @Persisted public var version: String = ""
   
   @Persisted public var customHeaders: List<Headers>
@@ -40,22 +45,51 @@ public class HostDetails : Object  {
         self.password = ""
         self.authToken = ""
         self.apiToken = ""
+        clearAWSCredentials()
       } else if authenticationType == .AuthToken {
         self.username = ""
         self.password = ""
         self.apiKey = ""
         self.apiToken = ""
+        clearAWSCredentials()
       } else if authenticationType == .UsernamePassword {
         self.authToken = ""
         self.apiKey = ""
         self.apiToken = ""
+        clearAWSCredentials()
       } else if authenticationType == .APIToken {
         self.authToken = ""
         self.apiKey = ""
         self.username = ""
         self.password = ""
+        clearAWSCredentials()
+      } else if authenticationType == .AWSSigV4 {
+        // Leaves the AWS fields alone, generateCopy() sets them before the type
+        self.username = ""
+        self.password = ""
+        self.authToken = ""
+        self.apiToken = ""
+        self.apiKey = ""
+      } else if authenticationType == .None {
+        // Only when switching from another type. generateCopy() starts from None,
+        // so a host saved on None keeps the credentials Request still falls back to
+        guard oldValue != .None else { return }
+        self.username = ""
+        self.password = ""
+        self.authToken = ""
+        self.apiToken = ""
+        self.apiKey = ""
+        clearAWSCredentials()
       }
     }
+  }
+  
+  private func clearAWSCredentials() {
+    self.awsAccessKeyId = ""
+    self.awsSecretAccessKey = ""
+    self.awsSessionToken = ""
+    self.awsRegion = ""
+    self.awsService = .es
   }
   
   public func isValid() -> Bool {
@@ -86,26 +120,54 @@ public class HostDetails : Object  {
   }
   
   public func generateCopy() -> HostDetails {
-    
+    guard !self.isInvalidated else {
+      return HostDetails()
+    }
+
     let copy = HostDetails()
     copy.detachedID = self.id
     copy.name = self.name.string
     copy.cloudid = self.cloudid
-    copy.host = self.host
+    if let h = self.host, !h.isInvalidated {
+      let hostCopy = HostURL()
+      hostCopy.scheme = h.scheme
+      hostCopy.url = h.url
+      hostCopy.path = h.path
+      hostCopy.port = h.port
+      hostCopy.selfSignedCertificate = h.selfSignedCertificate
+      copy.host = hostCopy
+    }
     copy.env = self.env
     copy.username = self.username
     copy.password = self.password
     copy.authToken = self.authToken
     copy.apiToken = self.apiToken
     copy.apiKey = self.apiKey
+    copy.awsAccessKeyId = self.awsAccessKeyId
+    copy.awsSecretAccessKey = self.awsSecretAccessKey
+    copy.awsSessionToken = self.awsSessionToken
+    copy.awsRegion = self.awsRegion
+    copy.awsService = self.awsService
     copy.version = self.version
-    copy.customHeaders = self.customHeaders
+    let headersCopy = List<Headers>()
+    for item in self.customHeaders {
+      if !item.isInvalidated {
+        let realmHeader = Headers()
+        realmHeader.id = item.id
+        realmHeader.header = item.header
+        realmHeader.value = item.value
+        realmHeader.focusedIndexValue = item.focusedIndexValue
+        realmHeader.focusedIndexHeader = item.focusedIndexHeader
+        headersCopy.append(realmHeader)
+      }
+    }
+    copy.customHeaders = headersCopy
     copy.createdDate = self.createdDate
     copy.updatedDate = Date.now
     copy.draft = self.draft
     copy.connectionType = self.connectionType
     copy.authenticationType = self.authenticationType
-    
+
     return copy
   }
   
