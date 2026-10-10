@@ -42,11 +42,10 @@ Available on the Apple App Store for iOS and macOS platforms
 
 ### macOS
 
-<img width=49% src="./Screenshots/macos-home.png" alt="Recent searches">
-<img width=49% src="./Screenshots/macos-tableview.png" alt="Search results in a table with the mapped fields sidebar">
-<img width=49% src="./Screenshots/macos-document.png" alt="Document panel">
-<img width=49% src="./Screenshots/macos-api.png" alt="API console">
-<img width=49% src="./Screenshots/macos-settings.png" alt="Settings">
+<img align="left" width=48% src="./Screenshots/macos-tableview.png" alt="Search results in a table with the mapped fields sidebar" style="padding:10px">
+<img align="left" width=48% src="./Screenshots/macos-document.png" alt="Document panel" style="padding:10px">
+
+<br clear="left"/>
 
 ### iOS
 
