@@ -42,8 +42,8 @@ Available on the Apple App Store for iOS and macOS platforms
 
 ### macOS
 
-<img align="left" width=48% src="./Screenshots/macos-tableview.png" alt="Search results in a table with the mapped fields sidebar" style="padding:10px">
-<img align="left" width=48% src="./Screenshots/macos-document.png" alt="Document panel" style="padding:10px">
+<img align="left" width=46% src="./Screenshots/macos-tableview.png" alt="Search results in a table with the mapped fields sidebar" style="padding:10px">
+<img align="left" width=46% src="./Screenshots/macos-document.png" alt="Document panel" style="padding:10px">
 
 <br clear="left"/>
 
