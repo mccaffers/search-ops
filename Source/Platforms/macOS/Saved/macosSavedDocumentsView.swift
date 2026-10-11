@@ -34,7 +34,10 @@ enum macosSavedDocumentLoadState: Equatable {
   case idle
   case loading
   case loaded
-  case notFound
+  /// Found in another index than the one it was saved from. `saved` when the new index was saved with it.
+  case moved(from: String, to: String, saved: Bool)
+  /// Not in any of the indices or patterns searched
+  case notFound(searched: [String])
   case failed(String)
 }
 
@@ -468,28 +471,45 @@ struct macosSavedDocumentsView: View {
       return
     }
     loadState = .loading
-    labels = document.dataViewId.flatMap { DataViewDataManager().view(id: $0) }?.labels ?? [:]
+    let dataView = document.dataViewId.flatMap { DataViewDataManager().view(id: $0) }
+    labels = dataView?.labels ?? [:]
     let hostCopy = host.generateCopy()
     loadTask = Task {
-      let result = await SavedDocumentSearch.load(document, host: hostCopy)
+      let result = await SavedDocumentSearch.load(document, host: hostCopy, dataView: dataView)
       guard !Task.isCancelled, selected?.id == document.id else { return }
       switch result {
       case .found(let content):
-        // The mapping gives each field its type badge, as in Search
-        let mapping = await IndexMap.indexMappings(serverDetails: hostCopy, index: document.docIndex)
+        // The mapping gives each field its type badge, as in Search. It's the index the document was found in,
+        // which isn't the saved one when it's moved.
+        let mapping = await IndexMap.indexMappings(serverDetails: hostCopy, index: content.ref.index)
         guard !Task.isCancelled, selected?.id == document.id else { return }
         fields = mapping
         onlyVisibleFields = []
         fieldsVersion = UUID()
         itemDetail.ref = content.ref
         itemDetail.item = content.row
-        loadState = .loaded
+        if let move = content.move {
+          loadState = .moved(from: move.from, to: content.ref.index,
+                             saved: move.isCertain && relocate(document, to: content.ref.index))
+        } else {
+          loadState = .loaded
+        }
       case .notFound:
-        loadState = .notFound
+        let fallback = SavedDocumentSearch.fallbackIndex(for: document, dataView: dataView)
+        loadState = .notFound(searched: [document.docIndex] + (fallback.map { [$0] } ?? []))
       case .failed(let error):
         loadState = .failed(error.message)
       }
     }
+  }
+
+  /// Saves the index a document was found in, so it's opened from there next time and shows as saved in Search.
+  /// Keeps it open, as whichever saved copy is kept when it was saved there already.
+  private func relocate(_ document: SavedDocument, to index: String) -> Bool {
+    guard let relocated = manager.relocate(id: document.id, to: index) else { return false }
+    selected = relocated
+    reload()
+    return true
   }
 
   private func closeDocument() {
@@ -636,10 +656,19 @@ struct macosSavedDocumentRowView: View {
   @ViewBuilder
   private var status: some View {
     switch loadState {
-    case .notFound:
-      Text("This document no longer exists on the cluster.")
+    case .notFound(let searched):
+      Text("Not found in \(searched.joined(separator: " or ")).")
         .font(.system(size: 11))
         .foregroundColor(Color("WarnText"))
+        .lineLimit(2)
+        .truncationMode(.middle)
+    case .moved(let from, let to, let saved):
+      // Not saved when other indices have a document with the same id, and the newest was opened
+      Text(saved ? "Moved from \(from) to \(to)." : "Not in \(from), opened the newest copy in \(to).")
+        .font(.system(size: 11))
+        .foregroundColor(Color("TextSecondary"))
+        .lineLimit(2)
+        .truncationMode(.middle)
     case .failed(let reason):
       Text(reason)
         .font(.system(size: 11))
@@ -677,9 +706,14 @@ struct macosSavedSearchRowView: View {
 
   @State private var isHovered = false
 
-  /// eg. "Run this search. Saved 9 Oct 2026 at 14:00, updated 10 Oct 2026 at 09:30"
+  /// eg. "Run this search over the last hour from when it's run. Saved 9 Oct 2026 at 14:00, updated 10 Oct 2026 at
+  /// 09:30"
   var helpText: String {
-    var text = "Run this search. Saved \(search.savedDate.formatted(date: .abbreviated, time: .shortened))"
+    var text = "Run this search"
+    if search.isPeriodLive, let period = search.periodTitle {
+      text += " over \(period.prefix(1).lowercased() + period.dropFirst()), from when it's run"
+    }
+    text += ". Saved \(search.savedDate.formatted(date: .abbreviated, time: .shortened))"
     if let updated = search.updatedDate {
       text += ", updated \(updated.formatted(date: .abbreviated, time: .shortened))"
     }
@@ -732,10 +766,17 @@ struct macosSavedSearchRowView: View {
               chip(icon: "clock", text: field.field)
             }
             if let period = search.periodTitle {
-              Text(period)
-                .font(.system(size: 11))
-                .foregroundColor(Color("TextSecondary"))
-                .lineLimit(1)
+              HStack(spacing: 3) {
+                // A period that moves with time, eg. "Last hour", searches up to when it's run
+                if search.isPeriodLive {
+                  Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 10))
+                }
+                Text(period)
+                  .font(.system(size: 11))
+                  .lineLimit(1)
+              }
+              .foregroundColor(Color("TextSecondary"))
             }
             if !details.isEmpty {
               Text(details)

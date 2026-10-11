@@ -54,7 +54,7 @@ struct SavedSearchTests {
     #expect(search.searchIndex == "live-trading-*")
     #expect(search.dataViewId == view.id)
     #expect(search.dateField == SavedDateField(field: "@timestamp", parts: ["@timestamp"], type: "date"))
-    #expect(search.timeRange == DateInterval(start: now - 7200, end: now))
+    #expect(search.period == .relative(value: 2, period: .Hours))
     #expect(search.query == "status:500")
     #expect(search.fieldFilters.map(\.field) == ["host.name", "cpu1"])
     #expect(search.fieldFilters.map(\.negated) == [false, true])
@@ -75,11 +75,46 @@ struct SavedSearchTests {
                                   filterObject: filterObject, selectedFields: [], now: now)
 
     #expect(search.dateField == nil)
-    #expect(search.timeRange == nil)
+    #expect(search.period == nil)
     #expect(search.query == "")
     #expect(search.sortField == nil)
     #expect(search.sortOrder == .Descending)
     #expect(search.displayTitle == "orders")
+  }
+
+  @Test func aRelativePeriodStaysRelative() {
+    let search = SavedSearch.make(hostId: hostId, searchIndex: "logs-*", dataView: nil,
+                                  filterObject: filterObject(), selectedFields: [], now: now)
+    #expect(search.isPeriodLive)
+    #expect(search.periodTitle == "Last 2 Hours")
+  }
+
+  @Test func pinningFixesARelativePeriodToTheDatesItCoversNow() {
+    let search = SavedSearch.make(hostId: hostId, searchIndex: "logs-*", dataView: nil,
+                                  filterObject: filterObject(), selectedFields: [], pinPeriod: true, now: now)
+    #expect(search.period == .absolute(from: now - 7200, to: now, fromNow: false, toNow: false))
+    #expect(!search.isPeriodLive)
+  }
+
+  @Test func aPeriodEndingNowStaysLiveUnlessPinned() {
+    let filterObject = filterObject()
+    let from = now - 3600
+    filterObject.restore(.absolute(from: from, to: Date.distantPast, fromNow: false, toNow: true))
+
+    let live = SavedSearch.make(hostId: hostId, searchIndex: "logs-*", dataView: nil,
+                                filterObject: filterObject, selectedFields: [], now: now)
+    let pinned = SavedSearch.make(hostId: hostId, searchIndex: "logs-*", dataView: nil,
+                                  filterObject: filterObject, selectedFields: [], pinPeriod: true, now: now)
+
+    #expect(live.period == .absolute(from: from, to: Date.distantPast, fromNow: false, toNow: true))
+    #expect(live.isPeriodLive)
+    #expect(pinned.period == .absolute(from: from, to: now, fromNow: false, toNow: false))
+  }
+
+  @Test func pinningFixedDatesKeepsThem() {
+    let period = DateRangeSnapshot.absolute(from: now - 60, to: now, fromNow: false, toNow: false)
+    #expect(SavedSearch.savedPeriod(period, pinned: true, now: now + 999) == period)
+    #expect(SavedSearch.savedPeriod(nil, pinned: true, now: now) == nil)
   }
 
   @Test func defaultTitleSummarisesTheSearch() {
@@ -95,7 +130,7 @@ struct SavedSearchTests {
     let search = SavedSearch(hostId: hostId,
                              searchIndex: "live-trading-*",
                              dateField: SavedDateField(field: "@timestamp", type: "date"),
-                             timeRange: range,
+                             period: .absolute(from: range.start, to: range.end, fromNow: false, toNow: false),
                              query: "status:500",
                              fieldFilters: [FieldFilter(field: "cpu1", value: "0", negated: true, disabled: true)],
                              selectedFields: ["cpu1", "cpu0"],
@@ -121,6 +156,34 @@ struct SavedSearchTests {
     #expect(filter.fieldFilters.first?.disabled == true)
     #expect(filter.sort?.field.squashedString == "cpu0")
     #expect(filter.sort?.order == .Ascending)
+  }
+
+  @Test func requestKeepsARelativePeriodRelative() throws {
+    let search = SavedSearch(hostId: hostId,
+                             searchIndex: "logs-*",
+                             dateField: SavedDateField(field: "@timestamp", type: "date"),
+                             period: .relative(value: 1, period: .Hours))
+
+    let filter = search.request(dataView: nil).filterObject
+
+    #expect(filter.absoluteRange == nil)
+    let relative = try #require(filter.relativeRange)
+    #expect(relative.value == 1)
+    #expect(relative.period == .Hours)
+  }
+
+  @Test func requestKeepsAPeriodEndingNow() throws {
+    let from = now - 3600
+    let search = SavedSearch(hostId: hostId,
+                             searchIndex: "logs-*",
+                             dateField: SavedDateField(field: "@timestamp", type: "date"),
+                             period: .absolute(from: from, to: now, fromNow: false, toNow: true))
+
+    let absolute = try #require(search.request(dataView: nil).filterObject.absoluteRange)
+
+    #expect(absolute.from == from)
+    #expect(absolute.toNow)
+    #expect(!absolute.fromNow)
   }
 
   @Test func requestWithoutAQuerySearchesEverything() {
@@ -196,11 +259,11 @@ struct SavedSearchTests {
   }
 
   @Test func aRelativePeriodIsNotAChangeStraightAfterSaving() {
-    // Saving pins the period to fixed dates, but the screen keeps its relative period
+    // Pinning the saved copy to fixed dates leaves the screen with its relative period
     let filterObject = filterObject()
     let baseline = state(filterObject)
     _ = SavedSearch.make(hostId: hostId, searchIndex: "live-trading-*", dataView: nil,
-                         filterObject: filterObject, selectedFields: ["cpu0", "cpu1"], now: now)
+                         filterObject: filterObject, selectedFields: ["cpu0", "cpu1"], pinPeriod: true, now: now)
     #expect(state(filterObject).changes(from: baseline).isEmpty)
   }
 
@@ -257,7 +320,7 @@ struct SavedSearchTests {
     let search = SavedSearch(hostId: hostId,
                              searchIndex: "live-trading-*",
                              dateField: SavedDateField(field: "@timestamp", type: "date"),
-                             timeRange: range,
+                             period: .absolute(from: range.start, to: range.end, fromNow: false, toNow: false),
                              query: "status:500",
                              fieldFilters: [FieldFilter(field: "cpu1", value: "0")],
                              selectedFields: ["cpu1"],
@@ -289,6 +352,40 @@ struct SavedSearchTests {
                                    selectedFields: ["dayClose"], columnWidths: ["date:date": 300])
     #expect(resized.changes(from: baseline) == [.columnWidths])
     #expect(SavedSearchState.changesLabel([.columnWidths]) == "Changed: column widths")
+  }
+
+  @Test func aRelativeSavedSearchOpenedAgainHasNoChanges() {
+    let saved = SavedSearch.make(hostId: hostId, searchIndex: "live-trading-*", dataView: nil,
+                                 filterObject: filterObject(), selectedFields: ["cpu0"], now: now)
+    let request = saved.request(dataView: nil)
+
+    let baseline = SavedSearchState(request: request)
+    let onScreen = SavedSearchState(searchIndex: request.index, dataViewId: nil,
+                                    filterObject: request.filterObject, selectedFields: ["cpu0"])
+
+    #expect(baseline.period == .relative(value: 2, period: .Hours))
+    #expect(onScreen.changes(from: baseline).isEmpty)
+  }
+
+  @Test func switchingBetweenRelativeAndFixedDatesIsAPeriodChange() {
+    #expect(SavedSearchState.changes([], pinningChanged: true) == [.period])
+    #expect(SavedSearchState.changes([.query, .sort], pinningChanged: true) == [.query, .sort, .period])
+    #expect(SavedSearchState.changes([.query, .period], pinningChanged: true) == [.query, .period])
+    #expect(SavedSearchState.changes([.query], pinningChanged: false) == [.query])
+  }
+
+  @Test func aSearchSavedWithFixedDatesForARelativePeriodIsPinned() {
+    let filterObject = filterObject()
+    let baseline = state(filterObject)
+    let pinned = SavedSearch.make(hostId: hostId, searchIndex: "live-trading-*", dataView: nil,
+                                  filterObject: filterObject, selectedFields: [], pinPeriod: true, now: now)
+    let relative = SavedSearch.make(hostId: hostId, searchIndex: "live-trading-*", dataView: nil,
+                                    filterObject: filterObject, selectedFields: [], now: now)
+
+    #expect(SavedSearchLink.isPinned(pinned, baseline: baseline))
+    #expect(!SavedSearchLink.isPinned(relative, baseline: baseline))
+    // Opened from the Saved tab, the screen has the same fixed dates, which weren't pinned from anything
+    #expect(!SavedSearchLink.isPinned(pinned, baseline: SavedSearchState(request: pinned.request(dataView: nil))))
   }
 
   @Test func changesLabelListsTheParts() {

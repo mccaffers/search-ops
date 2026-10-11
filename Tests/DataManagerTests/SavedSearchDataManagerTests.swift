@@ -39,7 +39,7 @@ struct SavedSearchDataManagerTests {
                              searchIndex: "live-trading-*",
                              dataViewId: dataViewId,
                              dateField: SavedDateField(field: "event.created", parts: ["event", "created"], type: "date"),
-                             timeRange: range,
+                             period: .absolute(from: range.start, to: range.end, fromNow: false, toNow: false),
                              query: "status:500",
                              fieldFilters: [FieldFilter(field: "host.name", value: "a"),
                                             FieldFilter(field: "cpu1", value: "0", negated: true, disabled: true)],
@@ -56,7 +56,7 @@ struct SavedSearchDataManagerTests {
     #expect(stored.searchIndex == "live-trading-*")
     #expect(stored.dataViewId == dataViewId)
     #expect(stored.dateField == SavedDateField(field: "event.created", parts: ["event", "created"], type: "date"))
-    #expect(stored.timeRange == range)
+    #expect(stored.period == .absolute(from: range.start, to: range.end, fromNow: false, toNow: false))
     #expect(stored.query == "status:500")
     #expect(stored.fieldFilters.map(\.field) == ["host.name", "cpu1"])
     #expect(stored.fieldFilters.map(\.negated) == [false, true])
@@ -72,11 +72,63 @@ struct SavedSearchDataManagerTests {
     let saved = try manager.save(draft())
     let stored = try #require(manager.search(id: saved.id))
     #expect(stored.dateField == nil)
-    #expect(stored.timeRange == nil)
+    #expect(stored.period == nil)
     #expect(stored.sortField == nil)
     #expect(stored.sortOrder == .Descending)
     #expect(stored.fieldFilters.isEmpty)
     #expect(stored.selectedFields.isEmpty)
+  }
+
+  @Test func aRelativePeriodIsStoredRelative() throws {
+    var search = draft()
+    search.dateField = SavedDateField(field: "@timestamp")
+    search.period = .relative(value: 1, period: .Hours)
+
+    let stored = try #require(manager.search(id: try manager.save(search).id))
+
+    #expect(stored.period == .relative(value: 1, period: .Hours))
+  }
+
+  @Test func aPeriodStartingOrEndingNowIsStoredWithItsNowSide() throws {
+    let from = Date(timeIntervalSince1970: 1_000)
+    var search = draft()
+    search.dateField = SavedDateField(field: "@timestamp")
+    search.period = .absolute(from: from, to: Date(timeIntervalSince1970: 0), fromNow: false, toNow: true)
+
+    let stored = try #require(manager.search(id: try manager.save(search).id))
+
+    #expect(stored.period == .absolute(from: from, to: Date(timeIntervalSince1970: 0), fromNow: false, toNow: true))
+  }
+
+  @Test func updatingFromRelativeToFixedDatesClearsTheRelativePeriod() throws {
+    var search = draft()
+    search.dateField = SavedDateField(field: "@timestamp")
+    search.period = .relative(value: 1, period: .Hours)
+    let saved = try manager.save(search)
+
+    let fixed = DateRangeSnapshot.absolute(from: Date(timeIntervalSince1970: 10), to: Date(timeIntervalSince1970: 20),
+                                           fromNow: false, toNow: false)
+    search.period = fixed
+    try manager.update(id: saved.id, with: search)
+
+    #expect(manager.search(id: saved.id)?.period == fixed)
+  }
+
+  @Test func aSearchSavedBeforeRelativePeriodsWereKeptReadsAsFixedDates() throws {
+    // Older rows only have the two dates, with the newer columns at their defaults
+    let object = RealmSavedSearch()
+    object.id = UUID()
+    object.hostId = hostId
+    object.dateField = "@timestamp"
+    object.rangeFrom = Date(timeIntervalSince1970: 10)
+    object.rangeTo = Date(timeIntervalSince1970: 20)
+    try realm.write { realm.add(object) }
+
+    let stored = try #require(manager.search(id: object.id))
+
+    #expect(stored.period == .absolute(from: Date(timeIntervalSince1970: 10), to: Date(timeIntervalSince1970: 20),
+                                       fromNow: false, toNow: false))
+    #expect(!stored.isPeriodLive)
   }
 
   @Test func theSameSearchCanBeSavedTwice() throws {
@@ -99,7 +151,7 @@ struct SavedSearchDataManagerTests {
     original.selectedFields = ["cpu0"]
     original.columnWidths = ["field:cpu0": 120, "document": 400]
     original.dateField = SavedDateField(field: "@timestamp")
-    original.timeRange = DateInterval(start: Date(timeIntervalSince1970: 10), end: Date(timeIntervalSince1970: 20))
+    original.period = .relative(value: 15, period: .Minutes)
     original.sortField = SavedDateField(field: "cpu0")
     let saved = try manager.save(original)
     #expect(saved.updatedDate == nil)
@@ -131,7 +183,7 @@ struct SavedSearchDataManagerTests {
     #expect(stored.columnWidths == ["field:cpu2": 90])
     // Cleared when the search no longer has them
     #expect(stored.dateField == nil)
-    #expect(stored.timeRange == nil)
+    #expect(stored.period == nil)
     #expect(stored.sortField == nil)
     #expect(stored.sortOrder == .Ascending)
     #expect(manager.all().count == 1)

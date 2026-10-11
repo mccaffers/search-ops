@@ -389,8 +389,8 @@ struct macosSearchMainView: View {
     return SavedDocumentDataManager().find(hostId: host.id, ref: ref) != nil
   }
 
-  /// The search as it stands, for the Saved tab
-  func currentSavedSearch(title: String = "") -> SavedSearch? {
+  /// The search as it stands, for the Saved tab, with its period pinned to fixed dates when `pinPeriod` is set
+  func currentSavedSearch(title: String = "", pinPeriod: Bool = false) -> SavedSearch? {
     guard let host = selectedHost, !host.isInvalidated, !selectedIndex.isEmpty else { return nil }
     return SavedSearch.make(hostId: host.id,
                             title: title,
@@ -398,7 +398,8 @@ struct macosSearchMainView: View {
                             dataView: selectedDataView,
                             filterObject: filterObject,
                             selectedFields: bodyFilteredFields.map(\.squashedString),
-                            columnWidths: macosTableColumn.savedWidths(tableColumnWidths))
+                            columnWidths: macosTableColumn.savedWidths(tableColumnWidths),
+                            pinPeriod: pinPeriod)
   }
 
   /// The search as far as saving goes, to compare with the saved search it came from
@@ -421,6 +422,7 @@ struct macosSearchMainView: View {
     if let link = savedSearchLink {
       if let saved = SavedSearchDataManager().search(id: link.id) {
         savedSearchLink?.title = saved.displayTitle
+        savedSearchLink?.pinnedPeriod = SavedSearchLink.isPinned(saved, baseline: link.baseline)
       } else {
         savedSearchLink = nil
       }
@@ -429,21 +431,25 @@ struct macosSearchMainView: View {
   }
 
   /// Saves the search as a new saved search, which saving again then updates
-  func saveSearch(named name: String) {
+  func saveSearch(named name: String, pinPeriod: Bool) {
     showingSavePopover = false
-    guard let search = currentSavedSearch(title: name),
+    guard let search = currentSavedSearch(title: name, pinPeriod: pinPeriod),
           let saved = try? SavedSearchDataManager().save(search) else { return }
-    savedSearchLink = SavedSearchLink(id: saved.id, title: saved.displayTitle, baseline: currentSearchState)
+    let baseline = currentSearchState
+    savedSearchLink = SavedSearchLink(id: saved.id, title: saved.displayTitle, baseline: baseline,
+                                      pinnedPeriod: SavedSearchLink.isPinned(saved, baseline: baseline))
     confirmSave("Saved")
   }
 
   /// Replaces the saved search this search came from with the search as it stands
-  func updateSavedSearch() {
+  func updateSavedSearch(pinPeriod: Bool) {
     showingSavePopover = false
-    guard let link = savedSearchLink, let search = currentSavedSearch() else { return }
+    guard let link = savedSearchLink, let search = currentSavedSearch(pinPeriod: pinPeriod) else { return }
     do {
-      try SavedSearchDataManager().update(id: link.id, with: search)
-      savedSearchLink?.baseline = currentSearchState
+      let saved = try SavedSearchDataManager().update(id: link.id, with: search)
+      let baseline = currentSearchState
+      savedSearchLink?.baseline = baseline
+      savedSearchLink?.pinnedPeriod = SavedSearchLink.isPinned(saved, baseline: baseline)
       confirmSave("Updated")
     } catch {
       // Removed from the Saved tab meanwhile, so it can only be saved as a new one
@@ -475,8 +481,10 @@ struct macosSearchMainView: View {
           macosSaveSearchPopover(linkedTitle: savedSearchLink?.title,
                                  changes: changes,
                                  suggestedName: currentSavedSearch()?.displayTitle ?? selectedIndex,
-                                 onUpdate: updateSavedSearch,
-                                 onSaveNew: saveSearch(named:),
+                                 period: filterObject.dateField == nil ? nil : filterObject.snapshotDateRange(),
+                                 linkedPinned: savedSearchLink?.pinnedPeriod ?? false,
+                                 onUpdate: updateSavedSearch(pinPeriod:),
+                                 onSaveNew: saveSearch(named:pinPeriod:),
                                  onClose: { showingSavePopover = false })
         }
     )

@@ -88,6 +88,33 @@ public class SavedDocumentDataManager {
     return object.eject()
   }
 
+  /// Points a saved document at the index it's now in, eg. after an ILM shrink. When the document is already saved
+  /// there too, that one is kept, taking this one's title if it has none, and this one is removed.
+  /// Returns the saved document, or nil when it isn't saved or the database can't be written.
+  @discardableResult
+  public func relocate(id: UUID, to index: String) -> SavedDocument? {
+    guard !index.isEmpty,
+          let realm = realmProvider(),
+          let moved = realm.object(ofType: RealmSavedDocument.self, forPrimaryKey: id) else { return nil }
+    guard moved.docIndex != index else { return moved.eject() }
+    let existing = object(hostId: moved.hostId, ref: DocumentRef(index: index, id: moved.docId))
+    do {
+      try realm.write {
+        if let existing = existing {
+          if existing.title.isEmpty {
+            existing.title = moved.title
+          }
+          realm.delete(moved)
+        } else {
+          moved.docIndex = index
+        }
+      }
+    } catch {
+      return nil
+    }
+    return (existing ?? moved).eject()
+  }
+
   public func delete(id: UUID) {
     guard let realm = realmProvider(),
           let object = realm.object(ofType: RealmSavedDocument.self, forPrimaryKey: id) else { return }

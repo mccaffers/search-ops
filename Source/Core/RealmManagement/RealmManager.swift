@@ -19,7 +19,8 @@ public class RealmManager : RealmManagerProtocol {
   // 12: RealmSavedSearch. A new class only, so the migration block needs nothing
   // 13: RealmSavedSearch updated date. Optional, so nil is right for older searches
   // 14: RealmSavedSearch column widths. Older searches had none, so the empty list needs nothing
-  public static let schemaVersion : UInt64 = 14
+  // 15: RealmSavedSearch relative periods and now flags. Empty and false read as the fixed dates older searches had
+  public static let schemaVersion : UInt64 = 15
   
   // Debug builds only: launching with SEARCHOPS_IN_MEMORY_STORE=1 keeps the database in memory,
   // so the app never reads the encryption key from the Keychain or writes a realm file.

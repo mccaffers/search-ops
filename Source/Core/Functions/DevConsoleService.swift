@@ -203,8 +203,8 @@ public struct DevConsoleResult: Sendable {
 /// Everything else (_bulk, _delete_by_query, _doc, _reindex, _close, ...) is blocked before it's sent
 public enum DevConsoleReadOnlyPolicy {
 
-  /// The endpoints a POST may go to, from the path's first API segment (the first one starting
-  /// with "_") to the end. "*" is any one segment, eg. an id or a pipeline name
+  /// The endpoints a POST may go to (only checked for POSTs), from the path's first API segment
+  /// (the first one starting with "_") to the end. "*" is any one segment, eg. an id or a pipeline name
   static let allowedPostEndpoints: [[String]] = [
     // Searches and other reads
     ["_search"], ["_search", "scroll"], ["_search", "scroll", "*"], ["_search", "template"],
@@ -226,9 +226,16 @@ public enum DevConsoleReadOnlyPolicy {
 
   /// Why the request isn't sent with read only mode on, or nil when it's allowed
   public static func blockedReason(for request: DevConsoleRequest) -> String? {
-    // A GET with a body goes out as a POST, so check what's sent, not what was typed
-    if request.sentMethod == .GET || isAllowedPost(path: request.path) {
+    // A GET with a body goes out as a POST, so check what's sent, not what was typed.
+    // No default case: a new method (eg. PUT or DELETE) has to decide here whether it's allowed,
+    // rather than inheriting the POST endpoint list, where PUT /_scripts/painless/_execute stores a script
+    switch request.sentMethod {
+    case .GET:
       return nil
+    case .POST:
+      if isAllowedPost(path: request.path) {
+        return nil
+      }
     }
     return "Read only mode is on, so \(request.sentMethod.rawValue) \(request.path) wasn't sent. "
       + "Only GET requests, searches and other reads, refresh, flush and cache clears are allowed. "

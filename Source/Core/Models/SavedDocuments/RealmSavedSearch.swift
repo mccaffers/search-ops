@@ -23,9 +23,15 @@ public class RealmSavedSearch: Object {
   @Persisted public var dateField: String = ""
   @Persisted public var dateFieldParts: List<String>
   @Persisted public var dateFieldType: String = ""
-  // Both set, or neither
+  // Both set, or neither, for fixed dates or ones that start or end now. Unused for a relative period.
   @Persisted public var rangeFrom: Date?
   @Persisted public var rangeTo: Date?
+  @Persisted public var rangeFromNow: Bool = false
+  @Persisted public var rangeToNow: Bool = false
+  // A relative period, eg. 1 and "Hours". "" means the period is the dates above, as in searches saved before
+  // relative periods were kept. A SearchDateTimePeriods raw value, kept as a string so an empty column is valid.
+  @Persisted public var relativeValue: Double = 0
+  @Persisted public var relativePeriod: String = ""
   @Persisted public var query: String = ""
   // Embedded, so deleting the search deletes its filters
   @Persisted public var fieldFilters: List<RealmFieldFilter>
@@ -53,8 +59,7 @@ public class RealmSavedSearch: Object {
       self.dateFieldParts.append(objectsIn: field.parts)
       self.dateFieldType = field.type
     }
-    self.rangeFrom = search.timeRange?.start
-    self.rangeTo = search.timeRange?.end
+    setPeriod(search.period)
     self.query = search.query
     self.fieldFilters.append(objectsIn: search.fieldFilters.map(RealmFieldFilter.init))
     self.selectedFields.append(objectsIn: search.selectedFields)
@@ -77,8 +82,7 @@ public class RealmSavedSearch: Object {
     dateFieldParts.removeAll()
     dateFieldParts.append(objectsIn: search.dateField?.parts ?? [])
     dateFieldType = search.dateField?.type ?? ""
-    rangeFrom = search.timeRange?.start
-    rangeTo = search.timeRange?.end
+    setPeriod(search.period)
     query = search.query
     fieldFilters.removeAll()
     fieldFilters.append(objectsIn: search.fieldFilters.map(RealmFieldFilter.init))
@@ -93,12 +97,40 @@ public class RealmSavedSearch: Object {
     sortOrder = search.sortOrder.rawValue
   }
 
+  private func setPeriod(_ period: DateRangeSnapshot?) {
+    rangeFrom = nil
+    rangeTo = nil
+    rangeFromNow = false
+    rangeToNow = false
+    relativeValue = 0
+    relativePeriod = ""
+    switch period {
+    case .none:
+      break
+    case .relative(let value, let unit):
+      relativeValue = value
+      relativePeriod = unit.rawValue
+    case .absolute(let from, let to, let fromNow, let toNow):
+      rangeFrom = from
+      rangeTo = to
+      rangeFromNow = fromNow
+      rangeToNow = toNow
+    }
+  }
+
+  /// The saved period, nil without one or when the stored dates don't make sense
+  var period: DateRangeSnapshot? {
+    if let unit = SearchDateTimePeriods(rawValue: relativePeriod) {
+      return .relative(value: relativeValue, period: unit)
+    }
+    guard let from = rangeFrom, let to = rangeTo else { return nil }
+    // A side that's now has no date of its own to be out of order with
+    guard rangeFromNow || rangeToNow || from <= to else { return nil }
+    return .absolute(from: from, to: to, fromNow: rangeFromNow, toNow: rangeToNow)
+  }
+
   /// A plain copy that's safe to keep after the object is deleted
   public func eject() -> SavedSearch {
-    var range: DateInterval? = nil
-    if let from = rangeFrom, let to = rangeTo, from <= to {
-      range = DateInterval(start: from, end: to)
-    }
     return SavedSearch(id: id,
                        hostId: hostId,
                        title: title,
@@ -107,7 +139,7 @@ public class RealmSavedSearch: Object {
                        dateField: dateField.isEmpty ? nil : SavedDateField(field: dateField,
                                                                            parts: Array(dateFieldParts),
                                                                            type: dateFieldType),
-                       timeRange: range,
+                       period: period,
                        query: query,
                        fieldFilters: fieldFilters.map { $0.eject() },
                        selectedFields: Array(selectedFields),

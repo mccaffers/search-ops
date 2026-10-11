@@ -348,9 +348,6 @@ struct SettingsView: View {
     buildDetailsCard
     linksCard
     feedbackCard
-    Text("Building since 2022")
-      .font(.system(size: 11))
-      .frame(maxWidth: .infinity)
   }
 
   private var buildDetailsCard: some View {

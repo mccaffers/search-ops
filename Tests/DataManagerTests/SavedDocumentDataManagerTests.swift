@@ -183,6 +183,76 @@ struct SavedDocumentDataManagerTests {
     #expect(manager.pruneOrphans(validHostIds: [hostId]) == 0)
   }
 
+  // MARK: - Relocate
+
+  @Test func relocateMovesTheDocumentToItsNewIndex() throws {
+    var document = draft("abc")
+    document.title = "Failed checkout"
+    let saved = try manager.save(document)
+
+    let moved = try #require(manager.relocate(id: saved.id, to: "shrink-ab1c-logs-2026.10.10"))
+
+    #expect(moved.id == saved.id)
+    #expect(moved.docIndex == "shrink-ab1c-logs-2026.10.10")
+    #expect(moved.title == "Failed checkout")
+    #expect(manager.document(id: saved.id)?.docIndex == "shrink-ab1c-logs-2026.10.10")
+    #expect(manager.find(hostId: hostId, ref: DocumentRef(index: "shrink-ab1c-logs-2026.10.10", id: "abc")) != nil)
+    #expect(manager.find(hostId: hostId, ref: DocumentRef(index: "logs-2026.10.10", id: "abc")) == nil)
+  }
+
+  @Test func relocateToTheSameIndexChangesNothing() throws {
+    let saved = try manager.save(draft("abc"))
+    #expect(manager.relocate(id: saved.id, to: "logs-2026.10.10") == saved)
+    #expect(manager.all() == [saved])
+  }
+
+  @Test func relocateOntoAnAlreadySavedCopyKeepsThatOne() throws {
+    var old = draft("abc")
+    old.title = "Failed checkout"
+    let moved = try manager.save(old)
+    let existing = try manager.save(draft("abc", index: "shrink-ab1c-logs-2026.10.10"))
+
+    let kept = try #require(manager.relocate(id: moved.id, to: "shrink-ab1c-logs-2026.10.10"))
+
+    #expect(kept.id == existing.id)
+    // It had no title of its own, so it takes the moved one's
+    #expect(kept.title == "Failed checkout")
+    #expect(manager.all().map(\.id) == [existing.id])
+  }
+
+  @Test func relocateOntoACopyWithATitleKeepsItsTitle() throws {
+    var old = draft("abc")
+    old.title = "Old title"
+    let moved = try manager.save(old)
+    var copy = draft("abc", index: "restored-logs-2026.10.10")
+    copy.title = "Kept title"
+    let existing = try manager.save(copy)
+
+    let kept = try #require(manager.relocate(id: moved.id, to: "restored-logs-2026.10.10"))
+
+    #expect(kept.id == existing.id)
+    #expect(kept.title == "Kept title")
+    #expect(manager.document(id: moved.id) == nil)
+  }
+
+  @Test func relocateOnlyMergesWithTheSameHost() throws {
+    let moved = try manager.save(draft("abc"))
+    let otherHost = try manager.save(draft("abc", index: "shrink-logs-2026.10.10", host: UUID()))
+
+    let relocated = try #require(manager.relocate(id: moved.id, to: "shrink-logs-2026.10.10"))
+
+    #expect(relocated.id == moved.id)
+    #expect(manager.all().count == 2)
+    #expect(manager.document(id: otherHost.id)?.hostId == otherHost.hostId)
+  }
+
+  @Test func relocateAnUnknownDocumentOrToNoIndexIsNil() throws {
+    #expect(manager.relocate(id: UUID(), to: "shrink-logs") == nil)
+    let saved = try manager.save(draft("abc"))
+    #expect(manager.relocate(id: saved.id, to: "") == nil)
+    #expect(manager.document(id: saved.id)?.docIndex == "logs-2026.10.10")
+  }
+
   // MARK: - Storage unavailable
 
   @Test func withoutADatabaseReadsAreEmptyAndSavesThrow() {
@@ -190,5 +260,6 @@ struct SavedDocumentDataManagerTests {
     #expect(manager.all().isEmpty)
     #expect(manager.find(hostId: hostId, ref: DocumentRef(index: "logs", id: "abc")) == nil)
     #expect(throws: SavedDocumentError.storageUnavailable) { try manager.save(draft("abc")) }
+    #expect(manager.relocate(id: UUID(), to: "shrink-logs") == nil)
   }
 }

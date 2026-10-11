@@ -19,8 +19,8 @@ public struct SavedSearch: Identifiable, Equatable, Hashable {
   /// The data view the search was made with, if any
   public var dataViewId: UUID?
   public var dateField: SavedDateField?
-  /// Always fixed dates: a relative period is pinned to when it was saved
-  public var timeRange: DateInterval?
+  /// As it was set, so "Last hour" covers the hour before each run. Fixed dates when it was pinned on saving.
+  public var period: DateRangeSnapshot?
   /// The query box, eg. `status:500`. Empty for every document.
   public var query: String
   public var fieldFilters: [FieldFilter]
@@ -41,7 +41,7 @@ public struct SavedSearch: Identifiable, Equatable, Hashable {
               searchIndex: String,
               dataViewId: UUID? = nil,
               dateField: SavedDateField? = nil,
-              timeRange: DateInterval? = nil,
+              period: DateRangeSnapshot? = nil,
               query: String = "",
               fieldFilters: [FieldFilter] = [],
               selectedFields: [String] = [],
@@ -56,7 +56,7 @@ public struct SavedSearch: Identifiable, Equatable, Hashable {
     self.searchIndex = searchIndex
     self.dataViewId = dataViewId
     self.dateField = dateField
-    self.timeRange = timeRange
+    self.period = period
     self.query = query
     self.fieldFilters = fieldFilters
     self.selectedFields = selectedFields
@@ -88,12 +88,18 @@ public struct SavedSearch: Identifiable, Equatable, Hashable {
     "\(title) copy"
   }
 
-  /// The saved time period, eg. "9 Oct 2026 at 14:00 – 10 Oct 2026 at 14:00", nil without one
+  /// The saved time period, eg. "Last hour" or "9 Oct 2026 at 14:00 – 10 Oct 2026 at 14:00", nil without one
   public var periodTitle: String? {
-    timeRange.map { DateRangeSnapshot.absolute(from: $0.start, to: $0.end, fromNow: false, toNow: false).title }
+    period?.title
   }
 
-  /// The search as it stands, with a relative period pinned to the fixed dates it covers at `now`
+  /// Whether the period moves with the time the search is run: a relative one, or one that ends or starts now
+  public var isPeriodLive: Bool {
+    period?.isLive ?? false
+  }
+
+  /// The search as it stands. Its period is kept as it was set, unless `pinPeriod` fixes it to the dates it
+  /// covers at `now`.
   public static func make(hostId: UUID,
                           title: String = "",
                           searchIndex: String,
@@ -101,6 +107,7 @@ public struct SavedSearch: Identifiable, Equatable, Hashable {
                           filterObject: FilterObject,
                           selectedFields: [String],
                           columnWidths: [String: Double] = [:],
+                          pinPeriod: Bool = false,
                           now: Date = Date.now) -> SavedSearch {
     let dateField = filterObject.dateField.flatMap { SavedDateField(field: $0) }
     let query = filterObject.query?.values.first?.string ?? ""
@@ -110,7 +117,8 @@ public struct SavedSearch: Identifiable, Equatable, Hashable {
                        dataViewId: dataView?.id,
                        dateField: dateField,
                        // A period means nothing without a field to apply it to
-                       timeRange: dateField == nil ? nil : SavedDocument.fixedRange(filterObject.snapshotDateRange(), now: now),
+                       period: dateField == nil ? nil : savedPeriod(filterObject.snapshotDateRange(),
+                                                                    pinned: pinPeriod, now: now),
                        query: query == "*" ? "" : query,
                        fieldFilters: filterObject.fieldFilters,
                        selectedFields: selectedFields,
@@ -118,6 +126,14 @@ public struct SavedSearch: Identifiable, Equatable, Hashable {
                        sortField: filterObject.sort.flatMap { SavedDateField(field: $0.field) },
                        sortOrder: filterObject.sort?.order ?? .Descending,
                        savedDate: now)
+  }
+
+  /// The period to save: as it was set, or fixed to the dates it covers at `now`
+  public static func savedPeriod(_ snapshot: DateRangeSnapshot?, pinned: Bool, now: Date = Date.now) -> DateRangeSnapshot? {
+    guard pinned else { return snapshot }
+    return SavedDocument.fixedRange(snapshot, now: now).map {
+      .absolute(from: $0.start, to: $0.end, fromNow: false, toNow: false)
+    }
   }
 
   /// The search to run in the Search tab: on the data view while it still exists (`dataView` is the view looked up
@@ -131,8 +147,8 @@ public struct SavedSearch: Identifiable, Equatable, Hashable {
     let filterObject = FilterObject()
     if let dateField = dateField {
       filterObject.dateField = dateField.squashedField()
-      if let range = timeRange {
-        filterObject.absoluteRange = AbsoluteDateRangeObject(from: range.start, to: range.end)
+      if let period = period {
+        filterObject.restore(period)
       }
     }
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -187,8 +203,8 @@ public struct SavedSearch: Identifiable, Equatable, Hashable {
 }
 
 /// What a search is made of, as far as saving it goes, to tell whether it has changed since it was saved.
-/// The time period is kept as it was set, so a relative period isn't a change just because the saved copy has
-/// fixed dates. The page, column widths and results aren't part of it.
+/// The time period is kept as it was set, so a relative period isn't a change just because the saved copy was
+/// pinned to fixed dates. The page, column widths and results aren't part of it.
 public struct SavedSearchState: Equatable {
   public enum Part: String, CaseIterable {
     case index = "index"
@@ -258,6 +274,12 @@ public struct SavedSearchState: Equatable {
     return parts
   }
 
+  /// `parts`, plus the time period when only whether it's pinned to fixed dates changed
+  public static func changes(_ parts: [Part], pinningChanged: Bool) -> [Part] {
+    guard pinningChanged, !parts.contains(.period) else { return parts }
+    return Part.allCases.filter { parts.contains($0) || $0 == .period }
+  }
+
   /// eg. "Changed: query, filters", or "No changes"
   public static func changesLabel(_ parts: [Part]) -> String {
     parts.isEmpty ? "No changes" : "Changed: " + parts.map(\.rawValue).joined(separator: ", ")
@@ -270,10 +292,20 @@ public struct SavedSearchLink: Equatable {
   public var title: String
   /// The search when it was saved, updated or opened
   public var baseline: SavedSearchState
+  /// Whether the saved search pinned a relative period to fixed dates, so saving it again pins it too
+  public var pinnedPeriod: Bool
 
-  public init(id: UUID, title: String, baseline: SavedSearchState) {
+  public init(id: UUID, title: String, baseline: SavedSearchState, pinnedPeriod: Bool = false) {
     self.id = id
     self.title = title
     self.baseline = baseline
+    self.pinnedPeriod = pinnedPeriod
+  }
+
+  /// Whether `saved` keeps fixed dates for a period that was relative, or ended now, when it was saved. Searches
+  /// that were opened from the Saved tab start from their stored period, so they don't count, nor do the fixed
+  /// dates of searches saved before relative periods were kept.
+  public static func isPinned(_ saved: SavedSearch, baseline: SavedSearchState) -> Bool {
+    saved.period != nil && !saved.isPeriodLive && (baseline.period?.isLive ?? false)
   }
 }

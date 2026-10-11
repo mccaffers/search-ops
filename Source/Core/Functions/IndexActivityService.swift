@@ -351,6 +351,14 @@ public class IndexActivityService {
     return response.httpStatus == 0 ? fallback : "\(fallback) (HTTP \(response.httpStatus))"
   }
 
+  /// A failure the query caused, eg. one index maps the field differently, which a smaller batch can avoid.
+  /// Connection errors, 401/403, 429 and 5xx would fail every request, so they aren't retried
+  static func isQueryFailure(_ response: ServerResponse) -> Bool {
+    response.error == nil && response.httpStatus == 400
+  }
+
+  static let fatalFallback = "Failed to fetch index activity"
+
   // MARK: - Date Field Cache
 
   /// The date field picked for an index, nil when it has none
@@ -408,17 +416,18 @@ public class IndexActivityService {
     return (fields, errorMessage)
   }
 
-  /// The newest document's date in each of `indices`, all using `field`. A batch that fails,
+  /// The newest document's date in each of `indices`, all using `field`. A batch the query fails on,
   /// eg. because one index maps the field differently, is split in half until the index is found,
-  /// about log2(n) more requests rather than one per index
+  /// about 2·log2(n) more requests rather than one per index. Any other failure, eg. expired
+  /// credentials or the cluster being down, would fail every request, so it stops and its message comes back as `fatal`
   @MainActor
   static func fetchMaxTimestamps(
     serverDetails: HostDetails,
     indices: [String],
     field: DateFieldInfo,
     request: Request
-  ) async -> [String: Double] {
-    guard !indices.isEmpty, !Task.isCancelled else { return [:] }
+  ) async -> (timestamps: [String: Double], fatal: String?) {
+    guard !indices.isEmpty, !Task.isCancelled else { return ([:], nil) }
 
     if indices.count == 1 {
       // Queried on its own, an alias's timestamp is keyed by its own name, not its index's
@@ -426,11 +435,13 @@ public class IndexActivityService {
       let response = await request.invoke(serverDetails: serverDetails,
                                           endpoint: "/\(index)/_search?ignore_unavailable=true",
                                           json: buildSingleIndexMaxQuery(field: field.name))
-      guard succeeded(response), let data = response.data,
-            let timestamp = parseSingleMaxTimestamp(data: data, isNanos: field.isNanos, isSeconds: field.isSeconds) else {
-        return [:]
+      guard succeeded(response), let data = response.data else {
+        return ([:], isQueryFailure(response) ? nil : failureMessage(response, fallback: fatalFallback))
       }
-      return [index: timestamp]
+      guard let timestamp = parseSingleMaxTimestamp(data: data, isNanos: field.isNanos, isSeconds: field.isSeconds) else {
+        return ([:], nil)
+      }
+      return ([index: timestamp], nil)
     }
 
     let response = await request.invoke(serverDetails: serverDetails,
@@ -438,16 +449,17 @@ public class IndexActivityService {
                                         json: buildBatchedTermsAggQuery(field: field.name))
     // No buckets is an answer too, those indices have no documents
     if succeeded(response), let data = response.data {
-      return parseBatchedAggResponse(data: data, isNanos: field.isNanos, isSeconds: field.isSeconds)
+      return (parseBatchedAggResponse(data: data, isNanos: field.isNanos, isSeconds: field.isSeconds), nil)
     }
+    guard isQueryFailure(response) else { return ([:], failureMessage(response, fallback: fatalFallback)) }
 
     let middle = indices.count / 2
-    var timestamps = await fetchMaxTimestamps(serverDetails: serverDetails, indices: Array(indices[..<middle]),
-                                              field: field, request: request)
+    let first = await fetchMaxTimestamps(serverDetails: serverDetails, indices: Array(indices[..<middle]),
+                                         field: field, request: request)
+    if first.fatal != nil { return first }
     let second = await fetchMaxTimestamps(serverDetails: serverDetails, indices: Array(indices[middle...]),
                                           field: field, request: request)
-    timestamps.merge(second) { _, new in new }
-    return timestamps
+    return (first.timestamps.merging(second.timestamps) { _, new in new }, second.fatal)
   }
 
   @MainActor
@@ -517,11 +529,13 @@ public class IndexActivityService {
 
     let jobs = indicesByField.flatMap { field, group in chunk(group).map { (field: field, indices: $0) } }
     var allTimestamps: [String: Double] = [:]
+    // The first failure that would fail every request. No more jobs are started after it
+    var fatal: String?
 
-    await withTaskGroup(of: [String: Double].self) { group in
+    await withTaskGroup(of: (timestamps: [String: Double], fatal: String?).self) { group in
       var next = jobs.startIndex
       func addNextJob() {
-        guard next < jobs.endIndex, !Task.isCancelled else { return }
+        guard next < jobs.endIndex, fatal == nil, !Task.isCancelled else { return }
         let job = jobs[next]
         next += 1
         group.addTask {
@@ -532,14 +546,19 @@ public class IndexActivityService {
       for _ in 0..<maxConcurrentSearches {
         addNextJob()
       }
-      for await timestamps in group {
-        allTimestamps.merge(timestamps) { _, new in new }
+      for await result in group {
+        allTimestamps.merge(result.timestamps) { _, new in new }
+        fatal = fatal ?? result.fatal
         addNextJob()
       }
     }
 
     let sorted = sortIndicesByActivity(indices: validIndices, timestamps: allTimestamps)
-    let errorMessage = allTimestamps.isEmpty ? "No document activity found in indices" : nil
+    // Some timestamps are still worth sorting by, so a failure is only reported when there are none
+    var errorMessage: String?
+    if allTimestamps.isEmpty {
+      errorMessage = fatal ?? "No document activity found in indices"
+    }
     return IndexActivityResult(sortedIndices: sorted, timestamps: allTimestamps, errorMessage: errorMessage)
   }
   

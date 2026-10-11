@@ -12,8 +12,8 @@ import XCTest
 @available(iOS 16.0.0, *)
 final class IndexActivityServiceTests: XCTestCase {
 
-  /// Answers each request from `route` and keeps every request it was sent.
-  /// Requests arrive from several tasks at once, so the list is locked
+  /// Answers each request from `route` and keeps every request it was sent. A status of 0 throws,
+  /// as a timeout does. Requests arrive from several tasks at once, so the list is locked
   final class RoutingURLSession: URLSessionProtocol {
     private let lock = NSLock()
     private var sent = [URLRequest]()
@@ -30,6 +30,7 @@ final class IndexActivityServiceTests: XCTestCase {
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
       lock.withLock { sent.append(request) }
       let answer = route(request)
+      if answer.status == 0 { throw URLError(.timedOut) }
       let response = HTTPURLResponse(url: request.url!, statusCode: answer.status, httpVersion: nil, headerFields: nil)!
       return (Data(answer.body.utf8), response)
     }
@@ -198,6 +199,81 @@ final class IndexActivityServiceTests: XCTestCase {
     XCTAssertEqual(result.sortedIndices.last, "idx-6")
     // All 8, then 4 + 4, then 2 + 2, then 1 + 1: 7 rather than 1 + 8 one at a time
     XCTAssertEqual(session.requests.filter(Self.isSearch).count, 7)
+  }
+
+  @MainActor
+  func testUnusableClusterIsNotSplit() async {
+    let names = (1...8).map { "idx-\($0)" }
+    for status in [401, 403, 429, 500, 503] {
+      IndexActivityService.clearDateFieldCache()
+      let session = RoutingURLSession { request in
+        if Self.isMapping(request) { return (200, Self.mapping(for: Self.indices(in: request))) }
+        return (status, #"{"error":"no"}"#)
+      }
+      Request.mockedSession = session
+
+      let result = await IndexActivityService.fetchIndicesActivity(serverDetails: makeHost(), indices: names)
+
+      XCTAssertEqual(session.requests.filter(Self.isSearch).count, 1, "HTTP \(status) fails every request")
+      XCTAssertEqual(result.errorMessage, "Failed to fetch index activity (HTTP \(status))")
+      XCTAssertEqual(result.sortedIndices, names.sorted { $0.localizedStandardCompare($1) == .orderedAscending })
+    }
+  }
+
+  @MainActor
+  func testConnectionErrorIsNotSplit() async {
+    let session = RoutingURLSession { request in
+      if Self.isMapping(request) { return (200, Self.mapping(for: Self.indices(in: request))) }
+      return (0, "")
+    }
+    Request.mockedSession = session
+
+    let result = await IndexActivityService.fetchIndicesActivity(serverDetails: makeHost(),
+                                                                 indices: (1...8).map { "idx-\($0)" })
+
+    XCTAssertEqual(session.requests.filter(Self.isSearch).count, 1)
+    XCTAssertEqual(result.errorMessage, URLError(.timedOut).localizedDescription)
+  }
+
+  @MainActor
+  func testFatalFailureWhileSplittingStops() async {
+    let names = (1...8).map { "idx-\($0)" }
+    let session = RoutingURLSession { request in
+      if Self.isMapping(request) { return (200, Self.mapping(for: Self.indices(in: request))) }
+      // The whole batch is a bad query, then the cluster goes down
+      if Self.indices(in: request).count == names.count {
+        return (400, #"{"error":{"type":"illegal_argument_exception","reason":"bad field"},"status":400}"#)
+      }
+      return (503, #"{"error":"unavailable"}"#)
+    }
+    Request.mockedSession = session
+
+    let result = await IndexActivityService.fetchIndicesActivity(serverDetails: makeHost(), indices: names)
+
+    // All 8, then the first 4, then stop: not 15
+    XCTAssertEqual(session.requests.filter(Self.isSearch).count, 2)
+    XCTAssertEqual(result.errorMessage, "Failed to fetch index activity (HTTP 503)")
+  }
+
+  @MainActor
+  func testFatalFailureStopsQueuedBatches() async {
+    // Each name fills most of a batch, so every index is a batch of its own
+    let names = (1...(IndexActivityService.maxConcurrentSearches + 4)).map {
+      "idx-\($0)-" + String(repeating: "x", count: IndexActivityService.maxIndexPathBytes / 2)
+    }
+    XCTAssertEqual(IndexActivityService.chunk(names).count, names.count)
+    let session = RoutingURLSession { request in
+      // So many batches fetch the whole cluster's mappings
+      if Self.isMapping(request) { return (200, Self.mapping(for: names)) }
+      return (401, #"{"error":"unauthorized"}"#)
+    }
+    Request.mockedSession = session
+
+    let result = await IndexActivityService.fetchIndicesActivity(serverDetails: makeHost(), indices: names)
+
+    // Only the batches already in flight, none started after the first 401
+    XCTAssertEqual(session.requests.filter(Self.isSearch).count, IndexActivityService.maxConcurrentSearches)
+    XCTAssertEqual(result.errorMessage, "Failed to fetch index activity (HTTP 401)")
   }
 
   @MainActor

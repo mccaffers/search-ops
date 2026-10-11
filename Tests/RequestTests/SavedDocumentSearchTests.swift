@@ -150,6 +150,186 @@ struct SavedDocumentSearchTests {
     #expect(error.message == "Request timed out")
   }
 
+  // MARK: - Finding a moved document
+
+  private func hits(_ pairs: [(index: String, id: String)]) -> ServerResponse {
+    let hits = pairs.map { #"{"_index": "\#($0.index)", "_id": "\#($0.id)", "_source": {"message": "\#($0.index)"}}"# }
+    return response(#"{"hits": {"hits": [\#(hits.joined(separator: ","))]}}"#)
+  }
+
+  private func refs(_ indices: [String], id: String = "abc") -> [DocumentRef?] {
+    indices.map { DocumentRef(index: $0, id: id) }
+  }
+
+  @Test func renamedCopiesAreRecognised() {
+    let copy = SavedDocumentSearch.isRenamedCopy
+    #expect(copy("shrink-logs-1", "logs-1"))
+    #expect(copy("shrink-ab1c-logs-1", "logs-1"))
+    #expect(copy("restored-logs-1", "logs-1"))
+    #expect(copy("partial-logs-1", "logs-1"))
+    #expect(copy("partial-shrink-ab1c-logs-1", "logs-1"))
+    #expect(copy("shrink-ab1c-.ds-logs-app-2026.10.01-000001", ".ds-logs-app-2026.10.01-000001"))
+    // Either way round, and two copies of the same index
+    #expect(copy("logs-1", "restored-logs-1"))
+    #expect(copy("restored-logs-1", "partial-logs-1"))
+  }
+
+  @Test func otherIndicesAreNotRenamedCopies() {
+    let copy = SavedDocumentSearch.isRenamedCopy
+    #expect(!copy("logs-1", "logs-1"))
+    #expect(!copy("logs-2", "logs-1"))
+    #expect(!copy("shrink-logs-2", "logs-1"))
+    #expect(!copy("snapshot-logs-1", "logs-1"))
+    #expect(!copy("shrink-abcde-logs-1", "logs-1"))
+  }
+
+  @Test func bestMatchPrefersTheSavedIndexThenARenamedCopy() throws {
+    let original = DocumentRef(index: "logs-1", id: "abc")
+
+    let same = try #require(SavedDocumentSearch.bestMatch(refs: refs(["logs-2", "logs-1"]), original: original,
+                                                          newestFirst: true))
+    #expect(same.position == 1)
+    #expect(same.isCertain)
+
+    // A copy wins over a newer, unrelated index
+    let copy = try #require(SavedDocumentSearch.bestMatch(refs: refs(["logs-9", "shrink-ab1c-logs-1"]),
+                                                          original: original, newestFirst: true))
+    #expect(copy.position == 1)
+    #expect(copy.isCertain)
+  }
+
+  @Test func bestMatchTakesTheOnlyHitAsCertain() throws {
+    let match = try #require(SavedDocumentSearch.bestMatch(refs: refs(["archive-2026"]),
+                                                           original: DocumentRef(index: "logs-1", id: "abc"),
+                                                           newestFirst: false))
+    #expect(match.position == 0)
+    #expect(match.isCertain)
+  }
+
+  @Test func bestMatchTakesTheNewestOfSeveralButIsntCertain() throws {
+    let original = DocumentRef(index: "logs-1", id: "abc")
+
+    // Sorted by the date field, newest first
+    let sorted = try #require(SavedDocumentSearch.bestMatch(refs: refs(["archive-b", "archive-a"]), original: original,
+                                                            newestFirst: true))
+    #expect(sorted.position == 0)
+    #expect(!sorted.isCertain)
+
+    // Otherwise the index name that sorts last, numbers compared as numbers
+    let dated = refs(["app-2026.10.10", "app-2026.10.9", "app-2026.9.30"])
+    let byName = try #require(SavedDocumentSearch.bestMatch(refs: dated, original: original, newestFirst: false))
+    #expect(byName.position == 0)
+    #expect(!byName.isCertain)
+  }
+
+  @Test func bestMatchIgnoresOtherIds() {
+    let original = DocumentRef(index: "logs-1", id: "abc")
+    let others: [DocumentRef?] = [DocumentRef(index: "shrink-logs-1", id: "other"), nil]
+    #expect(SavedDocumentSearch.bestMatch(refs: others, original: original, newestFirst: false) == nil)
+
+    let mixed: [DocumentRef?] = [DocumentRef(index: "logs-9", id: "other"), DocumentRef(index: "logs-2", id: "abc")]
+    let match = SavedDocumentSearch.bestMatch(refs: mixed, original: original, newestFirst: false)
+    #expect(match?.position == 1)
+    #expect(match?.isCertain == true)
+  }
+
+  @Test func fallbackSearchesThePatternOrDataView() {
+    let view = DataView(hostId: hostId, name: "Logs", pattern: "logs-*,metrics-*")
+    #expect(SavedDocumentSearch.fallbackIndex(for: savedDocument(dataViewId: view.id), dataView: view)
+            == "logs-*,metrics-*")
+    #expect(SavedDocumentSearch.fallbackIndex(for: savedDocument(searchIndex: "logs-*"), dataView: nil) == "logs-*")
+  }
+
+  @Test func noFallbackWhenOnlyItsOwnIndexWasSearched() {
+    #expect(SavedDocumentSearch.fallbackIndex(for: savedDocument(searchIndex: ""), dataView: nil) == nil)
+    #expect(SavedDocumentSearch.fallbackIndex(for: savedDocument(searchIndex: "logs-2026.10.10"), dataView: nil) == nil)
+  }
+
+  @Test func searchesAgainOnlyWhenNotFoundOrClosed() {
+    #expect(SavedDocumentSearch.shouldSearchAgain(after: .notFound))
+    let closed = ResponseError(title: "index_closed_exception", message: "closed", type: .critical)
+    #expect(SavedDocumentSearch.shouldSearchAgain(after: .failed(closed)))
+    let other = ResponseError(title: "security_exception", message: "denied", type: .critical)
+    #expect(!SavedDocumentSearch.shouldSearchAgain(after: .failed(other)))
+    let found = SavedDocumentContent(ref: DocumentRef(index: "logs", id: "abc"), row: [:], fields: [])
+    #expect(!SavedDocumentSearch.shouldSearchAgain(after: .found(found)))
+  }
+
+  @Test func fallbackRequestNarrowsToTheSavedPeriodNewestFirst() throws {
+    let range = DateInterval(start: Date(timeIntervalSince1970: 1_000), end: Date(timeIntervalSince1970: 5_000.5))
+    let document = savedDocument(dateField: SavedDateField(field: "@timestamp", type: "date"), timeRange: range)
+
+    let body = SavedDocumentSearch.fallbackRequestBody(for: document)
+
+    let json = try #require(JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
+    #expect(json["size"] as? Int == SavedDocumentSearch.fallbackSize)
+    let query = try #require(json["query"] as? [String: Any])
+    let filters = try #require((query["bool"] as? [String: Any])?["filter"] as? [[String: Any]])
+    #expect(((filters.first?["ids"] as? [String: Any])?["values"] as? [String]) == ["abc"])
+    let range0 = try #require((filters.last?["range"] as? [String: Any])?["@timestamp"] as? [String: String])
+    #expect(range0["gte"] == "1970-01-01T00:16:40.000Z")
+    #expect(range0["lte"] == "1970-01-01T01:23:20.500Z")
+    #expect(range0["format"] == "strict_date_optional_time")
+    let sort = try #require(json["sort"] as? [[String: [String: String]]])
+    #expect(sort == [["@timestamp": ["order": "desc", "unmapped_type": "date"]]])
+  }
+
+  @Test func fallbackRequestWithoutAPeriodIsJustTheId() throws {
+    // A field without a period, or a period without a field, can't narrow anything
+    for document in [savedDocument(dateField: SavedDateField(field: "@timestamp")),
+                     savedDocument(timeRange: DateInterval(start: .distantPast, end: .now))] {
+      let body = SavedDocumentSearch.fallbackRequestBody(for: document)
+      let json = try #require(JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
+      let query = try #require(json["query"] as? [String: Any])
+      let filters = try #require((query["bool"] as? [String: Any])?["filter"] as? [[String: Any]])
+      #expect(filters.count == 1)
+      #expect(json["sort"] == nil)
+    }
+  }
+
+  @Test func fallbackFindsARenamedCopyAndCanSaveIt() throws {
+    let response = hits([("logs-9", "abc"), ("shrink-ab1c-logs-2026.10.10", "abc")])
+    let result = SavedDocumentSearch.fallbackResult(from: response, document: savedDocument())
+    guard case .found(let content) = result else {
+      Issue.record("Expected the document, got \(result)")
+      return
+    }
+    #expect(content.ref == DocumentRef(index: "shrink-ab1c-logs-2026.10.10", id: "abc"))
+    #expect((content.row["message"] as? [String]) == ["shrink-ab1c-logs-2026.10.10"])
+    #expect(content.move == SavedDocumentMove(from: "logs-2026.10.10", isCertain: true))
+  }
+
+  @Test func fallbackOpensTheNewestOfSeveralWithoutSavingIt() throws {
+    let range = DateInterval(start: Date(timeIntervalSince1970: 1_000), end: Date(timeIntervalSince1970: 5_000))
+    let document = savedDocument(dateField: SavedDateField(field: "@timestamp"), timeRange: range)
+    let result = SavedDocumentSearch.fallbackResult(from: hits([("archive-b", "abc"), ("archive-a", "abc")]),
+                                                    document: document)
+    guard case .found(let content) = result else {
+      Issue.record("Expected the document, got \(result)")
+      return
+    }
+    #expect(content.ref.index == "archive-b")
+    #expect(content.move == SavedDocumentMove(from: "logs-2026.10.10", isCertain: false))
+  }
+
+  @Test func fallbackInTheSavedIndexIsNotAMove() {
+    let result = SavedDocumentSearch.fallbackResult(from: hits([("logs-2026.10.10", "abc")]), document: savedDocument())
+    guard case .found(let content) = result else {
+      Issue.record("Expected the document, got \(result)")
+      return
+    }
+    #expect(content.move == nil)
+  }
+
+  @Test func fallbackWithoutTheIdIsNotFound() {
+    let result = SavedDocumentSearch.fallbackResult(from: hits([("shrink-logs-2026.10.10", "other")]),
+                                                    document: savedDocument())
+    guard case .notFound = result else {
+      Issue.record("Expected not found, got \(result)")
+      return
+    }
+  }
+
   // MARK: - Where a search from a saved document runs
 
   @Test func searchUsesTheDataViewWhileItExists() {
