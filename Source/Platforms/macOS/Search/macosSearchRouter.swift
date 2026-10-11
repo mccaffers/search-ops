@@ -30,8 +30,17 @@ struct macosSearchRouter: View {
   
   @ObservedObject var serverObjects : HostsDataManager
   @ObservedObject var searchHistoryManager : SearchHistoryDataManager
+  /// Searches sent from the Saved tab
+  @ObservedObject var searchHandoff : macosSearchHandoff
   
   @StateObject var filterObject : FilterObject = FilterObject()
+  /// Replaced to start a fresh search screen, which searches as it appears
+  @State private var searchViewId = UUID()
+  /// Columns from a saved search, until the search screen has shown them
+  @State private var pendingSelectedFields: [String]? = nil
+  @State private var pendingColumnWidths: [String: Double]? = nil
+  /// The saved search being shown, kept here so it outlives a rebuilt search screen
+  @State private var savedSearchLink: SavedSearchLink? = nil
   
   func request(selectedHost: HostDetails, selectedIndex: String, filterObject: FilterObject, dataView: DataView?) {
     self.selectedHost = selectedHost
@@ -47,7 +56,62 @@ struct macosSearchRouter: View {
     macosSearchRouterPath = .MainSearch
   }
   
+  func refreshSavedSearchLink() {
+    guard let link = savedSearchLink else { return }
+    if let saved = SavedSearchDataManager().search(id: link.id) {
+      savedSearchLink?.title = saved.displayTitle
+    } else {
+      savedSearchLink = nil
+    }
+  }
+
+  /// Runs the search sent from the Saved tab, if there is one
+  func runHandoff() {
+    guard let pending = searchHandoff.take(),
+          let host = serverObjects.getHostByID(pending.hostId),
+          !host.isInvalidated else { return }
+    let wasSearching = macosSearchRouterPath == .MainSearch
+    selection = .None
+    pendingSelectedFields = pending.selectedFields
+    pendingColumnWidths = pending.columnWidths
+    // A search from a saved document's value isn't a saved search
+    savedSearchLink = pending.savedSearch.map {
+      SavedSearchLink(id: $0.id, title: $0.displayTitle, baseline: SavedSearchState(request: pending))
+    }
+    request(selectedHost: host, selectedIndex: pending.index, filterObject: pending.filterObject, dataView: pending.dataView)
+    // An open search screen only searches as it appears
+    if wasSearching {
+      searchViewId = UUID()
+    }
+  }
+  
   var body: some View {
+    Group {
+      routes
+    }
+    .onChange(of: searchHandoff.pendingId) { _ in
+      runHandoff()
+    }
+    .onAppear {
+      // Sent while this screen was being rebuilt, eg. after a host change
+      runHandoff()
+    }
+    .onChange(of: macosSearchRouterPath) { newValue in
+      // Going home starts a new search, which isn't the saved one
+      if newValue == .WelcomeScreen {
+        savedSearchLink = nil
+      }
+    }
+    .onChange(of: sidebar) { newValue in
+      // Back from another tab, where the saved search may have been renamed or removed
+      if newValue == .hidden {
+        refreshSavedSearchLink()
+      }
+    }
+  }
+  
+  @ViewBuilder
+  private var routes: some View {
     if macosSearchRouterPath == .WelcomeScreen {
       macosSearchHomeViewCollection(selection:$selection, 
                                     fullScreen:$fullScreen,
@@ -61,9 +125,13 @@ struct macosSearchRouter: View {
                           selectedHost:$selectedHost,
                           selectedIndex: $selectedIndex,
                           selectedDataView: $selectedDataView,
+                          pendingSelectedFields: $pendingSelectedFields,
+                          pendingColumnWidths: $pendingColumnWidths,
+                          savedSearchLink: $savedSearchLink,
                           filterObject:filterObject, 
                           selection: $selection,
                           fullScreen: $fullScreen)
+      .id(searchViewId)
     }
   }
 }

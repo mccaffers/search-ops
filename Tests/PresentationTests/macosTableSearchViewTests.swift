@@ -55,6 +55,34 @@ final class macosTableSearchViewTests: XCTestCase {
     XCTAssertNil(rowView(["cpu1": ["0"]], filterable: false).filterValue(for: .field("cpu1")))
   }
 
+  // MARK: - Copy button
+
+  func testCopyValueIsTheRawValue() {
+    let view = rowView(["@timestamp": ["2026-10-09T22:49:01Z"], "cpu1": ["0"], "tags": ["a", "b"]])
+    XCTAssertEqual(view.copyValue(for: .date("@timestamp")), "2026-10-09T22:49:01Z")
+    XCTAssertEqual(view.copyValue(for: .field("cpu1")), "0")
+    XCTAssertEqual(view.copyValue(for: .field("tags")), "a, b")
+  }
+
+  func testDateCellCopiesItsStoredValueNotItsText() {
+    let item: OrderedDictionary<String, Any> = ["@timestamp": ["2026-10-09T22:49:01Z"]]
+    XCTAssertNotEqual(macosTableSearchView.text(for: .date("@timestamp"), in: item), "2026-10-09T22:49:01Z")
+    XCTAssertEqual(macosTableSearchView.rawText(for: .date("@timestamp"), in: item), "2026-10-09T22:49:01Z")
+  }
+
+  func testMissingCollapsedAndDocumentCellsHaveNoCopyButton() {
+    let view = rowView(["cpu1": ["0"], "blank": [" "]], collapsed: [.field("cpu1")])
+    XCTAssertNil(view.copyValue(for: .field("cpu1")))
+    XCTAssertNil(view.copyValue(for: .field("blank")))
+    XCTAssertNil(view.copyValue(for: .field("missing")))
+    XCTAssertNil(view.copyValue(for: .date("missing")))
+    XCTAssertNil(view.copyValue(for: .document))
+  }
+
+  func testTablesWithoutFilteringCanStillCopy() {
+    XCTAssertEqual(rowView(["cpu1": ["0"]], filterable: false).copyValue(for: .field("cpu1")), "0")
+  }
+
   func testNoResultsMessagePointsAtFiltersWhenAnyAreOn() {
     XCTAssertEqual(macosSearchResultsView.noResultsMessage(activeFilterCount: 0),
                    "No results. Try adjusting the query string or date range.")
@@ -396,6 +424,52 @@ final class macosTableSearchViewTests: XCTestCase {
     XCTAssertEqual(rows.first?.item.keys.elements, ["user.name", "@timestamp"])
   }
 
+  func testVisibleRowsKeepEachDocumentsRefByItsOriginalPosition() {
+    let flat: [OrderedDictionary<String, Any>] = [
+      ["message": ["hello"]],
+      ["status": ["200"]],
+      ["message": ["bye"]]
+    ]
+    let refs: [DocumentRef?] = [DocumentRef(index: "logs-1", id: "a"), DocumentRef(index: "logs-1", id: "b"), nil]
+    let rows = macosTableSearchView.visibleRows(flatArray: flat,
+                                                refs: refs,
+                                                dateField: nil,
+                                                filteredFields: [field("message")],
+                                                showDateHeader: false)
+    XCTAssertEqual(rows.map(\.index), [0, 2])
+    XCTAssertEqual(rows.map(\.ref), [DocumentRef(index: "logs-1", id: "a"), nil])
+  }
+
+  func testVisibleRowsWithoutRefsHaveNone() {
+    let rows = macosTableSearchView.visibleRows(flatArray: [["message": ["hello"]]],
+                                                dateField: nil,
+                                                filteredFields: [],
+                                                showDateHeader: false)
+    XCTAssertNil(rows.first?.ref)
+  }
+
+  // MARK: - Saved column widths
+
+  func testColumnsKeepTheirKindInASavedSearch() {
+    let columns: [macosTableColumn] = [.date("date"), .field("dayClose"), .field("date:odd"), .document]
+    for column in columns {
+      XCTAssertEqual(macosTableColumn(savedKey: column.savedKey), column)
+    }
+    XCTAssertEqual(macosTableColumn.field("dayClose").savedKey, "field:dayClose")
+    XCTAssertNil(macosTableColumn(savedKey: "dayClose"))
+  }
+
+  func testSavedWidthsRoundTripAndSkipWhatCantBeRead() {
+    let widths: [macosTableColumn: CGFloat] = [.date("date"): 512.5, .field("dayClose"): 82]
+    let saved = macosTableColumn.savedWidths(widths)
+    XCTAssertEqual(saved, ["date:date": 512.5, "field:dayClose": 82])
+
+    var withJunk = saved
+    withJunk["mystery"] = 100
+    withJunk["field:zero"] = 0
+    XCTAssertEqual(macosTableColumn.widths(fromSaved: withJunk), widths)
+  }
+
   // MARK: - Layout cache
 
   func results(dateField: SquashedFieldsArray? = nil) -> RenderObject {
@@ -578,3 +652,26 @@ final class macosTableSearchViewTests: XCTestCase {
     XCTAssertFalse(counter.measured.isEmpty, "New results are measured again")
   }
 }
+
+#if os(macOS)
+@MainActor
+final class macosSearchHandoffTests: XCTestCase {
+
+  func testASentSearchIsTakenOnce() {
+    let handoff = macosSearchHandoff()
+    XCTAssertNil(handoff.pendingId)
+    XCTAssertNil(handoff.take())
+
+    let request = SearchHandoffRequest(hostId: UUID(), index: "logs-*", dataView: nil, filterObject: FilterObject())
+    handoff.send(request)
+    let firstId = handoff.pendingId
+
+    XCTAssertNotNil(firstId)
+    XCTAssertEqual(handoff.take()?.index, "logs-*")
+    XCTAssertNil(handoff.take())
+
+    handoff.send(request)
+    XCTAssertNotEqual(handoff.pendingId, firstId, "Each search sent is announced again")
+  }
+}
+#endif

@@ -789,7 +789,7 @@ struct macosDataViewEditorView: View {
           statsError = error.message
           indexStats = [:]
         } else if response.httpStatus >= 400 {
-          statsError = "The cluster returned HTTP \(response.httpStatus)."
+          statsError = response.httpErrorMessage
           indexStats = [:]
         } else {
           statsError = nil
@@ -844,13 +844,15 @@ struct macosDataViewEditorView: View {
 }
 
 /// The Manage pages' button: Button, ButtonHighlighted on hover and when pressed,
-/// dimmed while disabled, and green while `confirmed` is set, eg. "Saved"
+/// dimmed while disabled, and green while `confirmed` is set, eg. "Saved".
+/// `large` matches the height of a page header's back button and title.
 struct macosDataViewButtonStyle: ButtonStyle {
   var confirmed = false
   var destructive = false
+  var large = false
 
   func makeBody(configuration: Configuration) -> some View {
-    macosDataViewButton(configuration: configuration, confirmed: confirmed, destructive: destructive)
+    macosDataViewButton(configuration: configuration, confirmed: confirmed, destructive: destructive, large: large)
   }
 }
 
@@ -858,6 +860,7 @@ private struct macosDataViewButton: View {
   let configuration: ButtonStyleConfiguration
   let confirmed: Bool
   let destructive: Bool
+  let large: Bool
 
   @Environment(\.isEnabled) private var isEnabled
   @State private var hovering = false
@@ -876,9 +879,9 @@ private struct macosDataViewButton: View {
 
   var body: some View {
     configuration.label
-      .font(.system(size: 12, weight: .medium))
-      .padding(.horizontal, 12)
-      .frame(minHeight: 26)
+      .font(.system(size: large ? 13 : 12, weight: .medium))
+      .padding(.horizontal, large ? 14 : 12)
+      .frame(minHeight: large ? 36 : 26)
       .foregroundColor(foreground)
       .background(RoundedRectangle(cornerRadius: 5).fill(fill))
       .opacity(isEnabled || confirmed ? 1 : 0.6)

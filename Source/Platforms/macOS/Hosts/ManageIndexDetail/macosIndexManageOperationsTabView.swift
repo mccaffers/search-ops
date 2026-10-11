@@ -561,8 +561,10 @@ public struct macosIndexManageOperationsTabView: View {
   }
 }
 
-// Each card shows its own padlock, so each one keeps its own popover state
-private struct ReadOnlyPadlockButton: View {
+// Each card shows its own padlock, so each one keeps its own popover state.
+// Also shown in the Dev console, with its own detail
+struct ReadOnlyPadlockButton: View {
+  var detail: String = "Deletes are blocked. Turn it off in Settings."
   @State private var showPopover: Bool = false
 
   var body: some View {
@@ -580,7 +582,7 @@ private struct ReadOnlyPadlockButton: View {
       VStack(alignment: .leading, spacing: 4) {
         Text("Read only mode is on")
           .font(.system(size: 12, weight: .semibold))
-        Text("Deletes are blocked. Turn it off in Settings.")
+        Text(detail)
           .font(.system(size: 11))
           .foregroundColor(Color("TextSecondary"))
           .fixedSize(horizontal: false, vertical: true)

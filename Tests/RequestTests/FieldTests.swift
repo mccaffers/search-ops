@@ -184,6 +184,27 @@ final class FieldTests: XCTestCase {
     XCTAssertEqual(result.rows.last?["b"] as? [String], ["true"])
   }
 
+  func testSearchHitCountNotesWhenTheServerStoppedCounting() {
+    let capped = Search.getObjects(input: #"{"hits":{"total":{"value":10000,"relation":"gte"},"hits":[{"_source":{"a":1}}]}}"#)
+    XCTAssertEqual(capped.hitCount, 10000)
+    XCTAssertTrue(capped.hitCountIsLowerBound)
+
+    let exact = Search.getObjects(input: #"{"hits":{"total":{"value":60,"relation":"eq"},"hits":[{"_source":{"a":1}}]}}"#)
+    XCTAssertEqual(exact.hitCount, 60)
+    XCTAssertFalse(exact.hitCountIsLowerBound)
+
+    let legacy = Search.getObjects(input: #"{"hits":{"total":42,"hits":[{"_source":{"a":1}}]}}"#)
+    XCTAssertEqual(legacy.hitCount, 42)
+    XCTAssertFalse(legacy.hitCountIsLowerBound)
+  }
+
+  func testHitCountLabel() {
+    XCTAssertEqual(SearchResult.hitCountLabel(0), "0 hits")
+    XCTAssertEqual(SearchResult.hitCountLabel(1), "1 hit")
+    XCTAssertEqual(SearchResult.hitCountLabel(60), "60 hits")
+    XCTAssertEqual(SearchResult.hitCountLabel(10000, isLowerBound: true), "\(10000.formatted())+ hits")
+  }
+
   func testFlatResultsUseRowsAlreadyBuilt() {
     let rows: [OrderedDictionary<String, Any>] = [["given": ["row"]]]
     let result = Results.UpdateResultsWithFlatArray(searchResults: [["a": 1]], resultsFields: RenderedFields(fields: []), rows: rows)

@@ -289,6 +289,21 @@ final class SearchRenderTests: XCTestCase  {
                       "Main thread was busy for \(ticks.longestGap / 1_000_000) ms of a \(Int(elapsed / 1_000_000)) ms search")
   }
 
+  func testCallDoesNotRetrySortErrorsThatMentionAggregations() async throws {
+    let sortError = """
+    {"error":{"root_cause":[{"type":"illegal_argument_exception","reason":"Text fields are not optimised for operations that require per-document field data like aggregations and sorting. Alternatively, set fielddata=true on [message] in order to load field data"}]},"status":400}
+    """
+    let session = SequenceURLSession([sortError])
+    Request.mockedSession = session
+    defer { Request.mockedSession = nil }
+
+    let result = await SearchRender.call(pageInput: 1, filterObject: filterObject, host: hostDetails,
+                                         index: "testIndex", limitObj: limitObj, histogram: histogramRequest)
+
+    XCTAssertEqual(session.requestBodies.count, 1, "Not the histogram's fault, so not retried")
+    XCTAssertEqual(result.error?.title, "illegal_argument_exception")
+  }
+
   func testCallDoesNotRetryOtherErrors() async throws {
     let queryError = """
     {"error":{"root_cause":[{"type":"query_shard_exception","reason":"Failed to parse query [status:(]"}]},"status":400}
@@ -317,7 +332,7 @@ final class SearchRenderTests: XCTestCase  {
     XCTAssertEqual(parsed.result.hitCount, fromString.hitCount)
     XCTAssertEqual(parsed.result.data.count, fromString.data.count)
     XCTAssertEqual(parsed.result.fields.map(\.squashedString), fromString.fields.map(\.squashedString))
-    XCTAssertFalse(SearchRender.failedOnHistogram(parsed))
+    XCTAssertFalse(SearchRender.failedOnHistogram(parsed, field: "@timestamp"))
   }
 
   func testParseSkipsResponsesWithRequestErrors() async {
@@ -325,7 +340,7 @@ final class SearchRenderTests: XCTestCase  {
     failed.parsed = aggregationError
     let parsedFailure = await SearchRender.parse(failed, histogram: nil)
     XCTAssertNil(parsedFailure)
-    XCTAssertFalse(SearchRender.failedOnHistogram(nil))
+    XCTAssertFalse(SearchRender.failedOnHistogram(nil, field: "@timestamp"))
 
     let parsedEmpty = await SearchRender.parse(ServerResponse(), histogram: nil)
     XCTAssertNil(parsedEmpty, "No body, nothing to read")
@@ -335,12 +350,12 @@ final class SearchRenderTests: XCTestCase  {
     let aggregation = ServerResponse()
     aggregation.parsed = aggregationError
     let parsedAggregation = await SearchRender.parse(aggregation, histogram: histogramRequest)
-    XCTAssertTrue(SearchRender.failedOnHistogram(parsedAggregation))
+    XCTAssertTrue(SearchRender.failedOnHistogram(parsedAggregation, field: "@timestamp"))
 
     let query = ServerResponse()
     query.parsed = #"{"error":{"root_cause":[{"type":"t","reason":"no such index [logs]"}]}}"#
     let parsedQuery = await SearchRender.parse(query, histogram: histogramRequest)
-    XCTAssertFalse(SearchRender.failedOnHistogram(parsedQuery))
+    XCTAssertFalse(SearchRender.failedOnHistogram(parsedQuery, field: "@timestamp"))
   }
 
   @MainActor

@@ -289,7 +289,7 @@ extension macosSearchHistogramView {
   }
 
   static func countTitle(_ count: Int) -> String {
-    count == 1 ? "1 hit" : "\(count.formatted()) hits"
+    SearchResult.hitCountLabel(count)
   }
 
   static func bucketTitle(_ bucket: HistogramBucket, interval: HistogramInterval) -> String {

@@ -361,16 +361,6 @@ struct SearchOpsUnitTests {
     #expect(timestampField?.isSeconds == false)
   }
 
-  @Test func testSideBarManageCase() {
-    var currentSidebar: sideBar = .hidden
-    #expect(currentSidebar == .hidden)
-    currentSidebar = .manage
-    #expect(currentSidebar == .manage)
-    #expect(currentSidebar != .hosts)
-    #expect(currentSidebar != .settings)
-    #expect(currentSidebar != .develop)
-  }
-
 #if os(macOS)
   @Test @MainActor func testManageNavigationCoordinator_initialState() {
     let coordinator = ManageNavigationCoordinator()
@@ -516,6 +506,45 @@ struct SearchOpsUnitTests {
     coordinator.goBack()
     #expect(coordinator.screen == .hostOptions)
     #expect(coordinator.selectedHost?.name == "Cluster A")
+  }
+
+  @Test @MainActor func testManageNavigationCoordinator_openNewDataView() {
+    let coordinator = ManageNavigationCoordinator()
+    let oldHost = HostDetails()
+    oldHost.name = "Cluster A"
+    let host = HostDetails()
+    host.name = "Cluster B"
+
+    // Left on another host's index from an earlier visit
+    coordinator.selectHost(oldHost)
+    coordinator.selectIndex("logs")
+
+    coordinator.openNewDataView(for: host)
+    #expect(coordinator.screen == .dataViewEditor)
+    #expect(coordinator.selectedHost?.name == "Cluster B")
+    #expect(coordinator.selectedDataViewId == nil)
+    #expect(coordinator.selectedIndex == nil)
+
+    // Back goes to that host's data views, then its options
+    coordinator.goBack()
+    #expect(coordinator.screen == .dataViewList)
+    coordinator.goBack()
+    #expect(coordinator.screen == .hostOptions)
+    #expect(coordinator.selectedHost?.name == "Cluster B")
+  }
+
+  @Test @MainActor func testManageNavigationCoordinator_resetAfterOpenNewDataView() {
+    let coordinator = ManageNavigationCoordinator()
+    let host = HostDetails()
+
+    coordinator.openNewDataView(for: host)
+    coordinator.editDataView(UUID())
+
+    // Leaving the Hosts tab resets it
+    coordinator.reset()
+    #expect(coordinator.screen == .hostList)
+    #expect(coordinator.selectedHost == nil)
+    #expect(coordinator.selectedDataViewId == nil)
   }
 
   @Test @MainActor func testManageNavigationCoordinator_removedHostClosesDataViewEditor() {
@@ -1466,7 +1495,8 @@ struct SearchOpsUnitTests {
       "*", "logs-*", "logs-?", "a,b",
       "-logs", "+logs", "_logs",
       "a/b", "a\\b", "a\"b", "<logs-{now/d}>", "a|b", "a#b", "remote:logs",
-      "logs 2026", "logs\n"
+      "logs 2026", "logs\n",
+      "%5Fall", "logs%2A", "a%2Cb", "%2E%2E"
     ]
     for name in rejected {
       #expect(IndexManagementService.validateTargetIndex(name) != nil, "Expected '\(name)' to be rejected")
@@ -1506,6 +1536,28 @@ struct SearchOpsUnitTests {
     )
     #expect(ageSubmission == .failed(DeleteByQueryResult(errorMessage: "Deleting from '_all' indices is not allowed", isSuccess: false)))
   }
+  @Test @MainActor func testDeleteFunctions_blockedInReadOnlyMode() async {
+    // A valid target with no host: had it been sent, the error would be about the request instead
+    let host = HostDetails()
+    let expected = DeleteTaskSubmission.failed(DeleteByQueryResult(errorMessage: IndexManagementService.readOnlyMessage,
+                                                                   isSuccess: false))
+
+    let allSubmission = await IndexManagementService.deleteAllDocuments(serverDetails: host, index: "logs", readOnly: true)
+    #expect(allSubmission == expected)
+
+    let ageSubmission = await IndexManagementService.deleteDocumentsByAge(
+      serverDetails: host,
+      index: "logs",
+      dateField: "@timestamp",
+      dateMathExpression: "now-30d",
+      readOnly: true
+    )
+    #expect(ageSubmission == expected)
+
+    let notReadOnly = await IndexManagementService.deleteAllDocuments(serverDetails: host, index: "logs", readOnly: false)
+    #expect(notReadOnly != expected)
+  }
+
 
   // MARK: - IndexDeleteTaskTracker
 

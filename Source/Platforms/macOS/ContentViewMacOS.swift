@@ -12,10 +12,10 @@ import Combine
 
 public enum sideBar {
   case hosts
+  case saved
   case settings
   case hidden
   case develop
-  case manage
 }
 
 enum macosSearchViewEnum: Hashable {
@@ -111,6 +111,8 @@ struct ContentViewMacOS: View {
   @StateObject var hostsUpdated = HostUpdatedNotifier()
   @StateObject var searchHistoryManager = SearchHistoryDataManager()
   @StateObject var serverObjects = HostsDataManager()
+  @StateObject var searchHandoff = macosSearchHandoff()
+  @StateObject var manageCoordinator = ManageNavigationCoordinator()
   
   @FocusState var focusedField: String?
   
@@ -149,7 +151,8 @@ struct ContentViewMacOS: View {
                               fullScreen: $fullScreen,
                               sidebar: $sidebar,
                               serverObjects: serverObjects,
-                              searchHistoryManager: searchHistoryManager)
+                              searchHistoryManager: searchHistoryManager,
+                              searchHandoff: searchHandoff)
               .opacity(sidebar == .hidden ? 1 : 0)
               .id(refreshMainView)
               .onChange(of: hostsUpdated.updated) { newValue in
@@ -161,23 +164,29 @@ struct ContentViewMacOS: View {
               SettingsView(searchHistoryManager: searchHistoryManager,
                            fullScreen: $fullScreen)
                            
+            } else if sidebar == .saved {
+              macosSavedDocumentsView(fullScreen: $fullScreen,
+                                      serverObjects: serverObjects,
+                                      onSearch: { request in
+                                        searchHandoff.send(request)
+                                        selection = .None
+                                        sidebar = .hidden
+                                      })
             } else if sidebar == .hosts {
               macosHostsView(fullScreen:$fullScreen,
                              serverObjects: serverObjects, 
                              hostsUpdated: hostsUpdated, 
                              searchHistoryManager: searchHistoryManager,
+                             coordinator: manageCoordinator,
                              selection: $selection)
             } else if sidebar == .develop {
               macosDevelopView(fullScreen: $fullScreen,
                                serverObjects: serverObjects,
                                hostsUpdated: hostsUpdated)
-            } else if sidebar == .manage {
-              macosManageHostsView(fullScreen: $fullScreen,
-                                   serverObjects: serverObjects,
-                                   hostsUpdated: hostsUpdated)
             }
           }
           .environmentObject(hostsUpdated)
+          .environmentObject(manageCoordinator)
         })
       
       
@@ -191,11 +200,20 @@ struct ContentViewMacOS: View {
     .onReceive(fullScreenExitNotification, perform: { _ in
       fullScreen = false
     })
+    // Hosts opens on its list each time; links from Search set the screen before switching here
+    .onChange(of: sidebar) { newValue in
+      if newValue != .hosts {
+        manageCoordinator.reset()
+      }
+    }
     .background(Color("Background") )
     .background(WindowConfigurator(minFullScreenContentSize: NSSize(width: 400, height: 300)))
     .onAppear {
-      // Safety net for data views left behind by a host deleted elsewhere
-      DataViewDataManager().pruneOrphans(validHostIds: Set(serverObjects.items.filter { !$0.isInvalidated }.map(\.id)))
+      // Safety net for data views and saved items left behind by a host deleted elsewhere
+      let hostIds = Set(serverObjects.items.filter { !$0.isInvalidated }.map(\.id))
+      DataViewDataManager().pruneOrphans(validHostIds: hostIds)
+      SavedDocumentDataManager().pruneOrphans(validHostIds: hostIds)
+      SavedSearchDataManager().pruneOrphans(validHostIds: hostIds)
       // Recent searches saved before field filters kept everything in a nested filter object
       searchHistoryManager.migrateAwayFromFilterObjects()
     }

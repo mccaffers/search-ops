@@ -41,7 +41,7 @@ public class SearchRender {
     var parsed = await parse(response, histogram: histogram)
 
     // A histogram the server can't build shouldn't stop the search, so ask again without it
-    if histogram != nil, failedOnHistogram(parsed) {
+    if let histogram = histogram, failedOnHistogram(parsed, field: histogram.field) {
       response = await Fields.QueryElastic(filterObject: filterObject,
                                            item: host,
                                            selectedIndex: index,
@@ -71,9 +71,11 @@ public class SearchRender {
         // Store the successfully parsed data and additional information in the result structure.
         renderResult.results = parsedResponse.data
         renderResult.hits = parsedResponse.hitCount // Fields.getHits(input: data)
+        renderResult.hitsIsLowerBound = parsedResponse.hitCountIsLowerBound
         hitCount = renderResult.hits
         renderResult.fields = parsedResponse.fields // Fields.getFields(input: data)
         renderResult.rows = parsedResponse.rows
+        renderResult.refs = parsedResponse.refs
         renderResult.pages = Results.CalculatePages(hits: renderResult.hits, limit: limitObj.size)
         if let histogram = histogram {
           renderResult.histogram = parsed.histogram
@@ -124,10 +126,10 @@ public class SearchRender {
                         histogram: histogram.flatMap { SearchHistogram.parse(json: json, request: $0) })
   }
 
-  /// Whether the server rejected a search because of its histogram aggregation.
-  static func failedOnHistogram(_ parsed: ParsedSearch?) -> Bool {
-    guard let error = parsed?.result.error else { return false }
-    return SearchHistogram.isAggregationError(error)
+  /// Whether the server rejected a search because of its histogram aggregation on `field`.
+  static func failedOnHistogram(_ parsed: ParsedSearch?, field: String) -> Bool {
+    guard let parsed = parsed, parsed.result.error != nil else { return false }
+    return SearchHistogram.isHistogramError(json: parsed.json, field: field)
   }
   
 }

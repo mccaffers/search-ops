@@ -290,12 +290,65 @@ struct SearchHistogramTests {
 
   // MARK: - Failures
 
-  @Test func aggregationErrorsAreRecognised() {
-    #expect(SearchHistogram.isAggregationError(
-      "Field [created] of type [keyword] is not supported for aggregation [date_histogram]"))
-    #expect(SearchHistogram.isAggregationError(
-      "Trying to create too many buckets. Must be less than or equal to: [65535]. This limit can be set by changing the [search.max_buckets] cluster level setting."))
-    #expect(SearchHistogram.isAggregationError("Failed to parse query [status:(]") == false)
-    #expect(SearchHistogram.isAggregationError("no such index [logs]") == false)
+  func error(_ rootCause: [String: Any], extra: [String: Any] = [:]) -> [String: Any] {
+    var error: [String: Any] = ["root_cause": [rootCause]]
+    error.merge(rootCause) { current, _ in current }
+    error.merge(extra) { _, new in new }
+    return ["error": error, "status": 400]
   }
+
+  @Test func histogramErrorsAreRecognised() {
+    #expect(SearchHistogram.isHistogramError(json: error([
+      "type": "illegal_argument_exception",
+      "reason": "Field [created] of type [keyword] is not supported for aggregation [date_histogram]"
+    ]), field: "created"))
+    #expect(SearchHistogram.isHistogramError(json: error([
+      "type": "too_many_buckets_exception",
+      "reason": "Trying to create too many buckets. Must be less than or equal to: [65535]."
+    ]), field: "@timestamp"))
+    #expect(SearchHistogram.isHistogramError(json: error([
+      "type": "illegal_argument_exception",
+      "reason": "Fielddata is disabled on text fields by default. Set fielddata=true on [created] in order to load field data"
+    ]), field: "created"))
+    #expect(SearchHistogram.isHistogramError(json: error([
+      "type": "x_content_parse_exception",
+      "reason": "[1:120] [over_time] failed to parse field [fixed_interval]"
+    ]), field: "@timestamp"))
+  }
+
+  @Test func histogramErrorsAreFoundInNestedCauses() {
+    // The first root cause is generic, the histogram failure is in a failed shard's caused_by
+    let json: [String: Any] = ["error": [
+      "type": "search_phase_execution_exception",
+      "reason": "all shards failed",
+      "root_cause": [["type": "query_shard_exception", "reason": "failed to create query"]],
+      "failed_shards": [["shard": 0, "index": "logs-old", "reason": [
+        "type": "illegal_argument_exception",
+        "reason": "wrapper",
+        "caused_by": ["type": "illegal_argument_exception",
+                      "reason": "Field [created] of type [keyword] is not supported for aggregation [date_histogram]"]
+      ]]]
+    ]]
+    #expect(SearchHistogram.isHistogramError(json: json, field: "created"))
+  }
+
+  @Test func otherErrorsAreNotHistogramErrors() {
+    // Sorting on a text field mentions aggregations, but names a different field
+    #expect(SearchHistogram.isHistogramError(json: error([
+      "type": "illegal_argument_exception",
+      "reason": "Text fields are not optimised for operations that require per-document field data like aggregations and sorting, so these operations are disabled by default. Please use a keyword field instead. Alternatively, set fielddata=true on [message] in order to load field data"
+    ]), field: "@timestamp") == false)
+    #expect(SearchHistogram.isHistogramError(json: error([
+      "type": "query_shard_exception", "reason": "Failed to parse query [status:(]"
+    ]), field: "@timestamp") == false)
+    #expect(SearchHistogram.isHistogramError(json: error([
+      "type": "index_not_found_exception", "reason": "no such index [logs]"
+    ]), field: "@timestamp") == false)
+    #expect(SearchHistogram.isHistogramError(json: error([
+      "type": "illegal_argument_exception", "reason": "unknown aggregation type [foo]"
+    ]), field: "@timestamp") == false)
+    #expect(SearchHistogram.isHistogramError(json: ["took": 1], field: "@timestamp") == false)
+    #expect(SearchHistogram.isHistogramError(json: nil, field: "@timestamp") == false)
+  }
+
 }

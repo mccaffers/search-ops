@@ -21,7 +21,7 @@ struct macosSearchResultsView: View {
   var labels: [String: String] = [:]
   @Binding var columnWidths: [macosTableColumn: CGFloat]
   var onHideField: (macosTableColumn) -> Void = { _ in }
-  var onOpenDocument: (OrderedDictionary<String, Any>) -> Void
+  var onOpenDocument: (OrderedDictionary<String, Any>, DocumentRef?) -> Void
   /// Filters the search for a field's value, or against it when negated, from the table's cells
   var onFilter: ((_ field: String, _ value: String, _ negated: Bool) -> Void)? = nil
   /// How many field filters are on, so an empty search can point at them

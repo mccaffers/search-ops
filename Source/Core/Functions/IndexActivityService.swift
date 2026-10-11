@@ -289,8 +289,167 @@ public class IndexActivityService {
     }
   }
   
+  // MARK: - Request Batching
+
+  /// Elasticsearch refuses request lines over 4 KB (http.max_initial_line_length), so index lists
+  /// are kept under this many bytes, leaving room for the endpoint and query string
+  public static let maxIndexPathBytes = 3_000
+
+  /// Above this many mapping requests, one filtered /_mapping for the whole cluster is cheaper
+  public static let maxScopedMappingRequests = 4
+
+  /// Requests in flight at once while finding the newest documents
+  static let maxConcurrentSearches = 4
+
+  /// Only the mapping keys parseDateFieldsByIndices reads. Dynamic templates, analyzers and _meta,
+  /// often most of a mapping, are left out
+  public static let mappingFilterPath = "*.mappings.**.type,*.mappings.**.format"
+
+  /// Splits index names into comma separated lists that each fit in `maxBytes`, keeping their order.
+  /// A name longer than that gets a list of its own
+  public static func chunk(_ names: [String], maxBytes: Int = maxIndexPathBytes) -> [[String]] {
+    var chunks: [[String]] = []
+    var current: [String] = []
+    var currentBytes = 0
+    for name in names {
+      let bytes = name.utf8.count
+      // The comma before every name but the first
+      if !current.isEmpty && currentBytes + 1 + bytes > maxBytes {
+        chunks.append(current)
+        current = []
+        currentBytes = 0
+      }
+      currentBytes += current.isEmpty ? bytes : 1 + bytes
+      current.append(name)
+    }
+    if !current.isEmpty {
+      chunks.append(current)
+    }
+    return chunks
+  }
+
+  /// The requests that fetch the mappings of `indices`: one per chunk when there are only a few,
+  /// otherwise one for the whole cluster, hidden indices included
+  public static func mappingEndpoints(for indices: [String], filtered: Bool = true) -> [String] {
+    let filter = filtered ? "&filter_path=\(mappingFilterPath)" : ""
+    let chunks = chunk(indices)
+    if chunks.count > maxScopedMappingRequests {
+      return ["/_mapping?expand_wildcards=all\(filter)"]
+    }
+    return chunks.map { "/\($0.joined(separator: ","))/_mapping?ignore_unavailable=true\(filter)" }
+  }
+
+  /// Request only flags failures it couldn't send, a 4xx or 5xx still comes back with a body
+  static func succeeded(_ response: ServerResponse) -> Bool {
+    response.error == nil && response.data != nil && (200..<300).contains(response.httpStatus)
+  }
+
+  static func failureMessage(_ response: ServerResponse, fallback: String) -> String {
+    if let error = response.error, !error.message.isEmpty {
+      return error.message
+    }
+    return response.httpStatus == 0 ? fallback : "\(fallback) (HTTP \(response.httpStatus))"
+  }
+
+  // MARK: - Date Field Cache
+
+  /// The date field picked for an index, nil when it has none
+  struct CachedDateField {
+    let field: DateFieldInfo?
+    let fetched: Date
+  }
+
+  /// Mappings rarely change, so sorting again within a few minutes doesn't download them again.
+  /// Only indices that aren't cached yet, eg. a data stream's new backing index, are fetched
+  public static let dateFieldCacheLifetime: TimeInterval = 300
+
+  @MainActor static var dateFieldCache: [UUID: [String: CachedDateField]] = [:]
+
+  @MainActor public static func clearDateFieldCache() {
+    dateFieldCache = [:]
+  }
+
+  /// A detached copy keeps its host's id in detachedID, so a copy and its host share a cache
+  static func cacheKey(for host: HostDetails) -> UUID {
+    host.realm == nil ? host.detachedID : host.id
+  }
+
   // MARK: - Orchestration
-  
+
+  /// Fetches the mappings of `indices` and picks each one's date field. Indices missing from the
+  /// response (deleted, or nothing mapped) aren't in the result
+  @MainActor
+  static func fetchDateFields(
+    serverDetails: HostDetails,
+    indices: [String],
+    request: Request
+  ) async -> (fields: [String: DateFieldInfo?], errorMessage: String?) {
+    var fields: [String: DateFieldInfo?] = [:]
+    var errorMessage: String?
+    let targets = Set(indices)
+
+    let filteredEndpoints = mappingEndpoints(for: indices)
+    let unfilteredEndpoints = mappingEndpoints(for: indices, filtered: false)
+    for (filtered, unfiltered) in zip(filteredEndpoints, unfilteredEndpoints) {
+      if Task.isCancelled { break }
+      var response = await request.invoke(serverDetails: serverDetails, endpoint: filtered)
+      // A server or proxy that won't take filter_path is asked again without it
+      if !succeeded(response) && !Task.isCancelled {
+        response = await request.invoke(serverDetails: serverDetails, endpoint: unfiltered)
+      }
+      guard succeeded(response), let data = response.data else {
+        errorMessage = failureMessage(response, fallback: "Failed to fetch index mappings")
+        continue
+      }
+      for (index, dateFields) in parseDateFieldsByIndices(from: data, targetIndices: targets) {
+        fields.updateValue(selectBestDateField(from: dateFields), forKey: index)
+      }
+    }
+    return (fields, errorMessage)
+  }
+
+  /// The newest document's date in each of `indices`, all using `field`. A batch that fails,
+  /// eg. because one index maps the field differently, is split in half until the index is found,
+  /// about log2(n) more requests rather than one per index
+  @MainActor
+  static func fetchMaxTimestamps(
+    serverDetails: HostDetails,
+    indices: [String],
+    field: DateFieldInfo,
+    request: Request
+  ) async -> [String: Double] {
+    guard !indices.isEmpty, !Task.isCancelled else { return [:] }
+
+    if indices.count == 1 {
+      // Queried on its own, an alias's timestamp is keyed by its own name, not its index's
+      let index = indices[0]
+      let response = await request.invoke(serverDetails: serverDetails,
+                                          endpoint: "/\(index)/_search?ignore_unavailable=true",
+                                          json: buildSingleIndexMaxQuery(field: field.name))
+      guard succeeded(response), let data = response.data,
+            let timestamp = parseSingleMaxTimestamp(data: data, isNanos: field.isNanos, isSeconds: field.isSeconds) else {
+        return [:]
+      }
+      return [index: timestamp]
+    }
+
+    let response = await request.invoke(serverDetails: serverDetails,
+                                        endpoint: "/\(indices.joined(separator: ","))/_search?ignore_unavailable=true",
+                                        json: buildBatchedTermsAggQuery(field: field.name))
+    // No buckets is an answer too, those indices have no documents
+    if succeeded(response), let data = response.data {
+      return parseBatchedAggResponse(data: data, isNanos: field.isNanos, isSeconds: field.isSeconds)
+    }
+
+    let middle = indices.count / 2
+    var timestamps = await fetchMaxTimestamps(serverDetails: serverDetails, indices: Array(indices[..<middle]),
+                                              field: field, request: request)
+    let second = await fetchMaxTimestamps(serverDetails: serverDetails, indices: Array(indices[middle...]),
+                                          field: field, request: request)
+    timestamps.merge(second) { _, new in new }
+    return timestamps
+  }
+
   @MainActor
   public static func fetchIndicesActivity(
     serverDetails: HostDetails,
@@ -301,135 +460,84 @@ public class IndexActivityService {
     guard !validIndices.isEmpty else {
       return IndexActivityResult(sortedIndices: [], timestamps: [:])
     }
-    
-    if Task.isCancelled {
-      let sorted = sortIndicesByActivity(indices: validIndices, timestamps: [:])
-      return IndexActivityResult(sortedIndices: sorted, timestamps: [:])
+
+    func unsorted(_ errorMessage: String? = nil) -> IndexActivityResult {
+      IndexActivityResult(sortedIndices: sortIndicesByActivity(indices: validIndices, timestamps: [:]),
+                          timestamps: [:],
+                          errorMessage: errorMessage)
     }
-    
+
+    if Task.isCancelled { return unsorted() }
+
     let request = Request()
-    let mappingResponse = await request.invoke(serverDetails: serverDetails, endpoint: "/_mapping")
-    
-    if Task.isCancelled {
-      let sorted = sortIndicesByActivity(indices: validIndices, timestamps: [:])
-      return IndexActivityResult(sortedIndices: sorted, timestamps: [:])
+
+    // Date fields cached from an earlier sort, then fetch the rest
+    let hostKey = cacheKey(for: serverDetails)
+    let now = Date()
+    var hostCache = dateFieldCache[hostKey] ?? [:]
+    var bestFields: [String: DateFieldInfo] = [:]
+    var uncached: [String] = []
+    for index in validIndices {
+      if let entry = hostCache[index], now.timeIntervalSince(entry.fetched) < dateFieldCacheLifetime {
+        if let field = entry.field {
+          bestFields[index] = field
+        }
+      } else {
+        uncached.append(index)
+      }
     }
-    
-    if let error = mappingResponse.error {
-      let errorMsg = error.message.isEmpty ? "Failed to fetch index mappings" : error.message
-      let sorted = sortIndicesByActivity(indices: validIndices, timestamps: [:])
-      return IndexActivityResult(sortedIndices: sorted, timestamps: [:], errorMessage: errorMsg)
+
+    if !uncached.isEmpty {
+      let fetched = await fetchDateFields(serverDetails: serverDetails, indices: uncached, request: request)
+      if Task.isCancelled { return unsorted() }
+
+      if let errorMessage = fetched.errorMessage, fetched.fields.isEmpty, bestFields.isEmpty {
+        return unsorted(errorMessage)
+      }
+      for (index, field) in fetched.fields {
+        hostCache[index] = CachedDateField(field: field, fetched: now)
+        if let field = field {
+          bestFields[index] = field
+        }
+      }
+      dateFieldCache[hostKey] = hostCache
     }
-    
-    guard let mappingData = mappingResponse.data else {
-      let sorted = sortIndicesByActivity(indices: validIndices, timestamps: [:])
-      return IndexActivityResult(sortedIndices: sorted, timestamps: [:], errorMessage: "No mapping data received")
-    }
-    
-    let targetSet = Set(validIndices)
-    let dateFieldsByIndex = parseDateFieldsByIndices(from: mappingData, targetIndices: targetSet)
-    
+
+    // One search per field and chunk of indices
     var indicesByField: [DateFieldInfo: [String]] = [:]
     for index in validIndices {
-      if let fields = dateFieldsByIndex[index], let bestField = selectBestDateField(from: fields) {
-        indicesByField[bestField, default: []].append(index)
+      if let field = bestFields[index] {
+        indicesByField[field, default: []].append(index)
       }
     }
-    
+
     guard !indicesByField.isEmpty else {
-      let sorted = sortIndicesByActivity(indices: validIndices, timestamps: [:])
-      return IndexActivityResult(sortedIndices: sorted, timestamps: [:], errorMessage: "No date fields found in index mappings")
+      return unsorted("No date fields found in index mappings")
     }
-    
+
+    let jobs = indicesByField.flatMap { field, group in chunk(group).map { (field: field, indices: $0) } }
     var allTimestamps: [String: Double] = [:]
-    
-    for (fieldInfo, groupIndices) in indicesByField {
-      if Task.isCancelled { break }
-      
-      let chunkSize = 50
-      for chunkStart in stride(from: 0, to: groupIndices.count, by: chunkSize) {
-        if Task.isCancelled { break }
-        let chunkEnd = min(chunkStart + chunkSize, groupIndices.count)
-        let chunk = Array(groupIndices[chunkStart..<chunkEnd])
-        
-        let joinedIndices = chunk.joined(separator: ",")
-        let endpoint = "/\(joinedIndices)/_search"
-        let queryBody = buildBatchedTermsAggQuery(field: fieldInfo.name)
-        
-        let searchResponse = await request.invoke(
-          serverDetails: serverDetails,
-          endpoint: endpoint,
-          json: queryBody
-        )
-        
-        if Task.isCancelled { break }
-        
-        if searchResponse.error == nil, let data = searchResponse.data {
-          let chunkTimestamps = parseBatchedAggResponse(
-            data: data,
-            isNanos: fieldInfo.isNanos,
-            isSeconds: fieldInfo.isSeconds
-          )
-          if !chunkTimestamps.isEmpty {
-            allTimestamps.merge(chunkTimestamps) { (_, new) in new }
-            continue
-          }
-        }
-        
-        // Fallback: If batched search fails or returned no buckets, query indices individually with up to 4 concurrent workers
-        let singleQueryBody = buildSingleIndexMaxQuery(field: fieldInfo.name)
-        await withTaskGroup(of: (String, Double?).self) { group in
-          var iterator = chunk.makeIterator()
-          for _ in 0..<min(4, chunk.count) {
-            if let nextIdx = iterator.next() {
-              group.addTask {
-                if Task.isCancelled { return (nextIdx, nil) }
-                let singleRes = await request.invoke(
-                  serverDetails: serverDetails,
-                  endpoint: "/\(nextIdx)/_search",
-                  json: singleQueryBody
-                )
-                if let singleData = singleRes.data {
-                  let ts = parseSingleMaxTimestamp(
-                    data: singleData,
-                    isNanos: fieldInfo.isNanos,
-                    isSeconds: fieldInfo.isSeconds
-                  )
-                  return (nextIdx, ts)
-                }
-                return (nextIdx, nil)
-              }
-            }
-          }
-          
-          for await (idx, ts) in group {
-            if let ts = ts {
-              allTimestamps[idx] = ts
-            }
-            if !Task.isCancelled, let nextIdx = iterator.next() {
-              group.addTask {
-                if Task.isCancelled { return (nextIdx, nil) }
-                let singleRes = await request.invoke(
-                  serverDetails: serverDetails,
-                  endpoint: "/\(nextIdx)/_search",
-                  json: singleQueryBody
-                )
-                if let singleData = singleRes.data {
-                  let ts = parseSingleMaxTimestamp(
-                    data: singleData,
-                    isNanos: fieldInfo.isNanos,
-                    isSeconds: fieldInfo.isSeconds
-                  )
-                  return (nextIdx, ts)
-                }
-                return (nextIdx, nil)
-              }
-            }
-          }
+
+    await withTaskGroup(of: [String: Double].self) { group in
+      var next = jobs.startIndex
+      func addNextJob() {
+        guard next < jobs.endIndex, !Task.isCancelled else { return }
+        let job = jobs[next]
+        next += 1
+        group.addTask {
+          await fetchMaxTimestamps(serverDetails: serverDetails, indices: job.indices, field: job.field, request: request)
         }
       }
+
+      for _ in 0..<maxConcurrentSearches {
+        addNextJob()
+      }
+      for await timestamps in group {
+        allTimestamps.merge(timestamps) { _, new in new }
+        addNextJob()
+      }
     }
-    
+
     let sorted = sortIndicesByActivity(indices: validIndices, timestamps: allTimestamps)
     let errorMessage = allTimestamps.isEmpty ? "No document activity found in indices" : nil
     return IndexActivityResult(sortedIndices: sorted, timestamps: allTimestamps, errorMessage: errorMessage)

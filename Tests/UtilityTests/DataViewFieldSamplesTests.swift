@@ -94,4 +94,18 @@ struct DataViewFieldSamplesTests {
     #expect(DataViewFieldSamples.values(from: Data("{}".utf8), field: "a", limit: 5).isEmpty)
     #expect(DataViewFieldSamples.values(from: Data("not json".utf8), field: "a", limit: 5).isEmpty)
   }
+
+  // MARK: - Errors
+
+  @Test func httpErrorsIncludeTheClusterReason() {
+    let reason = "action [indices:monitor/stats] is unauthorized for user [test] with effective roles [monitoring_user,viewer]"
+    let body = #"{"error":{"root_cause":[{"type":"security_exception","reason":"\#(reason)"}],"type":"security_exception","reason":"\#(reason)"},"status":403}"#
+    let forbidden = ServerResponse(data: Data(body.utf8))
+    forbidden.httpStatus = 403
+    #expect(forbidden.httpErrorMessage == "The cluster returned HTTP 403: \(reason)")
+
+    let bare = ServerResponse(data: Data("Forbidden".utf8))
+    bare.httpStatus = 403
+    #expect(bare.httpErrorMessage == "The cluster returned HTTP 403.")
+  }
 }

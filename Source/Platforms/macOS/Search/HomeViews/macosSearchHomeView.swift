@@ -47,8 +47,17 @@ struct macosSearchHomeView: View {
   @Binding var relativeCustomdatePeriod : SearchDateTimePeriods?
   @ObservedObject var serverObjects : HostsDataManager
   @Binding var sidebar : sideBar
+  @EnvironmentObject var manageCoordinator : ManageNavigationCoordinator
   @FocusState var focusedField: String?
-  
+
+  // Opens the data view editor for the chosen host in Hosts, using the saved host record
+  func openNewDataView() {
+    if let selected = localSelectedHost, !selected.isInvalidated,
+       let host = serverObjects.getHostByID(selected.id), !host.isInvalidated {
+      manageCoordinator.openNewDataView(for: host)
+    }
+    sidebar = .hosts
+  }
 
   var body: some View {
     ScrollView {
@@ -81,7 +90,7 @@ struct macosSearchHomeView: View {
                                            selectedDataView: localSelectedDataView,
                                            onSelect: selectDataView,
                                            onClear: clearIndexSelection,
-                                           onNew: { sidebar = .manage })
+                                           onNew: openNewDataView)
             }
 
               macosSearchHomeIndicesView(localSelectedHost: $localSelectedHost,

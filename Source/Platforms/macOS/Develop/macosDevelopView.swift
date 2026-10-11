@@ -15,6 +15,8 @@ struct macosDevelopView: View {
 
   @AppStorage("devConsole.requestText") private var requestText: String = "GET /_cluster/health"
   @AppStorage("devConsole.selectedHostId") private var selectedHostId: String = ""
+  // Read only mode is toggled in Settings and blocks requests that could change data
+  @AppStorage(IndexManagementPreferences.readOnlyKey) private var isReadOnly: Bool = IndexManagementPreferences.readOnlyDefault
 
   @State private var isSending = false
   @State private var sendTask: Task<Void, Never>? = nil
@@ -86,6 +88,10 @@ struct macosDevelopView: View {
           .font(.system(size: 22, weight: .light))
 
         Spacer()
+
+        if isReadOnly {
+          ReadOnlyPadlockButton(detail: "Requests that could change data are blocked. GET requests, searches, refresh, flush and cache clears still work. Turn it off in Settings.")
+        }
 
         templatesButton
 
@@ -347,12 +353,18 @@ struct macosDevelopView: View {
       parseError = error.localizedDescription
       result = nil
     case .success(let request):
+      // Checked here too so the reason shows under the editor, the service also refuses it
+      if isReadOnly, let reason = DevConsoleReadOnlyPolicy.blockedReason(for: request) {
+        parseError = reason
+        result = nil
+        return
+      }
       parseError = nil
       isSending = true
       isCopied = false
       pendingRequest = request
       sendTask = Task {
-        let response = await DevConsoleService.send(host: host, request: request)
+        let response = await DevConsoleService.send(host: host, request: request, readOnly: isReadOnly)
         // A cancelled request has already updated the UI, and a newer one may be in flight
         guard !Task.isCancelled else { return }
         result = response

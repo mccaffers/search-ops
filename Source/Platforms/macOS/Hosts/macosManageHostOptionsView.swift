@@ -12,12 +12,15 @@ import SwiftUI
 struct macosManageHostOptionsView: View {
   var host: HostDetails
   var onBack: () -> Void
+  var onEditHost: () -> Void
+  var onDeleteHost: () -> Void
   var onClusterHealth: () -> Void
   var onListIndexes: () -> Void
   var onListUsers: () -> Void
   var onDataViews: () -> Void
 
   @State private var isBackHovered: Bool = false
+  @State private var showDeleteAlert: Bool = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -50,9 +53,29 @@ struct macosManageHostOptionsView: View {
         }
 
         Spacer()
+
+        Button("Connection & auth", action: onEditHost)
+          .buttonStyle(macosDataViewButtonStyle(large: true))
+          .help("Edit the name, connection and authentication")
+
+        Button("Delete") {
+          showDeleteAlert = true
+        }
+        .buttonStyle(macosDataViewButtonStyle(destructive: true, large: true))
+        .help("Delete this host")
       }
       .padding(.top, 10)
       .padding(.bottom, 5)
+      .alert("", isPresented: $showDeleteAlert, actions: {
+        Button("Delete", role: .destructive, action: onDeleteHost)
+        Button("Cancel", role: .cancel) {}
+      }, message: {
+        Text("""
+             Just checking...\n
+             Are you sure you want to delete \(!host.isInvalidated ? host.name : "this host")?\n
+             This will permanently delete the record on your device. You'll need to add it again to SearchOps to search this host
+             """)
+      })
 
       // Options List
       VStack(alignment: .leading, spacing: 8) {
@@ -136,7 +159,7 @@ struct macosManageHostOptionRow: View {
   let host = HostDetails()
   host.name = "Production Cluster"
   host.env = "Production"
-  return macosManageHostOptionsView(host: host, onBack: {}, onClusterHealth: {}, onListIndexes: {}, onListUsers: {}, onDataViews: {})
+  return macosManageHostOptionsView(host: host, onBack: {}, onEditHost: {}, onDeleteHost: {}, onClusterHealth: {}, onListIndexes: {}, onListUsers: {}, onDataViews: {})
     .frame(width: 400, height: 500)
     .padding()
 }

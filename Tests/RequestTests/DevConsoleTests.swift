@@ -190,6 +190,103 @@ final class DevConsoleTests: XCTestCase {
     XCTAssertEqual(result.body, "")
   }
 
+  // MARK: Read only
+
+  func testReadOnlyAllowsReadsAndMaintenance() throws {
+    let allowed = [
+      "GET /_cat/indices?v",
+      "GET /_cluster/health",
+      "GET /idx/_search\n{\"size\":1}",
+      "POST /idx/_search",
+      "POST /_search?scroll=1m",
+      "POST /logs-*,metrics/_search\n{}",
+      "POST /_all/_search",
+      "POST _search/scroll\n{\"scroll_id\":\"abc\"}",
+      "POST /idx/_count",
+      "POST /_msearch\n{}\n{}",
+      "POST /idx/_explain/1\n{}",
+      "POST /idx/_validate/query?explain",
+      "POST /_query\n{\"query\":\"FROM logs\"}",
+      "POST /_ingest/pipeline/my-pipeline/_simulate\n{}",
+      "POST /idx/_refresh",
+      "POST /_flush",
+      "POST /idx/_cache/clear"
+    ]
+    for input in allowed {
+      XCTAssertNil(DevConsoleReadOnlyPolicy.blockedReason(for: try parse(input)), "Expected '\(input)' to be allowed")
+    }
+  }
+
+  func testReadOnlyBlocksWrites() throws {
+    let blocked = [
+      "POST /_bulk\n{\"delete\":{\"_index\":\"idx\",\"_id\":\"1\"}}",
+      "POST /idx/_delete_by_query\n{\"query\":{\"match_all\":{}}}",
+      // Typed as GET, but sent as POST because of the body
+      "GET /idx/_delete_by_query\n{\"query\":{\"match_all\":{}}}",
+      "POST /idx/_update_by_query",
+      "POST /idx/_doc\n{\"a\":1}",
+      // A document id that looks like an endpoint
+      "POST /idx/_doc/_search\n{\"a\":1}",
+      "POST /idx/_update/1\n{}",
+      "POST /_reindex\n{}",
+      "POST /idx/_close",
+      "POST /idx/_forcemerge",
+      "POST /_aliases\n{}",
+      "POST /_tasks/_cancel",
+      "POST /idx/_rollover",
+      "POST /_plugins/_sql\n{\"query\":\"DELETE FROM idx\"}",
+      // Paths that could read differently on the server
+      "POST /idx/_search/../_delete_by_query",
+      "POST /idx/%5Fdelete_by_query",
+      "POST /idx/%255Fsearch",
+      "POST /",
+      "POST /idx"
+    ]
+    for input in blocked {
+      XCTAssertNotNil(DevConsoleReadOnlyPolicy.blockedReason(for: try parse(input)), "Expected '\(input)' to be blocked")
+    }
+  }
+
+  @MainActor
+  func testSendInReadOnlyBlocksWritesWithoutARequest() async throws {
+    let session = CapturingURLSession(body: "{}", status: 200)
+    Request.mockedSession = session
+    defer { Request.mockedSession = nil }
+
+    let result = await DevConsoleService.send(host: makeHost(), request: try parse("POST /_bulk\n{}"), readOnly: true)
+
+    XCTAssertNil(session.lastRequest, "Nothing is sent")
+    XCTAssertEqual(result.status, 0)
+    XCTAssertEqual(result.sentMethod, .POST)
+    XCTAssertEqual(result.path, "/_bulk")
+    XCTAssertTrue(result.errorMessage?.hasPrefix("Read only mode is on") ?? false)
+  }
+
+  @MainActor
+  func testSendWithReadOnlyOffSendsWrites() async throws {
+    let session = CapturingURLSession(body: "{\"errors\":false}", status: 200)
+    Request.mockedSession = session
+    defer { Request.mockedSession = nil }
+
+    let result = await DevConsoleService.send(host: makeHost(), request: try parse("POST /_bulk\n{}"), readOnly: false)
+
+    XCTAssertEqual(session.lastRequest?.httpMethod, "POST")
+    XCTAssertEqual(session.lastRequest?.url?.path, "/_bulk")
+    XCTAssertNil(result.errorMessage)
+  }
+
+  @MainActor
+  func testSendInReadOnlyAllowsSearches() async throws {
+    let session = CapturingURLSession(body: "{\"took\":1}", status: 200)
+    Request.mockedSession = session
+    defer { Request.mockedSession = nil }
+
+    let result = await DevConsoleService.send(host: makeHost(), request: try parse("POST /idx/_search\n{}"), readOnly: true)
+
+    XCTAssertEqual(session.lastRequest?.url?.path, "/idx/_search")
+    XCTAssertNil(result.errorMessage)
+  }
+
   func testCancelledResultKeepsSentMethodAndPath() throws {
     let result = DevConsoleResult.cancelled(try parse("GET /idx/_search\n{\"size\":1}"))
 

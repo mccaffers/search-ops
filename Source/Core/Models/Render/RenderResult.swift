@@ -21,9 +21,13 @@ public class RenderResult : ObservableObject {
   public var error : ResponseError?
   public var pages : Int = 0
   public var hits : Int = 0
+  /// The server stopped counting at `hits`, so there are at least that many
+  public var hitsIsLowerBound : Bool = false
   public var fields : [SquashedFieldsArray]? = nil
   /// Each document in `results` flattened into its fields' values, in the same order.
   public var rows : [OrderedDictionary<String, Any>] = []
+  /// Where each document in `results` lives, in the same order
+  public var refs : [DocumentRef?] = []
   public var mapping : [SquashedFieldsArray]? = nil
   /// Round-trip time of the search request, set whether or not the request succeeded.
   public var duration : Duration? = nil

@@ -76,7 +76,7 @@ public enum DataViewFieldSamples {
     }
     if response.httpStatus >= 400 {
       return ([], ResponseError(title: "Couldn't load values",
-                                message: "The cluster returned HTTP \(response.httpStatus).",
+                                message: response.httpErrorMessage,
                                 type: .warn))
     }
     guard let data = response.data else {
