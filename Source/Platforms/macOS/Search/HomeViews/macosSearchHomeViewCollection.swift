@@ -194,7 +194,7 @@ struct macosSearchHomeViewCollection: View {
       .padding(.leading, 3)
       .padding(.trailing, 5)
       .padding(.bottom, 5)
-      // Search stays loaded behind the other tabs, so read the data views again on the way back from Manage
+      // Search stays loaded behind the other tabs, so read the data views again on the way back from Hosts
       .onChange(of: sidebar) { newValue in
         if newValue == .hidden {
           loadDataViews()

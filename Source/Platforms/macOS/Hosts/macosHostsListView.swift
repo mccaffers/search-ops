@@ -7,80 +7,72 @@
 // ---------------------------------------
 import SwiftUI
 
+#if os(macOS)
 struct macosHostsListView: View {
-  
-  @Binding var items : [HostDetails]
-  @Binding var fullScreen : Bool
-  @Binding var selection: macosSearchViewEnum
-  @Binding var selectedHostToEdit : HostDetails?
-  
+
+  var hosts : [HostDetails]
+  var selection: macosSearchViewEnum
+  var onAdd : () -> Void
+  var onSelect : (HostDetails) -> Void
+
+  @State private var isAddHovered = false
+
     var body: some View {
       VStack {
         HStack(spacing:2) {
-          
+
           Text("Host Management")
             .font(.system(size: 22, weight:.light))
-          
-         
+
+
           Spacer()
-        }    
+        }
         .padding(.top, 10)
         .padding(.bottom, 0)
         .opacity(selection != .None ? 0.4 : 1)
 
         VStack(alignment:.leading, spacing:5){
-          
-          Button {
-            selectedHostToEdit = nil
-            selection = .HostManagement
-          } label: {
+
+          Button(action: onAdd) {
             HStack(spacing:5) {
               Image(systemName: "plus.app.fill")
               Text("Add a new host")
             }
             .padding(10)
-            .background(Color("Button"))
+            .background(isAddHovered ? Color("ButtonHighlighted") : Color("Button"))
             .clipShape(.rect(cornerRadius: 5))
-            
+            .contentShape(Rectangle())
           }
           .buttonStyle(PlainButtonStyle())
+          .onHover { hovering in
+            isAddHovered = hovering
+          }
           .padding(.bottom, 5)
           .opacity(selection != .None ? 0.4 : 1)
-          
-          if items.count == 0 {
+
+          if hosts.isEmpty {
             RepeatedPlaceholderView()
             Spacer()
           } else {
             ScrollView {
-              ForEach(items.indices, id: \.self) {  index in
-                if !items[index].isInvalidated {
-                  HStack {
-                    macosHostManagementHomeButton(selectedHostToEdit: $selectedHostToEdit,
-                                                  selection: $selection,
-                                                  item: items[index])
+              LazyVStack(alignment: .leading, spacing: 6) {
+                ForEach(hosts, id: \.id) { item in
+                  macosManageHostCardView(item: item) {
+                    onSelect(item)
                   }
-                  .opacity(selection != .None ? 0.4 : 1)
-                  
                 }
               }
             }
+            .opacity(selection != .None ? 0.4 : 1)
           }
-        
+
         }
         .frame(maxWidth: .infinity,alignment: .leading)
-   
+
       }
-      .padding(.horizontal,10)
-      .background(Color("BackgroundFixedShadow"))
-      .clipShape(.rect(cornerRadius: 5))
-      .padding(.leading, 3)
-      .padding(.trailing, 5)
-      .padding(.bottom, 5)
-      .padding(.top, fullScreen ? 5 : 0)
     }
 }
-
-
+#endif
 
 struct RepeatedPlaceholderView: View {
     var body: some View {

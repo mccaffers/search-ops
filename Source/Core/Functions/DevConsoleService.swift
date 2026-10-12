@@ -198,10 +198,99 @@ public struct DevConsoleResult: Sendable {
   }
 }
 
+/// With read only mode on, the Dev console only sends requests that can't change data: any GET
+/// without a body, and POSTs to search and other read endpoints, plus refresh, flush and cache clear.
+/// Everything else (_bulk, _delete_by_query, _doc, _reindex, _close, ...) is blocked before it's sent
+public enum DevConsoleReadOnlyPolicy {
+
+  /// The endpoints a POST may go to (only checked for POSTs), from the path's first API segment
+  /// (the first one starting with "_") to the end. "*" is any one segment, eg. an id or a pipeline name
+  static let allowedPostEndpoints: [[String]] = [
+    // Searches and other reads
+    ["_search"], ["_search", "scroll"], ["_search", "scroll", "*"], ["_search", "template"],
+    ["_msearch"], ["_msearch", "template"],
+    ["_count"], ["_mget"], ["_field_caps"], ["_validate", "query"], ["_explain", "*"],
+    ["_analyze"], ["_termvectors"], ["_termvectors", "*"], ["_mtermvectors"], ["_terms_enum"],
+    ["_render", "template"], ["_render", "template", "*"], ["_rank_eval"], ["_knn_search"],
+    ["_async_search"], ["_pit"], ["_eql", "search"],
+    ["_query"], ["_query", "async"], ["_sql"], ["_sql", "translate"], ["_sql", "close"],
+    // Simulations and explanations, nothing is stored
+    ["_ingest", "pipeline", "_simulate"], ["_ingest", "pipeline", "*", "_simulate"], ["_ingest", "_simulate"],
+    ["_index_template", "_simulate"], ["_index_template", "_simulate", "*"],
+    ["_index_template", "_simulate_index", "*"],
+    ["_scripts", "painless", "_execute"], ["_cluster", "allocation", "explain"],
+    ["_security", "user", "_has_privileges"], ["_security", "user", "*", "_has_privileges"],
+    // Maintenance that doesn't change or remove documents
+    ["_refresh"], ["_flush"], ["_flush", "synced"], ["_cache", "clear"]
+  ]
+
+  /// Why the request isn't sent with read only mode on, or nil when it's allowed
+  public static func blockedReason(for request: DevConsoleRequest) -> String? {
+    // A GET with a body goes out as a POST, so check what's sent, not what was typed.
+    // No default case: a new method (eg. PUT or DELETE) has to decide here whether it's allowed,
+    // rather than inheriting the POST endpoint list, where PUT /_scripts/painless/_execute stores a script
+    switch request.sentMethod {
+    case .GET:
+      return nil
+    case .POST:
+      if isAllowedPost(path: request.path) {
+        return nil
+      }
+    }
+    return "Read only mode is on, so \(request.sentMethod.rawValue) \(request.path) wasn't sent. "
+      + "Only GET requests, searches and other reads, refresh, flush and cache clears are allowed. "
+      + "Turn read only mode off in Settings to send it."
+  }
+
+  static func isAllowedPost(path: String) -> Bool {
+    guard let segments = segments(of: path) else { return false }
+
+    // Index names can't start with "_", so the first such segment starts the API. Anything
+    // after it has to match exactly, so a document id like _search can't pass for one
+    var target = segments.prefix { !$0.hasPrefix("_") }
+    var api = Array(segments.dropFirst(target.count))
+    // _all is a target, eg. /_all/_search
+    if target.isEmpty, api.first == "_all" {
+      target = ["_all"]
+      api.removeFirst()
+    }
+    guard target.count <= 1, !api.isEmpty else { return false }
+
+    return allowedPostEndpoints.contains { pattern in
+      pattern.count == api.count && zip(pattern, api).allSatisfy { $0 == "*" || $0 == $1 }
+    }
+  }
+
+  /// The decoded path segments, without the query string, or nil for a path that could
+  /// read differently on the server: double encoding, or . and .. segments
+  static func segments(of path: String) -> [String]? {
+    let withoutQuery = path.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
+    let withoutFragment = withoutQuery.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
+    guard let decoded = String(withoutFragment).removingPercentEncoding, !decoded.contains("%") else {
+      return nil
+    }
+    let segments = decoded.split(separator: "/").map(String.init)
+    guard !segments.contains(where: { $0 == "." || $0 == ".." || $0.contains("\\") }) else {
+      return nil
+    }
+    return segments
+  }
+}
+
 @MainActor
 public struct DevConsoleService {
 
-  public static func send(host: HostDetails, request: DevConsoleRequest) async -> DevConsoleResult {
+  /// Sends the request, unless read only mode is on and the request could change data
+  public static func send(host: HostDetails,
+                          request: DevConsoleRequest,
+                          readOnly: Bool = IndexManagementPreferences.isReadOnly()) async -> DevConsoleResult {
+    if readOnly, let reason = DevConsoleReadOnlyPolicy.blockedReason(for: request) {
+      return DevConsoleResult(status: 0,
+                              sentMethod: request.sentMethod,
+                              path: request.path,
+                              errorMessage: reason)
+    }
+
     let clock = ContinuousClock()
     let start = clock.now
 

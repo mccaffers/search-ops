@@ -143,8 +143,8 @@ struct DocumentFilterField: View {
   }
 }
 
-/// A field's value, with buttons to filter the search for or against it. They show while the pointer is over
-/// the value, or stay when the search already filters on it.
+/// A field's value, with buttons to copy it and to filter the search for or against it. They show while the
+/// pointer is over the value; the filter buttons also stay when the search already filters on it.
 struct DocumentValueCell: View {
   let displayValue: String
   /// The value to filter on, nil when the field has no single value
@@ -153,6 +153,7 @@ struct DocumentValueCell: View {
   let activeFilter: Bool?
   let onFilter: ((_ value: String, _ negated: Bool) -> Void)?
   @State private var isHovered = false
+  @State private var copied = false
 
   var body: some View {
     HStack(alignment: .top, spacing: 8) {
@@ -160,26 +161,71 @@ struct DocumentValueCell: View {
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
 
-      if let filterValue = filterValue, let onFilter = onFilter {
-        HStack(spacing: 2) {
-          DocumentFilterButton(systemImage: "plus.magnifyingglass",
-                               isActive: activeFilter == false,
-                               help: activeFilter == false ? "Already filtering for this value" : "Filter for value",
-                               accessibilityLabel: "Filter for \(displayValue)") {
-            onFilter(filterValue, false)
-          }
-          DocumentFilterButton(systemImage: "minus.magnifyingglass",
-                               isActive: activeFilter == true,
-                               help: activeFilter == true ? "Already filtering out this value" : "Filter out value",
-                               accessibilityLabel: "Filter out \(displayValue)") {
-            onFilter(filterValue, true)
-          }
+      // The buttons keep their space when hidden, so the value doesn't reflow as the pointer moves
+      HStack(spacing: 2) {
+        DocumentFilterButton(systemImage: copied ? "checkmark" : "doc.on.doc",
+                             isActive: copied,
+                             help: copied ? "Copied" : "Copy value",
+                             accessibilityLabel: "Copy \(displayValue)") {
+          NSPasteboard.general.clearContents()
+          NSPasteboard.general.setString(filterValue ?? displayValue, forType: .string)
+          copied = true
         }
-        // Keeps its space when hidden, so the value doesn't reflow as the pointer moves
-        .opacity(isHovered || activeFilter != nil ? 1 : 0)
+        .opacity(isHovered ? 1 : 0)
+
+        if let filterValue = filterValue, let onFilter = onFilter {
+          HStack(spacing: 2) {
+            DocumentFilterButton(systemImage: "plus.magnifyingglass",
+                                 isActive: activeFilter == false,
+                                 help: activeFilter == false ? "Already filtering for this value" : "Filter for value",
+                                 accessibilityLabel: "Filter for \(displayValue)") {
+              onFilter(filterValue, false)
+            }
+            DocumentFilterButton(systemImage: "minus.magnifyingglass",
+                                 isActive: activeFilter == true,
+                                 help: activeFilter == true ? "Already filtering out this value" : "Filter out value",
+                                 accessibilityLabel: "Filter out \(displayValue)") {
+              onFilter(filterValue, true)
+            }
+          }
+          .opacity(isHovered || activeFilter != nil ? 1 : 0)
+        }
       }
     }
     .contentShape(Rectangle())
+    .onHover { hovering in
+      isHovered = hovering
+      if !hovering {
+        copied = false
+      }
+    }
+  }
+}
+
+/// A text button in the Document panel's header, lighter on hover
+struct DocumentHeaderButton: View {
+  var systemImage: String? = nil
+  let title: String
+  var help: String? = nil
+  let action: () -> Void
+  @State private var isHovered = false
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 5) {
+        if let systemImage = systemImage {
+          Image(systemName: systemImage)
+            .foregroundColor(Color("LabelBackgroundFocus"))
+        }
+        Text(title)
+      }
+      .padding(10)
+      .background(isHovered ? Color("ButtonHighlighted") : Color("Background"))
+      .clipShape(.rect(cornerRadius: 5))
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(PlainButtonStyle())
+    .help(help ?? title)
     .onHover { hovering in
       isHovered = hovering
     }
@@ -243,6 +289,8 @@ struct DocumentFieldsGrid: View {
   var fieldFilters: [FieldFilter] = []
   /// Filters the search for a field's value, or against it when negated. No filter buttons without it.
   var onFilter: ((_ field: String, _ value: String, _ negated: Bool) -> Void)? = nil
+  /// Whether each field has a checkbox to show or hide it in the results list
+  var showsFieldVisibility: Bool = true
   /// The Field column's width, checkbox included
   var fieldColumnWidth: CGFloat = DocumentFieldsGrid.defaultFieldColumnWidth
   /// Called with the drag distance while the column divider is dragged. No divider handle without it.
@@ -286,16 +334,18 @@ struct DocumentFieldsGrid: View {
     Grid(alignment: .topLeading, horizontalSpacing: DocumentFieldsGrid.columnSpacing, verticalSpacing: 0) {
       GridRow(alignment: .center) {
         HStack(alignment: .center, spacing: toggleSpacing) {
-          DocumentCheckboxButton(
-            state: selectAllState,
-            help: selectAllState == .on
-              ? "Hide these fields from results list"
-              : "Show these fields in results list",
-            accessibilityLabel: selectAllState == .on
-              ? "Hide all \(keys.count) fields from results list"
-              : "Show all \(keys.count) fields in results list",
-            onToggle: onToggleAll
-          )
+          if showsFieldVisibility {
+            DocumentCheckboxButton(
+              state: selectAllState,
+              help: selectAllState == .on
+                ? "Hide these fields from results list"
+                : "Show these fields in results list",
+              accessibilityLabel: selectAllState == .on
+                ? "Hide all \(keys.count) fields from results list"
+                : "Show all \(keys.count) fields in results list",
+              onToggle: onToggleAll
+            )
+          }
           Text("Field")
             .fixedSize()
           Text(DocumentFieldsGrid.countLabel(total: keys.count, selected: keys.filter(isFieldVisible).count))
@@ -318,14 +368,16 @@ struct DocumentFieldsGrid: View {
           GridRow {
             // The checkbox leads each field cell, so the checkboxes line up down the left edge.
             HStack(alignment: .center, spacing: toggleSpacing) {
-              DocumentCheckboxButton(
-                state: isFieldVisible(key) ? .on : .off,
-                help: isFieldVisible(key) ? "Hide field from results list" : "Show field in results list",
-                accessibilityLabel: isFieldVisible(key)
-                  ? "Hide \(key) from results list"
-                  : "Show \(key) in results list",
-                onToggle: { onToggle(key) }
-              )
+              if showsFieldVisibility {
+                DocumentCheckboxButton(
+                  state: isFieldVisible(key) ? .on : .off,
+                  help: isFieldVisible(key) ? "Hide field from results list" : "Show field in results list",
+                  accessibilityLabel: isFieldVisible(key)
+                    ? "Hide \(key) from results list"
+                    : "Show \(key) in results list",
+                  onToggle: { onToggle(key) }
+                )
+              }
               DocumentFieldHeaderView(key: key,
                                       type: fieldType(key),
                                       label: DataViewSelection.label(for: key, labels: labels))
@@ -487,6 +539,13 @@ struct macosDocumentDetailView: View {
   var onFilter: ((_ field: String, _ value: String, _ negated: Bool) -> Void)? = nil
   /// Closes the panel, when Escape is pressed with nothing typed in the filter
   var onClose: () -> Void = {}
+  /// Whether the document is in the Saved tab. No Save button when nil, eg. a document without an id.
+  var isSaved: Bool? = nil
+  var onToggleSaved: () -> Void = {}
+  /// Whether each field has a checkbox to show or hide it in the results list
+  var showsFieldVisibility: Bool = true
+  /// The gap above the panel, leaving room for the bar it opens under
+  var topPadding: CGFloat = 36
   /// The width while the edge is being dragged, so only this panel redraws until the drag ends
   @State private var dragWidth: CGFloat? = nil
   @AppStorage("macosDocumentFieldColumnWidth") private var fieldColumnWidth: Double = DocumentFieldsGrid.defaultFieldColumnWidth
@@ -541,25 +600,21 @@ struct macosDocumentDetailView: View {
           
           Spacer()
           
-          Button {
+          if let isSaved = isSaved {
+            DocumentHeaderButton(systemImage: isSaved ? "bookmark.fill" : "bookmark",
+                                 title: isSaved ? "Saved" : "Save",
+                                 help: isSaved ? "Remove from Saved" : "Keep this document in the Saved tab",
+                                 action: onToggleSaved)
+          }
+          
+          DocumentHeaderButton(title: view == .Document ? "View as JSON" : "View as Document") {
             if view == .Document {
               view = .JSON
             } else {
               view = .Document
             }
-          } label: {
-            Group {
-              if view == .Document {
-                Text("View as JSON")
-              } else {
-                Text("View as Document")
-              }
-            }
-            .padding(10)
-            .background(Color("Background"))
-            .clipShape(.rect(cornerRadius: 5))
-          }.buttonStyle(PlainButtonStyle())
-            .padding(.trailing, 10)
+          }
+          .padding(.trailing, 10)
           
         }
         .padding(.vertical, 5)
@@ -598,6 +653,7 @@ struct macosDocumentDetailView: View {
                   labels: labels,
                   fieldFilters: fieldFilters,
                   onFilter: onFilter,
+                  showsFieldVisibility: showsFieldVisibility,
                   fieldColumnWidth: DocumentFieldsGrid.clampedFieldColumnWidth(fieldColumnDragWidth ?? fieldColumnWidth,
                                                                                panelWidth: panelWidth),
                   onFieldColumnDrag: { translation in
@@ -662,7 +718,7 @@ struct macosDocumentDetailView: View {
     .padding(.bottom, 25)
     .frame(width: dragWidth ?? width)
     .padding(.trailing, 10)
-    .padding(.top, 36)
+    .padding(.top, topPadding)
     // Starts a full panel width to the right, so it slides in from off screen however wide it is
     .offset(x: slidIn ? 0 : (dragWidth ?? width) + 10)
     .animation(.spring(response: 0.25, dampingFraction: 1, blendDuration: 0), value: slidIn)
@@ -684,6 +740,7 @@ struct macosDocumentDetailView: View {
     .onDisappear {
       itemDetail.showingView = false
       itemDetail.item = nil
+      itemDetail.ref = nil
     }
   }
 }

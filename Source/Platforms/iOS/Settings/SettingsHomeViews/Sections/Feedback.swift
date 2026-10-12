@@ -64,8 +64,21 @@ struct Feedback: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .multilineTextAlignment(.leading)
         }.frame(maxWidth: .infinity, alignment: .leading)
-        
-        
+
+        Text("As a free application, a star on GitHub would be much appreciated!")
+          .font(.system(size:15))
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .multilineTextAlignment(.leading)
+
+        Link(destination: URL(string: "https://github.com/mccaffers/search-ops")!) {
+          HStack (spacing:5) {
+            Image(systemName: "star.fill")
+            Text("Star SearchOps on GitHub")
+          }
+          .font(.system(size:15))
+          .foregroundColor(Color("ButtonLight"))
+        }.frame(maxWidth: .infinity, alignment: .leading)
+
       }.frame(maxWidth: .infinity, alignment: .leading)
         .foregroundColor(Color("TextSecondary"))
         .font(.system(size:14))

@@ -231,11 +231,47 @@ extension SearchHistogram {
                            buckets: buckets)
   }
 
-  /// Whether a failed search failed because of the histogram, eg. an index pattern
-  /// where one index maps the date field as a keyword. Those searches are retried without it.
-  public static func isAggregationError(_ message: String) -> Bool {
-    let lowered = message.lowercased()
-    return lowered.contains("date_histogram") || lowered.contains("aggregation") || lowered.contains("max_buckets")
+  /// Error types only an aggregation raises
+  static let histogramErrorTypes: Set<String> = ["too_many_buckets_exception", "aggregation_execution_exception"]
+
+  /// Whether a failed search failed because of the histogram on `field`, eg. an index pattern where
+  /// one index maps the date field as a keyword or text. Those searches are retried without it.
+  /// Every cause in the error is checked: the root causes, the caused_by chain and the failed shards.
+  public static func isHistogramError(json: [String: Any]?, field: String) -> Bool {
+    guard let error = json?["error"] as? [String: Any] else { return false }
+    return causes(of: error).contains { isHistogramError(type: $0.type, reason: $0.reason, field: field) }
+  }
+
+  /// Whether one error cause came from the histogram. A message that only mentions aggregations isn't
+  /// enough, sorting on a text field also fails with "...like aggregations and sorting"
+  public static func isHistogramError(type: String?, reason: String?, field: String) -> Bool {
+    if let type = type, histogramErrorTypes.contains(type) { return true }
+    guard let reason = reason?.lowercased() else { return false }
+    if reason.contains("date_histogram") || reason.contains("max_buckets") || reason.contains("[\(aggregationName)]") {
+      return true
+    }
+    // eg. "Fielddata is disabled on text fields by default. Set fielddata=true on [created]..."
+    // Only when it names the histogram's own field, not a sort or another aggregation's field
+    let quotedField = "[\(field.lowercased())]"
+    return reason.contains(quotedField) && (reason.contains("fielddata") || reason.contains("aggregat"))
+  }
+
+  /// The type and reason of an error and of everything nested in it.
+  static func causes(of error: [String: Any]) -> [(type: String?, reason: String?)] {
+    var found: [(type: String?, reason: String?)] = [(error["type"] as? String, error["reason"] as? String)]
+    var nested = (error["root_cause"] as? [[String: Any]]) ?? []
+    if let causedBy = error["caused_by"] as? [String: Any] {
+      nested.append(causedBy)
+    }
+    for shard in (error["failed_shards"] as? [[String: Any]]) ?? [] {
+      if let reason = shard["reason"] as? [String: Any] {
+        nested.append(reason)
+      }
+    }
+    for cause in nested {
+      found += causes(of: cause)
+    }
+    return found
   }
 
   /// Counts for the chart's axis, eg. 2M rather than 2.0E6. Fixed suffixes, as some locales

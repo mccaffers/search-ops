@@ -37,7 +37,8 @@ public class Results {
   public static func UpdateResultsWithFlatArray(searchResults: [[String: Any]]?,
                                                 resultsFields: RenderedFields,
                                                 datefield: SquashedFieldsArray? = nil,
-                                                rows: [OrderedDictionary<String, Any>]? = nil) -> RenderObject? {
+                                                rows: [OrderedDictionary<String, Any>]? = nil,
+                                                refs: [DocumentRef?] = []) -> RenderObject? {
       guard let searchResults = searchResults else {
           return nil
       }
@@ -46,7 +47,8 @@ public class Results {
           headers: resultsFields.fields.filter { $0.visible },
           results: searchResults.map { OrderedDictionary(uniqueKeys: $0.keys, values: $0.values) },
           flat: rows ?? DocumentFlattener.flattenPage(searchResults).rows,
-          dateField: datefield
+          dateField: datefield,
+          refs: refs
       )
   }
 

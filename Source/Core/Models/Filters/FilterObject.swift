@@ -180,10 +180,20 @@ public class FilterObject: ObservableObject {
 }
 
 /// A time period saved so it can be put back, eg. after zooming into the search histogram.
-public enum DateRangeSnapshot: Equatable {
+public enum DateRangeSnapshot: Hashable {
   case relative(value: Double, period: SearchDateTimePeriods)
   case absolute(from: Date, to: Date, fromNow: Bool, toNow: Bool)
   
+  /// Whether the dates it covers move with the time it's run: a relative period, or one that starts or ends now
+  public var isLive: Bool {
+    switch self {
+    case .relative:
+      return true
+    case .absolute(_, _, let fromNow, let toNow):
+      return fromNow || toNow
+    }
+  }
+
   /// eg. Last hour, Last 6 Months, or 5 Oct 2026 at 20:21 – Now
   public var title: String {
     switch self {

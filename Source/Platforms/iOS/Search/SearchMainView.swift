@@ -21,6 +21,8 @@ class DocumentDetail: ObservableObject {
   }
   
   @Published var headers : [SquashedFieldsArray]?
+  /// Where the open document lives, nil when that isn't known
+  @Published var ref: DocumentRef? = nil
   
   @Published var showingView : Bool = false
   

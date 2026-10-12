@@ -84,6 +84,7 @@ public class Search {
   public static func getObjects(json: [String: Any]?, input: String) -> SearchResult {
 
     var hitCount = 0
+    var hitCountIsLowerBound = false
 
     var parsedObject = SearchResult()
 
@@ -94,6 +95,7 @@ public class Search {
           if let value = total["value"] as? Int {
             hitCount = value
           }
+          hitCountIsLowerBound = (total["relation"] as? String) == "gte"
         } else if let total = hits["total"] as? Int {
           hitCount = total
         }
@@ -101,11 +103,13 @@ public class Search {
         if let objects = hits["hits"] as? [[String: Any]] {
           
           var holder : [[String : Any]] = [[String : Any]]()
+          var refs : [DocumentRef?] = []
           
           for jsonDict in objects {
             
             if let _source = jsonDict["_source"] as? [String: Any] {
               holder.append(_source)
+              refs.append(DocumentRef(hit: jsonDict))
             }
           }
 
@@ -115,8 +119,10 @@ public class Search {
             let page = DocumentFlattener.flattenPage(holder)
             parsedObject = SearchResult(data: holder,
                                         hitCount: hitCount,
+                                        hitCountIsLowerBound: hitCountIsLowerBound,
                                         fields: page.fields.map { SquashedFieldsArray(squashedString: $0.key, fieldParts: $0.parts) },
-                                        rows: page.rows)
+                                        rows: page.rows,
+                                        refs: refs)
           }
         }
       } else if let errorMessage = jsonObj["error"] as? [String: Any] {

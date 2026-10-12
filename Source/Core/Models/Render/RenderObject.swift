@@ -18,4 +18,6 @@ public struct RenderObject {
   public var results : [OrderedDictionary<String, Any>]
   public var flat : [OrderedDictionary<String, Any>]? = nil
   public var dateField : SquashedFieldsArray? = nil
+  /// Where each document in `results` lives, in the same order. Empty when not known.
+  public var refs : [DocumentRef?] = []
 }

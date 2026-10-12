@@ -30,5 +30,15 @@ public class ServerResponse {
 	public var httpStatus: Int = 0
 	public var url : URL? = nil
 	public var method : String? = nil
+
+	/// For a failed status: "The cluster returned HTTP 403: <reason>", with the reason from the error body when it has one
+	public var httpErrorMessage: String {
+		let status = "The cluster returned HTTP \(httpStatus)"
+		guard let body = data.flatMap({ String(data: $0, encoding: .utf8) }),
+					let reason = ClusterUsers.errorReason(body), !reason.isEmpty else {
+			return status + "."
+		}
+		return "\(status): \(reason)"
+	}
 }
 

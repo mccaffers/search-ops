@@ -68,6 +68,16 @@ public enum ManageScreen: Equatable {
     screen = .dataViewEditor
   }
 
+  /// Straight to a blank data view editor for the host, as the search screen's + does.
+  /// Back then goes to that host's data views.
+  public func openNewDataView(for host: HostDetails) {
+    guard !host.isInvalidated else { return }
+    selectedHost = host
+    selectedIndex = nil
+    selectedIndexStats = nil
+    editDataView(nil)
+  }
+
   public func selectIndex(_ indexName: String, stats: IndexStatsItem? = nil) {
     selectedIndex = indexName
     selectedIndexStats = stats
@@ -172,24 +182,21 @@ struct macosManageHostCardView: View {
   }
 }
 
+/// The Hosts tab's screens: the host list, then each host's options and the screens behind them.
+/// The add and edit popup and deleting a host belong to `macosHostsView`, which wraps this.
 @MainActor
 struct macosManageHostsView: View {
   @Binding var fullScreen: Bool
   @ObservedObject var serverObjects: HostsDataManager
   @ObservedObject var hostsUpdated: HostUpdatedNotifier
-
-  @StateObject var coordinator = ManageNavigationCoordinator()
+  @ObservedObject var coordinator: ManageNavigationCoordinator
+  var selection: macosSearchViewEnum = .None
+  var onAddHost: () -> Void = {}
+  var onEditHost: (HostDetails) -> Void = { _ in }
+  var onDeleteHost: (HostDetails) -> Void = { _ in }
 
   var activeHosts: [HostDetails] {
     serverObjects.items.filter { !$0.isInvalidated }
-  }
-
-  init(fullScreen: Binding<Bool> = .constant(false),
-       serverObjects: HostsDataManager,
-       hostsUpdated: HostUpdatedNotifier) {
-    self._fullScreen = fullScreen
-    self.serverObjects = serverObjects
-    self.hostsUpdated = hostsUpdated
   }
 
   var body: some View {
@@ -202,6 +209,8 @@ struct macosManageHostsView: View {
           macosManageHostOptionsView(
             host: host,
             onBack: { coordinator.goBack() },
+            onEditHost: { onEditHost(host) },
+            onDeleteHost: { onDeleteHost(host) },
             onClusterHealth: { coordinator.navigateToClusterHealth() },
             onListIndexes: { coordinator.navigateToListIndexes() },
             onListUsers: { coordinator.navigateToListUsers() },
@@ -314,51 +323,18 @@ struct macosManageHostsView: View {
     }
   }
 
-  @ViewBuilder
   private var hostListView: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      HStack {
-        Text("Manage Hosts")
-          .font(.system(size: 22, weight: .light))
-        Spacer()
-      }
-      .padding(.top, 10)
-      .padding(.bottom, 5)
-
-      if activeHosts.isEmpty {
-        VStack(spacing: 8) {
-          Image(systemName: "server.rack")
-            .font(.system(size: 32))
-            .foregroundColor(Color("TextSecondary"))
-          Text("No Configured Hosts")
-            .font(.headline)
-          Text("Add a host in Host Management to begin managing it.")
-            .font(.subheadline)
-            .foregroundColor(Color("TextSecondary"))
-            .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
-      } else {
-        ScrollView {
-          LazyVStack(alignment: .leading, spacing: 6) {
-            ForEach(activeHosts, id: \.id) { item in
-              macosManageHostCardView(item: item) {
-                coordinator.selectHost(item)
-              }
-            }
-          }
-        }
-      }
-
-      Spacer()
-    }
+    macosHostsListView(hosts: activeHosts,
+                       selection: selection,
+                       onAdd: onAddHost,
+                       onSelect: { host in coordinator.selectHost(host) })
   }
 }
 
 #Preview {
   macosManageHostsView(fullScreen: .constant(false),
                        serverObjects: HostsDataManager(),
-                       hostsUpdated: HostUpdatedNotifier())
+                       hostsUpdated: HostUpdatedNotifier(),
+                       coordinator: ManageNavigationCoordinator())
 }
 #endif

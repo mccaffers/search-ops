@@ -307,7 +307,7 @@ struct SettingsView: View {
 
   private var indexManagementCard: some View {
     macosSettingsCard(title: "Index Management",
-                      subtitle: "Safeguards for changes made from Manage → Index.") {
+                      subtitle: "Safeguards for changes made from Manage → Index and API.") {
       HStack(alignment: .center, spacing: 16) {
         VStack(alignment: .leading, spacing: 4) {
           HStack(spacing: 8) {
@@ -318,8 +318,8 @@ struct SettingsView: View {
                                tone: indexReadOnly ? .positive : .neutral)
           }
           Text(indexReadOnly
-               ? "When on, deleting documents from Manage → Index is disabled."
-               : "Read only is off. Deleting documents from Manage → Index is now possible.")
+               ? "When on, deleting documents from Manage → Index is disabled, and API only sends GET requests, searches, refresh, flush and cache clears."
+               : "Read only is off. Deleting documents from Manage → Index, and sending any request from API, is now possible.")
             .font(.system(size: 11))
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -407,6 +407,10 @@ struct SettingsView: View {
     macosSettingsCard(title: "Feedback & Support",
                       subtitle: "Please contact me if you have any issues or feedback.") {
       VStack(spacing: 8) {
+        macosLinkRow(icon: "cat",
+                     title: "mccaffers/search-ops",
+                     actionLabel: "GitHub",
+                     destination: URL(string: "https://github.com/mccaffers/search-ops")!)
         macosLinkRow(icon: "envelope",
                      title: "ryan@mccaffers.com",
                      actionLabel: "Email",

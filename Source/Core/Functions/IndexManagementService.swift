@@ -232,6 +232,8 @@ public class IndexManagementService {
     return (fields: fields, dateFields: deduplicatedDateFields, rawJson: rawJson, error: nil)
   }
 
+  public nonisolated static let readOnlyMessage = "Read only mode is on, deletes are blocked. Turn it off in Settings."
+
   public nonisolated static func validateTargetIndex(_ index: String) -> ResponseError? {
     let title = "Invalid Delete Target"
 
@@ -251,7 +253,9 @@ public class IndexManagementService {
       return ResponseError(title: title, message: "Index name cannot start with '\(first)'", type: .critical)
     }
 
-    let forbidden: Set<Character> = ["*", "?", ",", "/", "\\", "\"", "<", ">", "|", "#", ":"]
+    // The name goes into the URL unencoded and the server decodes it, so '%' would let
+    // eg. %5Fall or logs%2A past the checks above
+    let forbidden: Set<Character> = ["*", "?", ",", "/", "\\", "\"", "<", ">", "|", "#", ":", "%"]
     if let bad = index.first(where: { forbidden.contains($0) || $0.isWhitespace }) {
       return ResponseError(title: title, message: "Index name cannot contain '\(bad)'. Only a single, exact index or alias can be targeted", type: .critical)
     }
@@ -261,29 +265,37 @@ public class IndexManagementService {
 
   public static func deleteAllDocuments(
     serverDetails: HostDetails,
-    index: String
+    index: String,
+    readOnly: Bool = IndexManagementPreferences.isReadOnly()
   ) async -> DeleteTaskSubmission {
     let query = IndexAgeHelper.buildMatchAllDeleteQuery()
-    return await submitDeleteByQuery(serverDetails: serverDetails, index: index, query: query)
+    return await submitDeleteByQuery(serverDetails: serverDetails, index: index, query: query, readOnly: readOnly)
   }
 
   public static func deleteDocumentsByAge(
     serverDetails: HostDetails,
     index: String,
     dateField: String,
-    dateMathExpression: String
+    dateMathExpression: String,
+    readOnly: Bool = IndexManagementPreferences.isReadOnly()
   ) async -> DeleteTaskSubmission {
     let query = IndexAgeHelper.buildRangeDeleteQuery(dateField: dateField, dateMathExpression: dateMathExpression)
-    return await submitDeleteByQuery(serverDetails: serverDetails, index: index, query: query)
+    return await submitDeleteByQuery(serverDetails: serverDetails, index: index, query: query, readOnly: readOnly)
   }
 
   private static func submitDeleteByQuery(
     serverDetails: HostDetails,
     index: String,
-    query: String
+    query: String,
+    readOnly: Bool
   ) async -> DeleteTaskSubmission {
     if let err = validateTargetIndex(index) {
       return .failed(DeleteByQueryResult(errorMessage: err.message, isSuccess: false))
+    }
+
+    // The view blocks deletes too, this covers any other caller
+    if readOnly {
+      return .failed(DeleteByQueryResult(errorMessage: readOnlyMessage, isSuccess: false))
     }
 
     let endpoint = "/\(index)/_delete_by_query?conflicts=proceed&refresh=true&wait_for_completion=false&expand_wildcards=none"

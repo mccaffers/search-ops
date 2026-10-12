@@ -18,6 +18,12 @@ struct macosSearchMainView: View {
   @Binding var selectedIndex: String
   // Set while searching a data view's pattern, for its name and labels
   @Binding var selectedDataView: DataView?
+  /// Columns from a saved search, shown once its first search has loaded the fields
+  @Binding var pendingSelectedFields: [String]?
+  /// Column widths from a saved search, set with its columns
+  @Binding var pendingColumnWidths: [String: Double]?
+  /// The saved search this search came from, so saving again can update it
+  @Binding var savedSearchLink: SavedSearchLink?
   
   @StateObject var resultsFields: RenderedFields = RenderedFields(fields: [SquashedFieldsArray]())
   @State var renderedObjects: RenderObject?
@@ -39,6 +45,11 @@ struct macosSearchMainView: View {
 
   // detailed item view
   @StateObject var itemDetail : DocumentDetail = DocumentDetail()
+  /// Whether the document open in the panel is in the Saved tab
+  @State private var isDocumentSaved = false
+  @State private var showingSavePopover = false
+  /// eg. "Saved" or "Updated", shown on the Save button for a moment afterwards
+  @State private var saveConfirmation: String? = nil
   @State var searchResultsUpdated : UUID = UUID()
   @FocusState var focusedField: String?
   @State var items = [HostDetails]()
@@ -70,6 +81,8 @@ struct macosSearchMainView: View {
   @State var searchResponseError : ResponseError?
   /// Round-trip time of the latest search, kept on screen while the next one runs. Cleared per host and index.
   @State private var lastLatency: Duration?
+  /// Documents matching the last successful search, and whether the server stopped counting there
+  @State private var lastHitCount: (count: Int, isLowerBound: Bool)?
 
   /// Document counts over the time period, from the last first-page search
   @State var histogram : SearchHistogram?
@@ -155,11 +168,13 @@ struct macosSearchMainView: View {
         searchResponseError = error
         renderedObjects = nil
         histogram = nil
+        lastHitCount = nil
       } else {
         searchResponseError = nil
         if isFirstPage {
           histogram = response.histogram
         }
+        lastHitCount = (response.hits, response.hitsIsLowerBound)
         
         let searchEvent = RealmSearchEvent.make(host: selectedHost.id,
                                                 index: selectedIndex,
@@ -206,8 +221,20 @@ struct macosSearchMainView: View {
         
         if !isSameHostAndIndex {
           selectedFieldOrder = []
-          tableColumnWidths = [:]
-          Self.selectAllFieldsIfFew(fields: fields, onlyVisibleFields: onlyVisibleFields)
+          tableColumnWidths = macosTableColumn.widths(fromSaved: pendingColumnWidths ?? [:])
+          pendingColumnWidths = nil
+          if let saved = pendingSelectedFields {
+            // A saved search shows the columns it was saved with, even none
+            SavedSearch.applySelectedFields(saved,
+                                            dateField: filterObject.dateField?.squashedString,
+                                            fields: &fields,
+                                            onlyVisibleFields: &onlyVisibleFields)
+            selectedFieldOrder = saved
+            pendingSelectedFields = nil
+            updatedFieldsNotification = UUID()
+          } else {
+            Self.selectAllFieldsIfFew(fields: fields, onlyVisibleFields: onlyVisibleFields)
+          }
           if let dateField = filterObject.dateField {
             fields.first { $0.squashedString == dateField.squashedString }?.visible = true
             onlyVisibleFields.first { $0.squashedString == dateField.squashedString }?.visible = true
@@ -224,7 +251,8 @@ struct macosSearchMainView: View {
         renderedObjects = Results.UpdateResultsWithFlatArray(searchResults: searchResults,
                                                              resultsFields: viewableFields,
                                                              datefield: filterObject.dateField,
-                                                             rows: response.rows)
+                                                             rows: response.rows,
+                                                             refs: response.refs)
       }
       
       searchIndicator = false
@@ -348,9 +376,136 @@ struct macosSearchMainView: View {
   }
 
   /// Shows a clicked row in the Document panel, opening the panel in the same update as the click.
-  func openDocument(_ item: OrderedDictionary<String, Any>) {
+  func openDocument(_ item: OrderedDictionary<String, Any>, ref: DocumentRef?) {
+    itemDetail.ref = ref
     itemDetail.item = item
+    isDocumentSaved = Self.isSaved(ref, host: selectedHost)
     selection = .SearchDocumentView
+  }
+
+  /// Whether the document is in the Saved tab. False without a host or a reference.
+  static func isSaved(_ ref: DocumentRef?, host: HostDetails?) -> Bool {
+    guard let ref = ref, let host = host, !host.isInvalidated else { return false }
+    return SavedDocumentDataManager().find(hostId: host.id, ref: ref) != nil
+  }
+
+  /// The search as it stands, for the Saved tab, with its period pinned to fixed dates when `pinPeriod` is set
+  func currentSavedSearch(title: String = "", pinPeriod: Bool = false) -> SavedSearch? {
+    guard let host = selectedHost, !host.isInvalidated, !selectedIndex.isEmpty else { return nil }
+    return SavedSearch.make(hostId: host.id,
+                            title: title,
+                            searchIndex: selectedIndex,
+                            dataView: selectedDataView,
+                            filterObject: filterObject,
+                            selectedFields: bodyFilteredFields.map(\.squashedString),
+                            columnWidths: macosTableColumn.savedWidths(tableColumnWidths),
+                            pinPeriod: pinPeriod)
+  }
+
+  /// The search as far as saving goes, to compare with the saved search it came from
+  var currentSearchState: SavedSearchState {
+    SavedSearchState(searchIndex: selectedIndex,
+                     dataViewId: selectedDataView?.id,
+                     filterObject: filterObject,
+                     // Until a saved search's columns are shown, they're still the ones it was saved with
+                     selectedFields: pendingSelectedFields ?? bodyFilteredFields.map(\.squashedString),
+                     columnWidths: pendingColumnWidths ?? macosTableColumn.savedWidths(tableColumnWidths))
+  }
+
+  /// What differs from the saved search this search came from, empty when it didn't come from one
+  var savedSearchChanges: [SavedSearchState.Part] {
+    savedSearchLink.map { currentSearchState.changes(from: $0.baseline) } ?? []
+  }
+
+  /// Opens the Save popover, after checking the saved search it came from is still there under the same name
+  func openSavePopover() {
+    if let link = savedSearchLink {
+      if let saved = SavedSearchDataManager().search(id: link.id) {
+        savedSearchLink?.title = saved.displayTitle
+        savedSearchLink?.pinnedPeriod = SavedSearchLink.isPinned(saved, baseline: link.baseline)
+      } else {
+        savedSearchLink = nil
+      }
+    }
+    showingSavePopover = true
+  }
+
+  /// Saves the search as a new saved search, which saving again then updates
+  func saveSearch(named name: String, pinPeriod: Bool) {
+    showingSavePopover = false
+    guard let search = currentSavedSearch(title: name, pinPeriod: pinPeriod),
+          let saved = try? SavedSearchDataManager().save(search) else { return }
+    let baseline = currentSearchState
+    savedSearchLink = SavedSearchLink(id: saved.id, title: saved.displayTitle, baseline: baseline,
+                                      pinnedPeriod: SavedSearchLink.isPinned(saved, baseline: baseline))
+    confirmSave("Saved")
+  }
+
+  /// Replaces the saved search this search came from with the search as it stands
+  func updateSavedSearch(pinPeriod: Bool) {
+    showingSavePopover = false
+    guard let link = savedSearchLink, let search = currentSavedSearch(pinPeriod: pinPeriod) else { return }
+    do {
+      let saved = try SavedSearchDataManager().update(id: link.id, with: search)
+      let baseline = currentSearchState
+      savedSearchLink?.baseline = baseline
+      savedSearchLink?.pinnedPeriod = SavedSearchLink.isPinned(saved, baseline: baseline)
+      confirmSave("Updated")
+    } catch {
+      // Removed from the Saved tab meanwhile, so it can only be saved as a new one
+      savedSearchLink = nil
+      showingSavePopover = true
+    }
+  }
+
+  func confirmSave(_ text: String) {
+    saveConfirmation = text
+    Task {
+      try? await Task.sleep(for: .seconds(2))
+      if saveConfirmation == text {
+        saveConfirmation = nil
+      }
+    }
+  }
+
+  /// The Save button, which opens the save popover
+  var saveControl: AnyView? {
+    guard selectedHost != nil, !selectedIndex.isEmpty else { return nil }
+    let changes = savedSearchChanges
+    return AnyView(
+      macosSaveSearchButton(confirmation: saveConfirmation,
+                            hasChanges: savedSearchLink != nil && !changes.isEmpty,
+                            isOpen: showingSavePopover,
+                            action: openSavePopover)
+        .popover(isPresented: $showingSavePopover, arrowEdge: .bottom) {
+          macosSaveSearchPopover(linkedTitle: savedSearchLink?.title,
+                                 changes: changes,
+                                 suggestedName: currentSavedSearch()?.displayTitle ?? selectedIndex,
+                                 period: filterObject.dateField == nil ? nil : filterObject.snapshotDateRange(),
+                                 linkedPinned: savedSearchLink?.pinnedPeriod ?? false,
+                                 onUpdate: updateSavedSearch(pinPeriod:),
+                                 onSaveNew: saveSearch(named:pinPeriod:),
+                                 onClose: { showingSavePopover = false })
+        }
+    )
+  }
+
+  /// Saves the open document with this search's date field and time period, or unsaves it
+  func toggleSavedDocument() {
+    guard let ref = itemDetail.ref, let host = selectedHost, !host.isInvalidated else { return }
+    let manager = SavedDocumentDataManager()
+    if manager.find(hostId: host.id, ref: ref) != nil {
+      manager.delete(hostId: host.id, ref: ref)
+    } else {
+      let document = SavedDocument.make(hostId: host.id,
+                                        ref: ref,
+                                        searchIndex: selectedIndex,
+                                        dataView: selectedDataView,
+                                        dateField: filterObject.dateField,
+                                        dateRange: filterObject.snapshotDateRange())
+      _ = try? manager.save(document)
+    }
+    isDocumentSaved = Self.isSaved(ref, host: host)
   }
   
   /// Arrow keys move through the suggestions, Tab takes the highlighted or top one,
@@ -417,6 +572,12 @@ struct macosSearchMainView: View {
                                              to: bounds?.to)
   }
 
+  /// The histogram shows the document count itself, so the top bar only shows it when there's no histogram
+  var showsHistogram: Bool {
+    guard let histogram = histogram else { return false }
+    return histogram.totalCount > 0 && searchResponseError == nil && selectedHost != nil
+  }
+
   var body: some View {
     ZStack {
       Color("Background")
@@ -429,6 +590,10 @@ struct macosSearchMainView: View {
                                     index: selectedIndex,
                                     dataView: selectedDataView,
                                     latency: lastLatency,
+                                    hitCountLabel: showsHistogram ? nil : lastHitCount.map {
+                                      SearchResult.hitCountLabel($0.count, isLowerBound: $0.isLowerBound)
+                                    },
+                                    saveControl: saveControl,
                                     currentWidth: $currentWidth)
           .padding(.bottom, 5)
           .padding(.top, topButtonsPadding)
@@ -470,10 +635,7 @@ struct macosSearchMainView: View {
                                             onAction: applyChipAction(_:))
                 }
                 
-                if let histogram = histogram,
-                   histogram.totalCount > 0,
-                   searchResponseError == nil,
-                   selectedHost != nil {
+                if showsHistogram, let histogram = histogram {
                   macosSearchHistogramView(histogram: histogram,
                                            searchIndicator: searchIndicator,
                                            onSelectRange: applyChartSelection,
@@ -490,7 +652,7 @@ struct macosSearchMainView: View {
                                        labels: selectedDataView?.labels ?? [:],
                                        columnWidths: $tableColumnWidths,
                                        onHideField: hideField(_:),
-                                       onOpenDocument: openDocument(_:),
+                                       onOpenDocument: openDocument(_:ref:),
                                        onFilter: addFieldFilter(field:value:negated:),
                                        activeFilterCount: filterObject.fieldFilters.enabled.count,
                                        selectedHost:$selectedHost,
@@ -635,7 +797,9 @@ struct macosSearchMainView: View {
                                     },
                                     fieldFilters: filterObject.fieldFilters,
                                     onFilter: addFieldFilter(field:value:negated:),
-                                    onClose: { selection = .None })
+                                    onClose: { selection = .None },
+                                    isSaved: itemDetail.ref == nil ? nil : isDocumentSaved,
+                                    onToggleSaved: toggleSavedDocument)
               .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
           }
         }
@@ -721,6 +885,7 @@ struct macosSearchMainView: View {
     .onChange(of: selectedIndex) { _ in
       searchResponseError = nil
       lastLatency = nil
+      lastHitCount = nil
       histogram = nil
       zoomHistory = []
       currentPage = 0
@@ -729,6 +894,7 @@ struct macosSearchMainView: View {
       selectedDataView = nil
       searchResponseError = nil
       lastLatency = nil
+      lastHitCount = nil
       histogram = nil
       zoomHistory = []
       selectedIndex = ""

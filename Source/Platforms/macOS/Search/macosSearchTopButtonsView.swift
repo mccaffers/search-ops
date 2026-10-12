@@ -19,6 +19,10 @@ struct macosSearchTopButtonsView: View {
   /// Shown instead of the index when the search is a data view's pattern
   var dataView: DataView? = nil
   var latency: Duration? = nil
+  /// The search's matching document count, shown when there's no histogram to show it
+  var hitCountLabel: String? = nil
+  /// The Save button and its popover, shown after the latency
+  var saveControl: AnyView? = nil
   @Binding var currentWidth: CGFloat
   
     var body: some View {
@@ -84,6 +88,15 @@ struct macosSearchTopButtonsView: View {
           .help(dataView.map { "Data view \($0.name): \($0.pattern)" } ?? (index ?? "Choose an index"))
           Spacer()
 
+          if let hitCountLabel = hitCountLabel {
+            Text(hitCountLabel)
+              .monospacedDigit()
+              .padding(6)
+              .background(Color("Button"))
+              .clipShape(.rect(cornerRadius: 5))
+              .help("Documents matching the last search")
+          }
+
           if let latency = latency {
             let latencyColor: Color = latency.isSlowLatency ? .orange : .green
             Text(latency.latencyLabel)
@@ -93,6 +106,10 @@ struct macosSearchTopButtonsView: View {
               .background(latencyColor.opacity(0.18))
               .clipShape(.rect(cornerRadius: 5))
               .help("Round-trip time of the last search request")
+          }
+
+          if let saveControl = saveControl {
+            saveControl
           }
 
           Button {
@@ -125,6 +142,47 @@ struct macosSearchTopButtonsView: View {
         }.padding(.trailing, 5)
       }
     }
+}
+
+/// Saves the search to the Saved tab. It turns green for a moment with `confirmation`, eg. "Saved", and shows a dot
+/// while the saved search it came from has changes to update.
+struct macosSaveSearchButton: View {
+  /// eg. "Saved" or "Updated", shown for a moment afterwards
+  let confirmation: String?
+  let hasChanges: Bool
+  let isOpen: Bool
+  let action: () -> Void
+  @State private var isHovered = false
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 5) {
+        Image(systemName: confirmation == nil ? "bookmark" : "checkmark")
+        Text(confirmation ?? "Save")
+        if hasChanges && confirmation == nil {
+          Circle()
+            .fill(Color("LabelBackgroundFocus"))
+            .frame(width: 6, height: 6)
+            .accessibilityLabel("Has changes")
+        }
+      }
+      .foregroundColor(confirmation == nil ? Color("TextColor") : .white)
+      .padding(6)
+      .background(confirmation != nil
+                  ? Color("PositiveButton")
+                  : (isHovered || isOpen ? Color("ButtonHighlighted") : Color("Button")))
+      .clipShape(.rect(cornerRadius: 5))
+      .contentShape(Rectangle())
+      .animation(.easeInOut(duration: 0.15), value: confirmation)
+    }
+    .buttonStyle(PlainButtonStyle())
+    .help(hasChanges
+          ? "This search has changed since it was saved"
+          : "Save this search, with its filters, columns and time period, to the Saved tab")
+    .onHover { hovering in
+      isHovered = hovering
+    }
+  }
 }
 
 #endif

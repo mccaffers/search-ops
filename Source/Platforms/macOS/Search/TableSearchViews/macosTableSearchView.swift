@@ -24,6 +24,43 @@ enum macosTableColumn: Hashable {
       return "Document"
     }
   }
+
+  /// How a saved search keys the column's width, eg. "field:dayClose"
+  var savedKey: String {
+    switch self {
+    case .date(let key): return "date:\(key)"
+    case .field(let key): return "field:\(key)"
+    case .document: return "document"
+    }
+  }
+
+  init?(savedKey: String) {
+    if savedKey == "document" {
+      self = .document
+    } else if savedKey.hasPrefix("date:") {
+      self = .date(String(savedKey.dropFirst("date:".count)))
+    } else if savedKey.hasPrefix("field:") {
+      self = .field(String(savedKey.dropFirst("field:".count)))
+    } else {
+      return nil
+    }
+  }
+
+  /// Column widths as a saved search keeps them
+  static func savedWidths(_ widths: [macosTableColumn: CGFloat]) -> [String: Double] {
+    Dictionary(widths.map { ($0.key.savedKey, Double($0.value)) }, uniquingKeysWith: { first, _ in first })
+  }
+
+  /// A saved search's column widths, leaving out any it can't read
+  static func widths(fromSaved saved: [String: Double]) -> [macosTableColumn: CGFloat] {
+    var widths: [macosTableColumn: CGFloat] = [:]
+    for (key, width) in saved {
+      if let column = macosTableColumn(savedKey: key), width > 0 {
+        widths[column] = CGFloat(width)
+      }
+    }
+    return widths
+  }
 }
 
 /// A document row of the table layout, holding the flat row the detail panel expects.
@@ -31,6 +68,8 @@ struct macosTableRow {
   let index: Int
   let item: OrderedDictionary<String, Any>
   let summary: [TextModel]
+  /// Where the document lives, for saving it
+  var ref: DocumentRef? = nil
 }
 
 /// What the rows and automatic widths are built from. Only the set of picked fields counts, not their order,
@@ -145,7 +184,7 @@ struct macosTableSearchView: View {
   /// Hides the field behind a column, from the right-click menu of its header or cells.
   var onHideField: (macosTableColumn) -> Void = { _ in }
   /// Opens a document in the Document panel when its row is clicked.
-  var onOpenDocument: (OrderedDictionary<String, Any>) -> Void
+  var onOpenDocument: (OrderedDictionary<String, Any>, DocumentRef?) -> Void
   /// Filters the search for a field's value, or against it when negated, from a cell's buttons or menu.
   var onFilter: ((_ field: String, _ value: String, _ negated: Bool) -> Void)? = nil
 
@@ -166,6 +205,7 @@ struct macosTableSearchView: View {
                                  labels: labels)
         let layout = layoutCache.layout(for: key) {
           Self.layout(flatArray: flatArray,
+                      refs: renderedObjects.refs,
                       dateField: renderedObjects.dateField,
                       filteredFields: filteredFields,
                       showDateHeader: showDateHeader,
@@ -214,7 +254,7 @@ struct macosTableGridView: View {
   @ObservedObject var itemDetail: DocumentDetail
   let showsFilterNote: Bool
   var onHideField: (macosTableColumn) -> Void = { _ in }
-  var onOpenDocument: (OrderedDictionary<String, Any>) -> Void
+  var onOpenDocument: (OrderedDictionary<String, Any>, DocumentRef?) -> Void
   var onFilter: ((_ field: String, _ value: String, _ negated: Bool) -> Void)? = nil
 
   @State private var selectedRow: Int? = nil
@@ -223,7 +263,7 @@ struct macosTableGridView: View {
 
   func select(_ row: macosTableRow) {
     selectedRow = row.index
-    onOpenDocument(row.item)
+    onOpenDocument(row.item, row.ref)
   }
 
   /// The widths the columns are drawn at, including the column being dragged.
@@ -618,6 +658,7 @@ extension macosTableSearchView {
 
   /// The rows to show, in their original order, each with a summary of its fields other than the date.
   static func visibleRows(flatArray: [OrderedDictionary<String, Any>],
+                          refs: [DocumentRef?] = [],
                           dateField: SquashedFieldsArray?,
                           filteredFields: [SquashedFieldsArray],
                           showDateHeader: Bool) -> [macosTableRow] {
@@ -632,7 +673,8 @@ extension macosTableSearchView {
                                   showDateHeader: showDateHeader,
                                   hasDateValue: !dateValue(from: item, dateField: dateField).isEmpty,
                                   isBodyFiltered: !filteredFields.isEmpty)
-      return show ? macosTableRow(index: index, item: item, summary: summary) : nil
+      let ref = index < refs.count ? refs[index] : nil
+      return show ? macosTableRow(index: index, item: item, summary: summary, ref: ref) : nil
     }
   }
 
@@ -651,6 +693,7 @@ extension macosTableSearchView {
 
   /// Builds the rows and measures every cell and column name the width cache hasn't measured already.
   static func layout(flatArray: [OrderedDictionary<String, Any>],
+                     refs: [DocumentRef?] = [],
                      dateField: SquashedFieldsArray?,
                      filteredFields: [SquashedFieldsArray],
                      showDateHeader: Bool,
@@ -658,6 +701,7 @@ extension macosTableSearchView {
                      labels: [String: String] = [:],
                      widthCache: macosTableWidthCache) -> macosTableLayout {
     let rows = visibleRows(flatArray: flatArray,
+                           refs: refs,
                            dateField: dateField,
                            filteredFields: filteredFields,
                            showDateHeader: showDateHeader)
@@ -709,6 +753,18 @@ extension macosTableSearchView {
     switch column {
     case .date(let key):
       return dateText(for: key, in: item)
+    case .field(let key):
+      return cellText(for: key, in: item)
+    case .document:
+      return nil
+    }
+  }
+
+  /// A cell's value as stored, for copying: the date unformatted, and a field's values joined as in its cell.
+  static func rawText(for column: macosTableColumn, in item: OrderedDictionary<String, Any>) -> String? {
+    switch column {
+    case .date(let key):
+      return values(for: key, in: item).first
     case .field(let key):
       return cellText(for: key, in: item)
     case .document:

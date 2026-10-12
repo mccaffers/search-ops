@@ -21,8 +21,6 @@ struct macosHostAddView: View {
   
   
   var item: HostDetails? = nil
-  var deleteItem: () async -> ()
-  @State var showingAlert = false
   
   // Animation state
   @State private var offset: CGFloat = -500
@@ -41,13 +39,11 @@ struct macosHostAddView: View {
   init(selection: Binding<macosSearchViewEnum>,
        hostsUpdated: HostUpdatedNotifier,
        serverObjects: HostsDataManager,
-       item: HostDetails? = nil,
-       deleteItem: @escaping () async -> ()) {
+       item: HostDetails? = nil) {
     self._selection = selection
     self.hostsUpdated = hostsUpdated
     self.serverObjects = serverObjects
     self.item = item
-    self.deleteItem = deleteItem
 
     // Editing starts from a full copy of the saved host, as Update overwrites the
     // whole record and the form only fills in the fields it shows
@@ -90,10 +86,6 @@ struct macosHostAddView: View {
         .bold()
         
         Spacer()
-        
-        if currentView == .main, let item = item, !item.isInvalidated {
-          deleteButton
-        }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.horizontal, 10)
@@ -118,37 +110,6 @@ struct macosHostAddView: View {
       offset = -500  // Reset for next appearance
     }
   }
-  
-  var deleteButton: some View {
-    let message = """
-              Just checking...\n
-              Are you sure you want to delete \(item?.name ?? "")?\n
-              This will permanently delete the record on your device. You'll need to add it again to SearchOps to search this host
-              """
-    
-    return Button {
-      showingAlert = true
-    } label: {
-      Text("Delete")
-        .font(.system(size: 13))
-        .padding(10)
-        .background(Color("WarnText"))
-        .clipShape(.rect(cornerRadius: 5))
-    }
-    .buttonStyle(PlainButtonStyle())
-    .alert("", isPresented: $showingAlert, actions: {
-      Button("Delete", role: .destructive) {
-        Task {
-          await deleteItem()
-        }
-      }
-      Button("Cancel", role: .cancel) {}
-    }, message: {
-      Text(message)
-    })
-  }
-  
-  
   
   var mainView: some View {
     VStack(spacing: 0) {

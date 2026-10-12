@@ -49,7 +49,7 @@ struct macosSearchHomeDataViewsView: View {
         .onHover { hovering in
           isNewHovered = hovering
         }
-        .help("New data view (opens Manage)")
+        .help("New data view (opens Hosts)")
         .accessibilityLabel("New data view")
       }
     }
