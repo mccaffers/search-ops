@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		053352DE38B61015981466C9 /* Version_4_2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DB372AAF5D17A3BF4976057 /* Version_4_2.swift */; };
 		0577999760267C34DA243472 /* SavedSearchDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFF5FD928C9441CF33C79F3A /* SavedSearchDataManager.swift */; };
 		08D6C73A7AE03923CA7BBC1E /* DataViewSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157359D0336B8F0F3CE48A9A /* DataViewSelectionTests.swift */; };
 		12FCBBDD9591FBE702A54D70 /* DocumentFlattener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90EFC7FFDCE0CBB127771548 /* DocumentFlattener.swift */; };
@@ -29,6 +30,7 @@
 		597022167CC580057F3609E6 /* SavedDocumentSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 771909254B72D88F7EDA0338 /* SavedDocumentSearchTests.swift */; };
 		5BF891D152E2C4695261ED51 /* macosManageDataViewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 271D8C6EB754C1C72CCC806A /* macosManageDataViewsView.swift */; };
 		5D8971EFA952622D932039EA /* macosDataViewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E8C1DBFB3606EFD53479571 /* macosDataViewEditorView.swift */; };
+		5E1A7F0C2B9D4E6A8C3F0001 /* RelativeRangeFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E1A7F0C2B9D4E6A8C3F0002 /* RelativeRangeFilterTests.swift */; };
 		6C0FCF857A4D2E22D620B042 /* DataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3564845186283D5F37886B93 /* DataView.swift */; };
 		6D22B58F9434A06101BC67EB /* macosSettingsComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C65E1EA03C4C257BB9AB564F /* macosSettingsComponents.swift */; };
 		70F5DFB3961298002DA269AC /* SearchHistogramTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D62EBBFA0E007C23A676E61 /* SearchHistogramTests.swift */; };
@@ -514,8 +516,10 @@
 		38E065ADF846C1AF2FB323EF /* HostDetailsMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostDetailsMigrationTests.swift; sourceTree = "<group>"; };
 		4A79A43F4BFB7DA8D8CD1F0B /* ClusterHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClusterHealth.swift; sourceTree = "<group>"; };
 		4D62EBBFA0E007C23A676E61 /* SearchHistogramTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistogramTests.swift; sourceTree = "<group>"; };
+		4DB372AAF5D17A3BF4976057 /* Version_4_2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Version_4_2.swift; sourceTree = "<group>"; };
 		501559408242F726BA0419DB /* macosSearchHistogramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosSearchHistogramView.swift; sourceTree = "<group>"; };
 		5B2CBC0F41D506E3310154D4 /* ClusterHealthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClusterHealthTests.swift; sourceTree = "<group>"; };
+		5E1A7F0C2B9D4E6A8C3F0002 /* RelativeRangeFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelativeRangeFilterTests.swift; sourceTree = "<group>"; };
 		5E8C1DBFB3606EFD53479571 /* macosDataViewEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosDataViewEditorView.swift; sourceTree = "<group>"; };
 		651C740DA82AC08E83F7D710 /* SearchHistoryMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistoryMigrationTests.swift; sourceTree = "<group>"; };
 		667B7205111154C3FE202F83 /* macosTableRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = macosTableRowView.swift; sourceTree = "<group>"; };
@@ -1468,6 +1472,7 @@
 			isa = PBXGroup;
 			children = (
 				7EF5F2306E2F870AD9683FDB /* SavedSearchTests.swift */,
+				5E1A7F0C2B9D4E6A8C3F0002 /* RelativeRangeFilterTests.swift */,
 				C6DE268D6B5AF7273C4F42E9 /* SavedDocumentTests.swift */,
 				941AAE0C2DC89B0C00555527 /* FieldsArrayTests.swift */,
 				941AAE0D2DC89B0C00555527 /* HostDetailsWrapTests.swift */,
@@ -1848,6 +1853,7 @@
 				941325F32BC837F000AC438F /* Version_1_94.swift */,
 				94F879D42C6A99710066B7E9 /* Version_2_0.swift */,
 				94B48C0B2DE7729700FF391B /* Version_3_0.swift */,
+				4DB372AAF5D17A3BF4976057 /* Version_4_2.swift */,
 			);
 			path = Versions;
 			sourceTree = "<group>";
@@ -2640,6 +2646,7 @@
 				94A15C692C5B5C7B0087F95A /* macosHostAddNameEnvViews.swift in Sources */,
 				940322912A4D8B4C00FC8BBE /* ServerItemView.swift in Sources */,
 				94B48C0C2DE7729700FF391B /* Version_3_0.swift in Sources */,
+				053352DE38B61015981466C9 /* Version_4_2.swift in Sources */,
 				94D2948C2C257FC70093A5AD /* macosAppHistory.swift in Sources */,
 				940322522A4D8B4B00FC8BBE /* ResultsPlaceholderView.swift in Sources */,
 				9403228E2A4D8B4C00FC8BBE /* ServerItemStatsView.swift in Sources */,
@@ -2949,6 +2956,7 @@
 			files = (
 				E78654E9D9F445B0805DC4D0 /* SavedSearchDataManagerTests.swift in Sources */,
 				D88AD9A88C311548530F85BC /* SavedSearchTests.swift in Sources */,
+				5E1A7F0C2B9D4E6A8C3F0001 /* RelativeRangeFilterTests.swift in Sources */,
 				597022167CC580057F3609E6 /* SavedDocumentSearchTests.swift in Sources */,
 				4F6DB723F5CEDF2690953069 /* SavedDocumentTests.swift in Sources */,
 				15DFA5DF8241DDC2319C154E /* SavedDocumentDataManagerTests.swift in Sources */,

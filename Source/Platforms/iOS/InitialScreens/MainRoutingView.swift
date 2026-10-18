@@ -14,10 +14,14 @@ struct MainRoutingView: View {
   @AppStorage("showInitialScreen") private var showInitialScreen: Bool = true
   @AppStorage("lastSeenVersionNotes") private var lastSeenVersionNotes: String = ""
   
+  // The release notes shown at launch, until the user has seen them once
+  static let currentReleaseNotes = "4.2"
+  
   private enum VersionSheetEnum : String, Identifiable {
     case Version1_94
     case Version2_0
     case Version3_0
+    case Version4_2
     public var id: String { rawValue }
   }
 
@@ -34,13 +38,13 @@ struct MainRoutingView: View {
       }
     }.onAppear {
       
-      if  "3.0" != lastSeenVersionNotes {
+      if Self.currentReleaseNotes != lastSeenVersionNotes {
         showingVersionSheet = true
       }
       
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-        if "3.0" != lastSeenVersionNotes {
-          versionSheet = .Version3_0
+        if Self.currentReleaseNotes != lastSeenVersionNotes {
+          versionSheet = .Version4_2
         }
       }
       
@@ -77,6 +81,19 @@ struct MainRoutingView: View {
   
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
               lastSeenVersionNotes = "3.0"
+            }
+            
+            withAnimation {
+              showingVersionSheet = false
+            }
+          }
+        
+      case .Version4_2:
+        Version_4_2(showContinueButton:true)
+          .onDisappear {
+  
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+              lastSeenVersionNotes = Self.currentReleaseNotes
             }
             
             withAnimation {

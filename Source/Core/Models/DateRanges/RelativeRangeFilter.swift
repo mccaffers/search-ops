@@ -23,7 +23,24 @@ public class RelativeRangeFilter : ObservableObject {
   
   @Published public var period: SearchDateTimePeriods = SearchDateTimePeriods.Minutes
   @Published public var value: Double = 0.0
-  
+
+  /// A range from text the user typed, or nil unless it's a positive number
+  public static func from(text: String, period: SearchDateTimePeriods) -> RelativeRangeFilter? {
+    guard let value = Double(text.trimmingCharacters(in: .whitespaces)),
+          value.isFinite, value > 0 else {
+      return nil
+    }
+    return RelativeRangeFilter(period: period, value: value)
+  }
+
+  /// The value for editing, without a trailing ".0" on whole numbers
+  public static func editableText(for value: Double) -> String {
+    if value == value.rounded(), abs(value) < 1e15 {
+      return String(Int64(value))
+    }
+    return String(value)
+  }
+
   public func GetFromTime() -> Date {
     let seconds = DateTools.calculateSecondsByPeriod(value: self.value, period: self.period)
     return Date.now - seconds

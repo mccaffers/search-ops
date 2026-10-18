@@ -23,11 +23,31 @@ struct ReleaseNotesList: View {
     ScrollView{
       VStack(spacing:25) {
         
+        ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 11))!,
+                               buttonText: "Version 4.2",
+                               buttonDescription: "Amazon OpenSearch Service with AWS SigV4, field visibility in document details, a GitHub star link in Settings and lots of fixes",
+                               buttonAction: { showingRelease = "Version 4.2" },  activeButton: true, isLatest: true)
+        .padding(.top, 15)
+        
+        ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 10))!,
+                               buttonText: "Version 4.1",
+                               buttonDescription: "Sign requests with AWS SigV4 for Amazon OpenSearch Service, show array values in search results and tidy pasted host URLs",
+                               buttonAction: { })
+        
+        ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2026, month: 9, day: 19))!,
+                               buttonText: "Version 4.0",
+                               buttonDescription: "Show or hide fields in document details, with better formatting for values that aren't text",
+                               buttonAction: { })
+        
+        ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2025, month: 9, day: 16))!,
+                               buttonText: "Version 3.1.1",
+                               buttonDescription: "Switch between HTTPS and HTTP for a host in the macOS version",
+                               buttonAction: { })
+        
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2025, month: 9, day: 5))!,
                                buttonText: "Version 3.1",
                                buttonDescription: "Fixing an issue with the date rendering",
-                               buttonAction: { },  activeButton: false, isLatest: true)
-        .padding(.top, 15)
+                               buttonAction: { })
         
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 10))!,
                                buttonText: "Version 3",
@@ -136,6 +156,8 @@ struct ReleaseNotesList: View {
         Version_2_0(title: showingRelease)
       } else if showingRelease == "Version 3.0" {
         Version_3_0(title: showingRelease)
+      } else if showingRelease == "Version 4.2" {
+        Version_4_2(title: showingRelease)
       }
     }
   }

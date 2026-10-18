@@ -457,7 +457,7 @@ struct SearchMainView: View {
     .environmentObject(selectedHost)
     .environmentObject(filterObject)
     .onAppear {
-      if lastSeenVersionNotes == "2.0",
+      if !lastSeenVersionNotes.isEmpty,
          searchHistoryManager.items.count > 0,
          !hasShownInitialScreen {
         hasShownInitialScreen = true

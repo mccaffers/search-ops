@@ -47,202 +47,14 @@ struct Version_2_0: View {
   var body: some View {
     
     ZStack {
-      NavigationStack {
-        ScrollView {
-          VStack (spacing:0) {
-
-            VStack(alignment: .leading, spacing:5) {
-              VStack(alignment:.leading, spacing:10) {
-                
-                HStack {
-                  Text("New Features")
-                    .foregroundStyle(LinearGradient(colors: [Color("LabelBackgroundBorder"), .purple], startPoint: .trailing, endPoint: .leading))
-                    .font(.system(size: 26))
-                  Spacer()
-                  Text("iOS")
-                    .foregroundStyle(LinearGradient(colors: [Color("LabelBackgroundBorder"), .purple], startPoint: .trailing, endPoint: .leading))
-                    .font(.system(size: 26))
-                }
-                
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .bold()
-                .padding(.top, 10)
-                
-                VStack(alignment:.leading, spacing:15) {
-                  VStack(alignment:.leading, spacing:5) {
-                    Text("Recent Searches")
-                      .font(.system(size: 18))
-                      .bold()
-                    Text("Searches are saved, allowing you to quickly return to a previous search. A view appears when you launch the app to jump back in.")
-                      .padding(.bottom, 10)
-                    
-                    Image("recent_searches_ios")
-                      .resizable()
-                      .aspectRatio(contentMode: .fit)
-                      .frame(maxWidth: 400)
-                      .padding(2)
-                      .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                          .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
-                      )
-                  }
-                  
-                  VStack(alignment:.leading, spacing:5) {
-                    Text("Refresh Timer")
-                      .font(.system(size: 18))
-                      .bold()
-                    Text("Set a timer to refresh your search at a set frequency (1 second, 5 seconds, etc.)")
-                      .padding(.bottom, 10)
-                    
-                    Image("ios_timer")
-                      .resizable()
-                      .aspectRatio(contentMode: .fit)
-                      .frame(maxWidth: 400)
-                      .padding(2)
-                      .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                          .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
-                      )
-                  }
-                  
-                  VStack(alignment:.leading, spacing:5) {
-                    Text("Default Date Range")
-                      .font(.system(size: 18))
-                      .bold()
-                    Text("Refactored the UI to move the Date Field and Date Range next to each other, and if there is only one date field, to select it, and default to the last 15 minutes. I'll make these defaults configurable in a future update!")
-                      .padding(.bottom, 10)
-                    
-                    Image("ios_date_range")
-                      .resizable()
-                      .aspectRatio(contentMode: .fit)
-                      .frame(maxWidth: 400)
-                      .padding(2)
-                      .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                          .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
-                      )
-                  }
-                }
-                
-              }.padding(.top, 5)
-              
-              HostAddDivider()
-                .padding(.vertical, 10)
-              
-              VStack(alignment:.leading, spacing:10) {
-                
-                HStack {
-                  Text("New Platform")
-                    .foregroundStyle(LinearGradient(colors: [Color("LabelBackgroundBorder"), .purple], startPoint: .trailing, endPoint: .leading))
-                    .font(.system(size: 26))
-                  Spacer()
-                  Text("macOS")
-                    .foregroundStyle(LinearGradient(colors: [Color("LabelBackgroundBorder"), .purple], startPoint: .trailing, endPoint: .leading))
-                    .font(.system(size: 26))
-                  
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .bold()
-                
-                Text("Developed a native macOS version of SearchOps to complement the iOS app")
-                
-                Text("Build queries, view recent searches and more on macOS. One Application on multiple platforms (iPhone, iPad and now macOS)")
-                
-                  .frame(maxWidth: .infinity, alignment: .leading)
-                
-                Image("macos_front_srceen")
-                  .resizable()
-                  .aspectRatio(contentMode: .fit)
-                  .padding(2)
-                  .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                      .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
-                  )
-                  .padding(.top, 5)
-                
-                Image("macos_main_search")
-                  .resizable()
-                  .aspectRatio(contentMode: .fit)
-                  .padding(2)
-                  .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                      .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
-                  )
-                  .padding(.top, 5)
-                
-                Image("macos_doc")
-                  .resizable()
-                  .aspectRatio(contentMode: .fit)
-                  .padding(2)
-                  .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                      .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
-                  )
-                  .padding(.top, 5)
-
-              }
-              
-              HostAddDivider()
-                .padding(.vertical, 10)
-              
-//              Text("Thank you for purchasing SearchOps!")
-//                .padding(.bottom, 10)
-              
-              Text("More updates to follow!")
-                .padding(.bottom, 15)
-              
-              VStack(alignment: .leading,spacing:10) {
-                HStack {
-                  GradientButtonView(title: "iPhone & iPad")
-                  GradientButtonView(title: "macOS")
-                }
-                
-                HStack {
-                  GradientButtonView(title: "No Tracking or Analytics")
-                  GradientButtonView(title: "No In App Purchases")
-                }
-                
-              }.padding(.bottom, 15)
-              
-              Text("Do send feedback to me, my email address is in App Settings")
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, 10)
-              
-              
-              Spacer()
-              
-            }
-            .padding(.horizontal, 20)
-            
-          }
+      if showContinueButton {
+        // Shown as the launch sheet, so it needs its own navigation bar
+        NavigationStack {
+          content
         }
-        .toolbar {
-          ToolbarItem(placement: .navigationBarTrailing) {
-            Text("Sept 2024")
-              .foregroundColor(Color("TextSecondary"))
-          }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
-        
-        .background(Color("Background").edgesIgnoringSafeArea(.all))
-        
-        .frame(maxWidth: .infinity)
-        .onAppear {
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {  // Delay of 2 seconds
-            
-            if !showContinueButton && !showFireworks {
-              fireworkSettings.showFireworks = true
-            }
-            showFireworks = true
-            
-          }
-          
-          
-        }
+      } else {
+        // Pushed from Release Notes, so it uses the Settings stack
+        content
       }
       
       
@@ -268,6 +80,204 @@ struct Version_2_0: View {
           .isHidden(!isVisible)
           .zIndex(0)
       }
+      
+    }
+  }
+
+  private var content: some View {
+    ScrollView {
+      VStack (spacing:0) {
+
+        VStack(alignment: .leading, spacing:5) {
+          VStack(alignment:.leading, spacing:10) {
+            
+            HStack {
+              Text("New Features")
+                .foregroundStyle(LinearGradient(colors: [Color("LabelBackgroundBorder"), .purple], startPoint: .trailing, endPoint: .leading))
+                .font(.system(size: 26))
+              Spacer()
+              Text("iOS")
+                .foregroundStyle(LinearGradient(colors: [Color("LabelBackgroundBorder"), .purple], startPoint: .trailing, endPoint: .leading))
+                .font(.system(size: 26))
+            }
+            
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .bold()
+            .padding(.top, 10)
+            
+            VStack(alignment:.leading, spacing:15) {
+              VStack(alignment:.leading, spacing:5) {
+                Text("Recent Searches")
+                  .font(.system(size: 18))
+                  .bold()
+                Text("Searches are saved, allowing you to quickly return to a previous search. A view appears when you launch the app to jump back in.")
+                  .padding(.bottom, 10)
+                
+                Image("recent_searches_ios")
+                  .resizable()
+                  .aspectRatio(contentMode: .fit)
+                  .frame(maxWidth: 400)
+                  .padding(2)
+                  .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                      .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
+                  )
+              }
+              
+              VStack(alignment:.leading, spacing:5) {
+                Text("Refresh Timer")
+                  .font(.system(size: 18))
+                  .bold()
+                Text("Set a timer to refresh your search at a set frequency (1 second, 5 seconds, etc.)")
+                  .padding(.bottom, 10)
+                
+                Image("ios_timer")
+                  .resizable()
+                  .aspectRatio(contentMode: .fit)
+                  .frame(maxWidth: 400)
+                  .padding(2)
+                  .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                      .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
+                  )
+              }
+              
+              VStack(alignment:.leading, spacing:5) {
+                Text("Default Date Range")
+                  .font(.system(size: 18))
+                  .bold()
+                Text("Refactored the UI to move the Date Field and Date Range next to each other, and if there is only one date field, to select it, and default to the last 15 minutes. I'll make these defaults configurable in a future update!")
+                  .padding(.bottom, 10)
+                
+                Image("ios_date_range")
+                  .resizable()
+                  .aspectRatio(contentMode: .fit)
+                  .frame(maxWidth: 400)
+                  .padding(2)
+                  .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                      .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
+                  )
+              }
+            }
+            
+          }.padding(.top, 5)
+          
+          HostAddDivider()
+            .padding(.vertical, 10)
+          
+          VStack(alignment:.leading, spacing:10) {
+            
+            HStack {
+              Text("New Platform")
+                .foregroundStyle(LinearGradient(colors: [Color("LabelBackgroundBorder"), .purple], startPoint: .trailing, endPoint: .leading))
+                .font(.system(size: 26))
+              Spacer()
+              Text("macOS")
+                .foregroundStyle(LinearGradient(colors: [Color("LabelBackgroundBorder"), .purple], startPoint: .trailing, endPoint: .leading))
+                .font(.system(size: 26))
+              
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .bold()
+            
+            Text("Developed a native macOS version of SearchOps to complement the iOS app")
+            
+            Text("Build queries, view recent searches and more on macOS. One Application on multiple platforms (iPhone, iPad and now macOS)")
+            
+              .frame(maxWidth: .infinity, alignment: .leading)
+            
+            Image("macos_front_srceen")
+              .resizable()
+              .aspectRatio(contentMode: .fit)
+              .padding(2)
+              .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                  .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
+              )
+              .padding(.top, 5)
+            
+            Image("macos_main_search")
+              .resizable()
+              .aspectRatio(contentMode: .fit)
+              .padding(2)
+              .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                  .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
+              )
+              .padding(.top, 5)
+            
+            Image("macos_doc")
+              .resizable()
+              .aspectRatio(contentMode: .fit)
+              .padding(2)
+              .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                  .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
+              )
+              .padding(.top, 5)
+
+          }
+          
+          HostAddDivider()
+            .padding(.vertical, 10)
+          
+//              Text("Thank you for purchasing SearchOps!")
+//                .padding(.bottom, 10)
+          
+          Text("More updates to follow!")
+            .padding(.bottom, 15)
+          
+          VStack(alignment: .leading,spacing:10) {
+            HStack {
+              GradientButtonView(title: "iPhone & iPad")
+              GradientButtonView(title: "macOS")
+            }
+            
+            HStack {
+              GradientButtonView(title: "No Tracking or Analytics")
+              GradientButtonView(title: "No In App Purchases")
+            }
+            
+          }.padding(.bottom, 15)
+          
+          Text("Do send feedback to me, my email address is in App Settings")
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, 10)
+          
+          
+          Spacer()
+          
+        }
+        .padding(.horizontal, 20)
+        
+      }
+    }
+    .toolbar {
+      ToolbarItem(placement: .navigationBarTrailing) {
+        Text("Sept 2024")
+          .foregroundColor(Color("TextSecondary"))
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .navigationTitle(title)
+    .navigationBarTitleDisplayMode(.large)
+    .toolbarBackground(.visible, for: .navigationBar)
+    .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
+    
+    .background(Color("Background").edgesIgnoringSafeArea(.all))
+    
+    .frame(maxWidth: .infinity)
+    .onAppear {
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {  // Delay of 2 seconds
+        
+        if !showContinueButton && !showFireworks {
+          fireworkSettings.showFireworks = true
+        }
+        showFireworks = true
+        
+      }
+      
       
     }
   }
