@@ -80,7 +80,7 @@ struct SearchHostIndexList: View {
         }
         .scrollContentBackground(.hidden)
         .background(Color("Background"))
-        .toolbarBackground(.visible, for: .navigationBar)
+        .navigationBarBackgroundVisibleBeforeiOS26()
         .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
         .frame(maxWidth: .infinity)
     }

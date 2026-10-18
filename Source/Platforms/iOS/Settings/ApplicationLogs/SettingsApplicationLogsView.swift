@@ -96,7 +96,7 @@ struct SettingsApplicationLogsView: View {
     .background(Color("Background"))
     .navigationTitle("Application Logs")
     .navigationBarTitleDisplayMode(.large)
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
   }
 }

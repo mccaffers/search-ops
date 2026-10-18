@@ -23,7 +23,7 @@ struct SearchQuerySheetView: View {
     .navigationTitle("Query Filter")
 #if os(iOS)
     .navigationBarTitleDisplayMode(.large)
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
 #endif
     

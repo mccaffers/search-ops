@@ -15,6 +15,16 @@ extension View {
     func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
         clipShape( RoundedCorner(radius: radius, corners: corners) )
     }
+
+    /// `toolbarBackground(.visible, for: .navigationBar)` hides large titles on iOS 26,
+    /// so only force the bar background on earlier versions
+    @ViewBuilder func navigationBarBackgroundVisibleBeforeiOS26() -> some View {
+        if #available(iOS 26, *) {
+            self
+        } else {
+            self.toolbarBackground(.visible, for: .navigationBar)
+        }
+    }
   #endif 
     func hiddenConditionally(isHidden: Bool) -> some View {
         isHidden ? AnyView(self.hidden()) : AnyView(self)

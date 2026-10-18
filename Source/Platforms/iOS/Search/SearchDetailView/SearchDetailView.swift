@@ -97,7 +97,7 @@ struct SearchDetailView: View {
       }
     }
 
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .navigationTitle(navigationBarTitle)
     .toolbarBackground(Color("TabBarColor"), for: .navigationBar)
     .navigationBarTitleDisplayMode(navigationTitleSize)

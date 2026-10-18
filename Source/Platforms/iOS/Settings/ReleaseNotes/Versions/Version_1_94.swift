@@ -277,6 +277,12 @@ struct Version_1_94: View {
   private var content: some View {
     ScrollView {
       VStack (spacing:0) {
+        Text("May 2024")
+          .font(.subheadline)
+          .foregroundStyle(Color("TextSecondary"))
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, 20)
+          .padding(.top, 5)
         if title == "New Update" {
           Text("Version 1.94")
             .font(.title2)
@@ -476,17 +482,11 @@ struct Version_1_94: View {
       } .padding(.top, 10)
     }
    
-    .toolbar {
-        ToolbarItem(placement: .navigationBarTrailing) {
-          Text("May 2024")
-            .foregroundColor(Color("TextSecondary"))
-        }
-    }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .navigationTitle(title)
 #if os(iOS)
     .navigationBarTitleDisplayMode(.large)
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
 #endif
     .background(Color("Background").edgesIgnoringSafeArea(.all))

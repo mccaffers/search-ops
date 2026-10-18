@@ -147,7 +147,7 @@ struct ReleaseNotesList: View {
     .navigationTitle("Release Notes")
     .frame(maxWidth: .infinity)
     .background(Color("Background"))
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
     .navigationDestination(isPresented: $showReleaseDetails) {
       if showingRelease == "Version 1.94" {

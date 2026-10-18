@@ -115,7 +115,7 @@ struct ServicesHome: View {
     }
     .navigationTitle("Hosts")
     .navigationBarTitleDisplayMode(.large)
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
     .toolbar {
       ToolbarItem(placement: .navigationBarTrailing) {

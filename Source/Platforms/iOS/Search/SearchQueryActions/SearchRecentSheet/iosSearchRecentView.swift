@@ -42,7 +42,7 @@ struct iosSearchRecentView: View {
       }
       .background(Color("Background"))
       .navigationBarTitleDisplayMode(.inline)
-      .toolbarBackground(.visible, for: .navigationBar)
+      .navigationBarBackgroundVisibleBeforeiOS26()
       .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
       .navigationTitle("Recent Searches")
       .toolbar {

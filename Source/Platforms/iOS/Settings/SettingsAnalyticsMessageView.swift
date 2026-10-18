@@ -39,7 +39,7 @@ struct SettingsAnalyticsMessageView: View {
     }.background(Color("Background"))
       .navigationTitle("No Analytics!")
       .navigationBarTitleDisplayMode(.large)
-      .toolbarBackground(.visible, for: .navigationBar)
+      .navigationBarBackgroundVisibleBeforeiOS26()
       .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
   }
 }

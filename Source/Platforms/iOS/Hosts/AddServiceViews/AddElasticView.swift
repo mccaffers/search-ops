@@ -163,7 +163,7 @@ struct AddElasticView: View {
     
 #endif
     .navigationTitle("Add a new host")
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
     .toolbar {
       NavigationLink(destination: ElasticHelpView()) {

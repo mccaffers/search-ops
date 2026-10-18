@@ -255,7 +255,7 @@ struct SearchSettingsView: View {
     .background(Color("Background"))
     .navigationTitle("App Config & Limits")
     .navigationBarTitleDisplayMode(.large)
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
     .id(refresh)
   }

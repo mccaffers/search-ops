@@ -248,7 +248,7 @@ struct SettingAppLogs: View {
     //		.toolbar(showNavigationBar ? .visible : .hidden, for:.navigationBar)
 #if os(iOS)
     .toolbarBackground(Color("TabBarColor"), for: .navigationBar)
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
     .toolbar {
       if logManager.items.count > 0 {
