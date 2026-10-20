@@ -136,7 +136,7 @@ struct TestingConnectionView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color("Background"))
     .navigationTitle("Connection Test")
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
     .onAppear {
       Task { @MainActor in

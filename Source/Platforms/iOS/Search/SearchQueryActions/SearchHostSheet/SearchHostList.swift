@@ -76,7 +76,7 @@ struct SearchHostList: View {
 //                    .padding(.horizontal, 15)
 //                }
             }
-            .toolbarBackground(.visible, for: .navigationBar)
+            .navigationBarBackgroundVisibleBeforeiOS26()
             .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
             .navigationTitle("Hosts")
             .padding(.top, 10)

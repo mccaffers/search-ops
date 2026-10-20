@@ -315,4 +315,27 @@ public enum SavedDocumentSearch {
                                       dataView: target.dataView,
                                       filterObject: filterObject)
   }
+
+  /// As `termSearch`, with the value in the query box rather than a filter chip, for iOS, which has no chips
+  public static func termQuerySearch(for document: SavedDocument,
+                                     field: String,
+                                     value: String,
+                                     negated: Bool,
+                                     dataView: DataView?) -> SearchHandoffRequest {
+    let request = termSearch(for: document, field: field, value: value, negated: negated, dataView: dataView)
+    request.filterObject.fieldFilters = []
+    let query = QueryObject()
+    query.values.append(QueryFilterObject(string: termQuery(field: field, value: value, negated: negated)))
+    request.filterObject.query = query
+    return request
+  }
+
+  /// A query string matching the exact value, eg. `service:"checkout"`, or `NOT service:"checkout"` when negated
+  public static func termQuery(field: String, value: String, negated: Bool) -> String {
+    let escaped = value
+      .replacingOccurrences(of: "\\", with: "\\\\")
+      .replacingOccurrences(of: "\"", with: "\\\"")
+    let term = "\(field):\"\(escaped)\""
+    return negated ? "NOT \(term)" : term
+  }
 }

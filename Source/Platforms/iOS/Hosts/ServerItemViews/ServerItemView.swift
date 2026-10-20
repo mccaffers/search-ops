@@ -49,7 +49,7 @@ struct ServerItemView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .navigationTitle(!item.isInvalidated ? item.name : "")
     .navigationBarTitleDisplayMode(.large)
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
     
   }

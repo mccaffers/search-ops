@@ -24,6 +24,9 @@ struct macosSearchMainView: View {
   @Binding var pendingColumnWidths: [String: Double]?
   /// The saved search this search came from, so saving again can update it
   @Binding var savedSearchLink: SavedSearchLink?
+  /// The dashboard this search was opened from with Edit, shown as a Back to Dashboard button
+  var dashboardReturn: macosDashboardReturn? = nil
+  var onBackToDashboard: () -> Void = {}
   
   @StateObject var resultsFields: RenderedFields = RenderedFields(fields: [SquashedFieldsArray]())
   @State var renderedObjects: RenderObject?
@@ -594,6 +597,10 @@ struct macosSearchMainView: View {
                                       SearchResult.hitCountLabel($0.count, isLowerBound: $0.isLowerBound)
                                     },
                                     saveControl: saveControl,
+                                    backControl: dashboardReturn.map { target in
+                                      AnyView(macosBackToDashboardButton(title: target.title,
+                                                                         action: onBackToDashboard))
+                                    },
                                     currentWidth: $currentWidth)
           .padding(.bottom, 5)
           .padding(.top, topButtonsPadding)

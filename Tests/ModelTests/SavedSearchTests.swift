@@ -336,6 +336,34 @@ struct SavedSearchTests {
     #expect(baseline.period == .absolute(from: range.start, to: range.end, fromNow: false, toNow: false))
   }
 
+  /// As iOS opens a saved search: its fields are picked from the index's mapping, and the date field isn't one of them
+  @Test func aSavedSearchOpenedOnIOSWithItsFieldsPickedHasNoChanges() {
+    let search = SavedSearch(hostId: hostId,
+                             searchIndex: "logs-*",
+                             dateField: SavedDateField(field: "@timestamp", type: "date"),
+                             period: .relative(value: 24, period: .Hours),
+                             query: "status:500",
+                             selectedFields: ["service", "message"])
+    let request = search.request(dataView: nil)
+    let baseline = SavedSearchState(request: request)
+
+    var mapping = [field("@timestamp", type: "date"), field("message"), field("service"), field("status")]
+    var picked = [SquashedFieldsArray]()
+    SavedSearch.applySelectedFields(request.selectedFields ?? [], dateField: "@timestamp",
+                                    fields: &mapping, onlyVisibleFields: &picked)
+    let keys = picked.map(\.squashedString).filter { $0 != request.filterObject.dateField?.squashedString }
+    let onScreen = SavedSearchState(searchIndex: request.index, dataViewId: nil,
+                                    filterObject: request.filterObject, selectedFields: keys)
+
+    #expect(keys == ["service", "message"])
+    #expect(onScreen.changes(from: baseline).isEmpty)
+
+    // Before the fields are picked none are shown, which would read as a change
+    let beforePicking = SavedSearchState(searchIndex: request.index, dataViewId: nil,
+                                         filterObject: request.filterObject, selectedFields: [])
+    #expect(beforePicking.changes(from: baseline) == [.columns])
+  }
+
   @Test func columnWidthsAreSavedRunAgainAndCountAsAChange() {
     let widths = ["date:date": 512.5, "field:dayClose": 82]
     let search = SavedSearch.make(hostId: hostId, searchIndex: "volatility", dataView: nil,

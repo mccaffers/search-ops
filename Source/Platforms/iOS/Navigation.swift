@@ -17,19 +17,32 @@ struct Navigation: View {
   @StateObject var filterHistoryDataManager = FilterHistoryDataManager()
   
   @State var hasShownInitialScreen = false
+  @State var selectedTab = 1
+  /// Carries a search from the Saved tab to the Search tab
+  @StateObject var searchHandoff = iosSearchHandoff()
   
   @AppStorage("hasRemovedDuplicateFilters") private var hasRemovedDuplicateFilters: Bool = false
   
   var body: some View {
     
-    TabView() {
+    TabView(selection: $selectedTab) {
       SearchNavigationStack(searchHistoryManager: searchHistoryManager,
                             filterHistoryDataManager: filterHistoryDataManager,
+                            searchHandoff: searchHandoff,
                             hasShownInitialScreen: $hasShownInitialScreen)
       .tabItem {
         Image(systemName: "magnifyingglass")
         Text("Search")
       }.tag(1)
+
+      iosSavedView(onSearch: { request in
+        searchHandoff.send(request)
+        selectedTab = 1
+      })
+      .tabItem {
+        Image(systemName: "bookmark")
+        Text("Saved")
+      }.tag(4)
       
       HostsNavigationStackView()
         .tabItem {

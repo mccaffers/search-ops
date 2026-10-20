@@ -10,6 +10,7 @@ import Foundation
 import RealmSwift
 
 /// Reads and writes saved searches. Callers only ever get `SavedSearch` values, never live Realm objects.
+/// Deleting a search also takes it off every dashboard.
 @MainActor
 public class SavedSearchDataManager {
 
@@ -80,6 +81,18 @@ public class SavedSearchDataManager {
           let object = realm.object(ofType: RealmSavedSearch.self, forPrimaryKey: id) else { return }
     try? realm.write {
       realm.delete(object)
+      DashboardDataManager.removePanels(in: realm) { $0 == id }
+    }
+  }
+
+  /// Removes the saved searchs with these ids in one write, eg. the ones ticked in the Saved tab
+  public func delete(ids: Set<UUID>) {
+    guard !ids.isEmpty, let realm = realmProvider() else { return }
+    let objects = realm.objects(RealmSavedSearch.self).where { $0.id.in(Array(ids)) }
+    guard !objects.isEmpty else { return }
+    try? realm.write {
+      realm.delete(objects)
+      DashboardDataManager.removePanels(in: realm) { ids.contains($0) }
     }
   }
 
@@ -90,6 +103,7 @@ public class SavedSearchDataManager {
     guard !objects.isEmpty else { return }
     try? realm.write {
       realm.delete(objects)
+      DashboardDataManager.removePanels(in: realm) { _ in true }
     }
   }
 
@@ -98,8 +112,11 @@ public class SavedSearchDataManager {
     guard let realm = realmProvider() else { return }
     let objects = realm.objects(RealmSavedSearch.self).where { $0.hostId == id }
     guard !objects.isEmpty else { return }
+    // Read before deleting, the objects are invalidated afterwards
+    let ids = Set(objects.map(\.id))
     try? realm.write {
       realm.delete(objects)
+      DashboardDataManager.removePanels(in: realm) { ids.contains($0) }
     }
   }
 
@@ -109,11 +126,13 @@ public class SavedSearchDataManager {
     guard let realm = realmProvider() else { return 0 }
     let orphans = Array(realm.objects(RealmSavedSearch.self).filter { !validHostIds.contains($0.hostId) })
     guard !orphans.isEmpty else { return 0 }
-    // Count before deleting, the objects are invalidated afterwards
+    // Read before deleting, the objects are invalidated afterwards
     let count = orphans.count
+    let ids = Set(orphans.map(\.id))
     do {
       try realm.write {
         realm.delete(orphans)
+        DashboardDataManager.removePanels(in: realm) { ids.contains($0) }
       }
     } catch {
       return 0

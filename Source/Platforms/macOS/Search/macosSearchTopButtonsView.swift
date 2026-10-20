@@ -23,11 +23,17 @@ struct macosSearchTopButtonsView: View {
   var hitCountLabel: String? = nil
   /// The Save button and its popover, shown after the latency
   var saveControl: AnyView? = nil
+  /// Back to the dashboard the search was opened from, shown first
+  var backControl: AnyView? = nil
   @Binding var currentWidth: CGFloat
   
     var body: some View {
       VStack {
         HStack (spacing: 5){
+
+          if let backControl = backControl {
+            backControl
+          }
           
           Button {
             selection = .None
@@ -142,6 +148,32 @@ struct macosSearchTopButtonsView: View {
         }.padding(.trailing, 5)
       }
     }
+}
+
+/// Goes back to the dashboard the search was opened from with Edit
+struct macosBackToDashboardButton: View {
+  let title: String
+  let action: () -> Void
+  @State private var isHovered = false
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 4) {
+        Image(systemName: "chevron.left")
+          .font(.system(size: 11, weight: .semibold))
+        Text("Back to Dashboard")
+      }
+      .padding(6)
+      .background(isHovered ? Color("ButtonHighlighted") : Color("Button"))
+      .clipShape(.rect(cornerRadius: 5))
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(PlainButtonStyle())
+    .help("Back to \(title)")
+    .onHover { hovering in
+      isHovered = hovering
+    }
+  }
 }
 
 /// Saves the search to the Saved tab. It turns green for a moment with `confirmation`, eg. "Saved", and shows a dot

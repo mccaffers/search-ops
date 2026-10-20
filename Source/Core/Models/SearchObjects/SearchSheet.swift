@@ -9,7 +9,7 @@
 import Foundation
 
 public enum SearchSheet: String, Identifiable {
-  case query, main, fields, timer, recent
+  case query, main, fields, timer, recent, saveSearch
   public var id: String { rawValue }
 }
 

@@ -10,16 +10,33 @@ import SwiftUI
 
 #if os(macOS)
 
-/// Hands a search from the Saved tab to the Search tab, which runs it when it hears about it
+/// The dashboard a search was opened from with Edit, for the Search tab's Back to Dashboard button
+struct macosDashboardReturn: Equatable {
+  let id: UUID
+  let title: String
+}
+
+/// Hands a search from the Saved or Dashboards tab to the Search tab, which runs it when it hears about it
 @MainActor
 final class macosSearchHandoff: ObservableObject {
   /// New for each search sent, for the Search tab to watch
   @Published private(set) var pendingId: UUID? = nil
   private var pending: SearchHandoffRequest? = nil
+  /// Set while the search showing was opened from a dashboard
+  @Published private(set) var dashboardReturn: macosDashboardReturn? = nil
 
-  func send(_ request: SearchHandoffRequest) {
+  /// `returningTo` is the dashboard the search was opened from. Searches from anywhere else clear it.
+  func send(_ request: SearchHandoffRequest, returningTo dashboard: macosDashboardReturn? = nil) {
     pending = request
+    dashboardReturn = dashboard
     pendingId = UUID()
+  }
+
+  /// The search showing is no longer the one opened from the dashboard, or the dashboard is open again
+  func clearDashboardReturn() {
+    if dashboardReturn != nil {
+      dashboardReturn = nil
+    }
   }
 
   /// The search waiting to run, once. Later calls get nil until another is sent.
@@ -104,6 +121,12 @@ struct macosSavedDocumentsView: View {
   @State private var renameText = ""
   @State private var pendingDelete: macosSavedItem? = nil
   @State private var confirmingClearAll = false
+  /// Rows tick instead of running or opening, for deleting several at once
+  @State private var isSelecting = false
+  @State private var selectedIds: Set<UUID> = []
+  @State private var confirmingDeleteSelected = false
+  /// Narrows the list as it's typed, matching the saved items on this Mac
+  @State private var searchText = ""
   /// Remembered between visits, as it's a way of looking at the tab rather than part of what's saved
   @AppStorage("macosSavedItemFilter") private var filterRaw: String = SavedItemFilter.all.rawValue
 
@@ -120,15 +143,23 @@ struct macosSavedDocumentsView: View {
     return SavedDocument.grouped(documents, searches: searches, hosts: hosts)
   }
 
-  /// The items the switch shows
+  /// The items the switch shows that match the text typed above the list
   var groups: [SavedDocumentGroup] {
-    filter.apply(allGroups)
+    SavedTextFilter.apply(searchText, to: filter.apply(allGroups), dataViewNames: dataViewNames)
+  }
+
+  private var isSearching: Bool {
+    !searchText.trimmingCharacters(in: .whitespaces).isEmpty
   }
 
   var body: some View {
     ZStack(alignment: .topTrailing) {
       VStack(alignment: .leading, spacing: 10) {
         header
+
+        if !allGroups.isEmpty {
+          searchField
+        }
 
         if let message = message {
           Text(message)
@@ -144,7 +175,7 @@ struct macosSavedDocumentsView: View {
         if allGroups.isEmpty {
           emptyState
         } else if groups.isEmpty {
-          Text(filter == .searches ? "No saved searches" : "No saved documents")
+          Text(emptyFilterText)
             .font(.subheadline)
             .foregroundColor(Color("TextSecondary"))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -162,6 +193,9 @@ struct macosSavedDocumentsView: View {
                   macosSavedSearchRowView(
                     search: search,
                     dataViewName: search.dataViewId.flatMap { dataViewNames[$0] },
+                    isSelecting: isSelecting,
+                    isChecked: selectedIds.contains(search.id),
+                    onToggle: { toggle(search.id) },
                     onRun: { run(search) },
                     onRename: {
                       renameText = search.title
@@ -177,6 +211,9 @@ struct macosSavedDocumentsView: View {
                     dataViewName: document.dataViewId.flatMap { dataViewNames[$0] },
                     isSelected: selected?.id == document.id,
                     loadState: selected?.id == document.id ? loadState : .idle,
+                    isSelecting: isSelecting,
+                    isChecked: selectedIds.contains(document.id),
+                    onToggle: { toggle(document.id) },
                     onOpen: { open(document) },
                     onRename: {
                       renameText = document.title
@@ -251,6 +288,14 @@ struct macosSavedDocumentsView: View {
     }
     .onDisappear {
       loadTask?.cancel()
+      endSelecting()
+    }
+    .onChange(of: filterRaw) { _ in
+      // Only rows still shown stay ticked
+      selectedIds = SavedSelection.visible(selectedIds, in: groups)
+    }
+    .onChange(of: searchText) { _ in
+      selectedIds = SavedSelection.visible(selectedIds, in: groups)
     }
     .alert(
       "Rename",
@@ -280,6 +325,14 @@ struct macosSavedDocumentsView: View {
       }
     } message: {
       Text(Self.clearMessage(filter, count: groups.reduce(0) { $0 + $1.count }))
+    }
+    .alert(selectedTitle, isPresented: $confirmingDeleteSelected) {
+      Button("Cancel", role: .cancel) { }
+      Button("Delete", role: .destructive) {
+        deleteSelected()
+      }
+    } message: {
+      Text(selectedMessage)
     }
     .alert(
       "Remove from Saved?",
@@ -326,21 +379,82 @@ struct macosSavedDocumentsView: View {
       if !allGroups.isEmpty {
         filterSwitch
       }
-      if !groups.isEmpty {
-        Button {
-          confirmingClearAll = true
-        } label: {
-          HStack(spacing: 4) {
-            Image(systemName: "trash")
-            Text(Self.clearTitle(filter))
+      if isSelecting {
+        if !selectedIds.isEmpty {
+          Button {
+            confirmingDeleteSelected = true
+          } label: {
+            HStack(spacing: 4) {
+              Image(systemName: "trash")
+              Text("Delete (\(selectedIds.count))")
+            }
           }
+          .buttonStyle(macosDataViewButtonStyle(destructive: true))
+          .help("Remove the ticked items from Saved")
         }
-        .buttonStyle(macosDataViewButtonStyle(destructive: true))
-        .help(Self.clearHelp(filter))
+        Button("Done", action: endSelecting)
+          .buttonStyle(macosDataViewButtonStyle())
+          .keyboardShortcut(.cancelAction)
+          .help("Stop selecting")
+      } else if !groups.isEmpty {
+        Button("Select", action: startSelecting)
+          .buttonStyle(macosDataViewButtonStyle())
+          .help("Tick saved items to delete several at once")
+        // Hidden while searching, as it would remove more than the matches shown
+        if !isSearching {
+          Button {
+            confirmingClearAll = true
+          } label: {
+            HStack(spacing: 4) {
+              Image(systemName: "trash")
+              Text(Self.clearTitle(filter))
+            }
+          }
+          .buttonStyle(macosDataViewButtonStyle(destructive: true))
+          .help(Self.clearHelp(filter))
+        }
       }
     }
     .padding(.top, 10)
     .padding(.bottom, 5)
+  }
+
+  private var searchField: some View {
+    HStack(spacing: 6) {
+      Image(systemName: "magnifyingglass")
+        .foregroundColor(Color("TextSecondary"))
+        .font(.system(size: 12))
+
+      TextField("Filter saved searches and documents...", text: $searchText)
+        .textFieldStyle(PlainTextFieldStyle())
+        .font(.system(size: 13))
+        .disableAutocorrection(true)
+        .onExitCommand {
+          searchText = ""
+        }
+
+      if !searchText.isEmpty {
+        Button(action: { searchText = "" }) {
+          Image(systemName: "xmark.circle.fill")
+            .foregroundColor(Color("TextSecondary"))
+            .font(.system(size: 12))
+        }
+        .buttonStyle(PlainButtonStyle())
+        .help("Clear filter")
+      }
+    }
+    .padding(.horizontal, 8)
+    .padding(.vertical, 8)
+    .background(Color("Button"))
+    .clipShape(RoundedRectangle(cornerRadius: 5))
+  }
+
+  /// Shown when there are saved items, but none the switch and text show
+  private var emptyFilterText: String {
+    if isSearching {
+      return "No saved items match \"\(searchText.trimmingCharacters(in: .whitespaces))\""
+    }
+    return filter == .searches ? "No saved searches" : "No saved documents"
   }
 
   private var emptyState: some View {
@@ -450,6 +564,52 @@ struct macosSavedDocumentsView: View {
     reload()
   }
 
+  private func startSelecting() {
+    closeDocument()
+    message = nil
+    selectedIds = []
+    isSelecting = true
+  }
+
+  private func endSelecting() {
+    isSelecting = false
+    selectedIds = []
+  }
+
+  private func toggle(_ id: UUID) {
+    if selectedIds.contains(id) {
+      selectedIds.remove(id)
+    } else {
+      selectedIds.insert(id)
+    }
+  }
+
+  private var selectedSplit: (documents: Set<UUID>, searches: Set<UUID>) {
+    SavedSelection.split(selectedIds, in: groups)
+  }
+
+  private var selectedTitle: String {
+    let split = selectedSplit
+    return SavedSelection.deleteTitle(documents: split.documents.count, searches: split.searches.count)
+  }
+
+  private var selectedMessage: String {
+    let split = selectedSplit
+    return SavedSelection.deleteMessage(documents: split.documents.count, searches: split.searches.count)
+  }
+
+  /// Removes the ticked items the list shows, then stops selecting
+  private func deleteSelected() {
+    let split = selectedSplit
+    if let open = selected, split.documents.contains(open.id) {
+      closeDocument()
+    }
+    manager.delete(ids: split.documents)
+    searchManager.delete(ids: split.searches)
+    endSelecting()
+    reload()
+  }
+
   private func rename(_ item: macosSavedItem, to title: String) {
     switch item {
     case .document(let document):
@@ -551,6 +711,10 @@ struct macosSavedDocumentRowView: View {
   var dataViewName: String?
   var isSelected: Bool
   var loadState: macosSavedDocumentLoadState
+  /// Clicking ticks the row instead of opening it, and its menus are hidden
+  var isSelecting = false
+  var isChecked = false
+  var onToggle: () -> Void = {}
   var onOpen: () -> Void
   var onRename: () -> Void
   var onDelete: () -> Void
@@ -558,12 +722,16 @@ struct macosSavedDocumentRowView: View {
   @State private var isHovered = false
 
   var body: some View {
-    Button(action: onOpen) {
+    Button(action: isSelecting ? onToggle : onOpen) {
       HStack(spacing: 10) {
-        Image(systemName: "doc.text")
-          .font(.system(size: 14))
-          .foregroundColor(Color.accentColor)
-          .frame(width: 20)
+        if isSelecting {
+          macosSavedCheckbox(isChecked: isChecked, isHovered: isHovered)
+        } else {
+          Image(systemName: "doc.text")
+            .font(.system(size: 14))
+            .foregroundColor(Color.accentColor)
+            .frame(width: 20)
+        }
 
         VStack(alignment: .leading, spacing: 3) {
           Text(document.displayTitle)
@@ -606,28 +774,30 @@ struct macosSavedDocumentRowView: View {
             .controlSize(.small)
         }
 
-        Menu {
-          menuItems
-        } label: {
-          Image(systemName: "ellipsis")
+        if !isSelecting {
+          Menu {
+            menuItems
+          } label: {
+            Image(systemName: "ellipsis")
+              .font(.system(size: 12, weight: .semibold))
+              .foregroundColor(Color("TextSecondary"))
+              .frame(width: 20, height: 20)
+              .contentShape(Rectangle())
+          }
+          .menuStyle(.borderlessButton)
+          .menuIndicator(.hidden)
+          .fixedSize()
+          .help("More actions")
+
+          Image(systemName: "chevron.right")
             .font(.system(size: 12, weight: .semibold))
             .foregroundColor(Color("TextSecondary"))
-            .frame(width: 20, height: 20)
-            .contentShape(Rectangle())
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help("More actions")
-
-        Image(systemName: "chevron.right")
-          .font(.system(size: 12, weight: .semibold))
-          .foregroundColor(Color("TextSecondary"))
       }
       .padding(.vertical, 8)
       .padding(.horizontal, 12)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(isHovered || isSelected ? Color("ButtonHighlighted") : Color("Button"))
+      .background(isHovered || isSelected || (isSelecting && isChecked) ? Color("ButtonHighlighted") : Color("Button"))
       .clipShape(.rect(cornerRadius: 5))
       .contentShape(Rectangle())
     }
@@ -636,9 +806,12 @@ struct macosSavedDocumentRowView: View {
       isHovered = hovering
     }
     .contextMenu {
-      menuItems
+      if !isSelecting {
+        menuItems
+      }
     }
-    .help("Saved \(document.savedDate.formatted(date: .abbreviated, time: .shortened))")
+    .accessibilityAddTraits(isSelecting && isChecked ? .isSelected : [])
+    .help(isSelecting ? "" : "Saved \(document.savedDate.formatted(date: .abbreviated, time: .shortened))")
   }
 
   @ViewBuilder
@@ -700,6 +873,10 @@ struct macosSavedSearchRowView: View {
   var search: SavedSearch
   /// The name of the data view it was saved from, nil when there's none or it's been deleted
   var dataViewName: String?
+  /// Clicking ticks the row instead of running it, and its menus are hidden
+  var isSelecting = false
+  var isChecked = false
+  var onToggle: () -> Void = {}
   var onRun: () -> Void
   var onRename: () -> Void
   var onDelete: () -> Void
@@ -735,12 +912,16 @@ struct macosSavedSearchRowView: View {
   }
 
   var body: some View {
-    Button(action: onRun) {
+    Button(action: isSelecting ? onToggle : onRun) {
       HStack(spacing: 10) {
-        Image(systemName: "magnifyingglass")
-          .font(.system(size: 14))
-          .foregroundColor(Color.accentColor)
-          .frame(width: 20)
+        if isSelecting {
+          macosSavedCheckbox(isChecked: isChecked, isHovered: isHovered)
+        } else {
+          Image(systemName: "magnifyingglass")
+            .font(.system(size: 14))
+            .foregroundColor(Color.accentColor)
+            .frame(width: 20)
+        }
 
         VStack(alignment: .leading, spacing: 3) {
           Text(search.displayTitle)
@@ -789,28 +970,30 @@ struct macosSavedSearchRowView: View {
 
         Spacer()
 
-        Menu {
-          menuItems
-        } label: {
-          Image(systemName: "ellipsis")
+        if !isSelecting {
+          Menu {
+            menuItems
+          } label: {
+            Image(systemName: "ellipsis")
+              .font(.system(size: 12, weight: .semibold))
+              .foregroundColor(Color("TextSecondary"))
+              .frame(width: 20, height: 20)
+              .contentShape(Rectangle())
+          }
+          .menuStyle(.borderlessButton)
+          .menuIndicator(.hidden)
+          .fixedSize()
+          .help("More actions")
+
+          Image(systemName: "chevron.right")
             .font(.system(size: 12, weight: .semibold))
             .foregroundColor(Color("TextSecondary"))
-            .frame(width: 20, height: 20)
-            .contentShape(Rectangle())
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help("More actions")
-
-        Image(systemName: "chevron.right")
-          .font(.system(size: 12, weight: .semibold))
-          .foregroundColor(Color("TextSecondary"))
       }
       .padding(.vertical, 8)
       .padding(.horizontal, 12)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(isHovered ? Color("ButtonHighlighted") : Color("Button"))
+      .background(isHovered || (isSelecting && isChecked) ? Color("ButtonHighlighted") : Color("Button"))
       .clipShape(.rect(cornerRadius: 5))
       .contentShape(Rectangle())
     }
@@ -819,9 +1002,12 @@ struct macosSavedSearchRowView: View {
       isHovered = hovering
     }
     .contextMenu {
-      menuItems
+      if !isSelecting {
+        menuItems
+      }
     }
-    .help(helpText)
+    .accessibilityAddTraits(isSelecting && isChecked ? .isSelected : [])
+    .help(isSelecting ? "" : helpText)
   }
 
   @ViewBuilder
@@ -846,6 +1032,28 @@ struct macosSavedSearchRowView: View {
     .background(Color("BackgroundFixedShadow"))
     .foregroundColor(Color("TextSecondary"))
     .clipShape(Capsule())
+  }
+}
+
+/// Shown in place of a saved row's icon while selecting, styled like the field checkboxes in the Document panel
+struct macosSavedCheckbox: View {
+  var isChecked: Bool
+  var isHovered: Bool
+
+  var body: some View {
+    Group {
+      if isChecked {
+        Image(systemName: "checkmark.square.fill")
+          .symbolRenderingMode(.palette)
+          .foregroundStyle(Color("TextColor"), Color("BackgroundAlt3"))
+      } else {
+        Image(systemName: "square")
+          .foregroundColor(isHovered ? Color("LabelBackgroundFocus") : Color("TextSecondary"))
+      }
+    }
+    .font(.system(size: 14))
+    .frame(width: 20)
+    .accessibilityHidden(true)
   }
 }
 #endif

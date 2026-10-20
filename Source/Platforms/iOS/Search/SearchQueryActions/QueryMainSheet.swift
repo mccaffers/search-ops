@@ -75,7 +75,7 @@ struct QueryMainSheet: View {
       .foregroundColor(Color("TextColor"))
       .background(Color("Background"))
       .navigationBarTitleDisplayMode(.inline)
-      .toolbarBackground(.visible, for: .navigationBar)
+      .navigationBarBackgroundVisibleBeforeiOS26()
       .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
       .navigationTitle("Filters")
       .toolbar {

@@ -98,7 +98,7 @@ struct SearchMainSheet: View {
       }
       .frame(maxHeight: .infinity)
       .background(Color("Background"))
-      .toolbarBackground(.visible, for: .navigationBar)
+      .navigationBarBackgroundVisibleBeforeiOS26()
       .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
       
       .navigationTitle("Hosts & Indices")

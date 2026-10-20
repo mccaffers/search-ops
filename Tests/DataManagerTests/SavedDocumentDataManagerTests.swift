@@ -161,6 +161,20 @@ struct SavedDocumentDataManagerTests {
     #expect(manager.documents(hostId: otherHost).count == 1)
   }
 
+  @Test func deleteIdsRemovesOnlyThoseDocuments() throws {
+    let a = try manager.save(draft("a"))
+    let b = try manager.save(draft("b"))
+    try manager.save(draft("c"))
+
+    manager.delete(ids: [a.id, b.id, UUID()])
+
+    #expect(manager.all().map(\.docId) == ["c"])
+    // No ids, or ids already gone, change nothing
+    manager.delete(ids: [])
+    manager.delete(ids: [a.id])
+    #expect(manager.all().map(\.docId) == ["c"])
+  }
+
   @Test func deleteAllRemovesEveryHostsDocuments() throws {
     try manager.save(draft("abc"))
     try manager.save(draft("def", host: UUID()))

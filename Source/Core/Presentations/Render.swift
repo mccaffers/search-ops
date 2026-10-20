@@ -16,13 +16,15 @@ public class SearchRender {
   
   // Asynchronously performs a search query against an Elasticsearch server using specified parameters.
   // Utilizes the `MainActor` to ensure any UI updates from the result are thread-safe.
+  // `size` asks for that many documents instead of the page size set in Settings.
   @MainActor
   public static func call(pageInput: Int,
                           filterObject: FilterObject,
                           host: HostDetails,
                           index: String,
                           limitObj: LimitObj,
-                          histogram: SearchHistogramRequest? = nil) async -> RenderResult {
+                          histogram: SearchHistogramRequest? = nil,
+                          size: Int? = nil) async -> RenderResult {
     
     let renderResult = RenderResult() // Initialize the structure to hold search results.
     
@@ -34,7 +36,8 @@ public class SearchRender {
                                               item: host,
                                               selectedIndex: index,
                                               from: from,
-                                              histogram: histogram)
+                                              histogram: histogram,
+                                              size: size)
     
     // Read each response once, away from the main thread, and use it for the histogram check,
     // the documents and the histogram
@@ -45,7 +48,8 @@ public class SearchRender {
       response = await Fields.QueryElastic(filterObject: filterObject,
                                            item: host,
                                            selectedIndex: index,
-                                           from: from)
+                                           from: from,
+                                           size: size)
       parsed = await parse(response, histogram: nil)
     }
     

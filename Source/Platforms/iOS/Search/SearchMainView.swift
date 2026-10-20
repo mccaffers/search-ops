@@ -87,6 +87,15 @@ struct SearchMainView: View {
     @StateObject var filterObject : FilterObject = FilterObject()
     @ObservedObject var searchHistoryManager : SearchHistoryDataManager
     @ObservedObject var filterHistoryDataManager : FilterHistoryDataManager
+    /// Searches sent from the Saved tab
+    @ObservedObject var searchHandoff : iosSearchHandoff
+    @EnvironmentObject var serverObjects : HostsDataManager
+    /// A search from the Saved tab waiting for its host to be selected
+    @State private var pendingHandoff : SearchHandoffRequest? = nil
+    /// The saved search being shown, so saving again can update it
+    @State var savedSearchLink : SavedSearchLink? = nil
+    /// The fields of a saved search being opened, until the mapping has loaded and they're picked in Fields
+    @State private var pendingSelectedFields : [String]? = nil
   
 	// -----------------------------------------------
 	// FIELDS
@@ -129,6 +138,8 @@ struct SearchMainView: View {
 		}
 	}
 	@State var validSearchResults : Bool = false
+	/// Where each of `searchResults` lives, in the same order
+	@State var resultRefs : [DocumentRef?] = []
 	
 	@State var showingDetailedView : Bool = false
 	
@@ -175,6 +186,7 @@ struct SearchMainView: View {
 		filteredFields = []
 		validSearchResults = false
 		searchResults = nil
+		resultRefs = []
 		hitCount = 0
 		filterObject.resetIndexSpecificFilters()
 	}
@@ -190,8 +202,38 @@ struct SearchMainView: View {
     }
   }
 
+  /// The fields picked in Fields, by name, not counting the date field, which has a column of its own
+  var selectedFieldKeys: [String] {
+    let dateField = filterObject.dateField?.squashedString
+    return filteredFields.map(\.squashedString).filter { $0 != dateField }
+  }
+
+  /// What differs from the saved search this search came from, empty when it didn't come from one
+  var savedSearchChanges: [SavedSearchState.Part] {
+    guard let link = savedSearchLink else { return [] }
+    return SavedSearchState(searchIndex: selectedIndex,
+                            dataViewId: nil,
+                            filterObject: filterObject,
+                            // Until a saved search's fields are picked, they're still the ones it was saved with
+                            selectedFields: pendingSelectedFields ?? selectedFieldKeys)
+      .changes(from: link.baseline)
+  }
+
+  /// Picks up a rename, or forgets the saved search when it's been removed in the Saved tab
+  func refreshSavedSearchLink() {
+    guard let link = savedSearchLink else { return }
+    if let saved = SavedSearchDataManager().search(id: link.id) {
+      savedSearchLink?.title = saved.displayTitle
+      savedSearchLink?.pinnedPeriod = SavedSearchLink.isPinned(saved, baseline: link.baseline)
+    } else {
+      savedSearchLink = nil
+    }
+  }
+
   @MainActor
   func historyCall (_ selectedHost: HostDetails, _ selectedIndex: String, _ localFilterObject: FilterObject) -> () {
+    // A recent search isn't the saved one
+    savedSearchLink = nil
     self.selectedHost.item = selectedHost
     self.selectedIndex = selectedIndex
     self.filterObject.dateField = localFilterObject.dateField
@@ -205,6 +247,68 @@ struct SearchMainView: View {
     }
   }
   
+  /// Runs the search sent from the Saved tab, switching to its host first when it's another one
+  @MainActor
+  func takeHandoff() {
+    guard let request = searchHandoff.take() else { return }
+    guard let host = serverObjects.getHostByID(request.hostId), !host.isInvalidated else {
+      withAnimation(Animation.linear(duration: 0.3)) {
+        errorMessage.append(ResponseError(title: "Saved Search",
+                                          message: "The host this search was saved from no longer exists.",
+                                          type: .warn))
+      }
+      return
+    }
+    stopTimer()
+    presentedSheet = nil
+    showingDetailedView = false
+    if let current = selectedHost.item, !current.isInvalidated, current.id == host.id {
+      runHandoff(request)
+    } else {
+      // Selecting a host clears the index and filters, so the search is run once that's happened
+      pendingHandoff = request
+      selectedHost.item = host
+    }
+  }
+
+  @MainActor
+  private func runHandoff(_ request: SearchHandoffRequest) {
+    // A search for a saved document's value isn't a saved search
+    savedSearchLink = request.savedSearch.map {
+      SavedSearchLink(id: $0.id, title: $0.displayTitle, baseline: SavedSearchState(request: request))
+    }
+    selectedIndex = request.index
+    fields = []
+    filteredFields = []
+    let incoming = request.filterObject
+    filterObject.dateField = incoming.dateField
+    filterObject.absoluteRange = incoming.absoluteRange
+    filterObject.relativeRange = incoming.relativeRange
+    filterObject.sort = incoming.sort
+    filterObject.query = incoming.query
+    // iOS has no chips to show field filters, so none are kept out of sight
+    filterObject.fieldFilters = []
+    let selectedFields = request.selectedFields ?? []
+    pendingSelectedFields = selectedFields
+    withAnimation(Animation.linear(duration: 0.3)) {
+      errorMessage.removeAll()
+    }
+    Task { @MainActor in
+      await getMappedFields()
+      if !selectedFields.isEmpty {
+        var mapped = fields
+        var selected = [SquashedFieldsArray]()
+        SavedSearch.applySelectedFields(selectedFields,
+                                        dateField: filterObject.dateField?.squashedString,
+                                        fields: &mapped,
+                                        onlyVisibleFields: &selected)
+        fields = mapped
+        filteredFields = selected
+      }
+      pendingSelectedFields = nil
+      makeSearchRequest = true
+    }
+  }
 	
   func FetchResults(pageInput: Int = 0) async {
     
@@ -268,6 +372,8 @@ struct SearchMainView: View {
         
         ClearScreen()
       } else {
+        // Before the results, so the rows they're drawn into know where each document lives
+        resultRefs = response.refs
         searchResults = response.results
         hitCount = response.hits
         resultsFields.fields = response.fields ?? []
@@ -377,6 +483,8 @@ struct SearchMainView: View {
                            makeSearchRequest: $makeSearchRequest,
                            loading: $loadingSpinner,
                            selectedIndex: selectedIndex,
+                           isSavedSearch: savedSearchLink != nil,
+                           hasUnsavedChanges: !savedSearchChanges.isEmpty,
                            stopTimer: stopTimer,
                            schedule:schedule)
         
@@ -393,6 +501,7 @@ struct SearchMainView: View {
       SearchDisplayMainView(validSearchResults: validSearchResults,
                             showingGrid: showingGrid,
                             searchResults: $searchResults,
+                            resultRefs: resultRefs,
                             viewableFields: viewableFields,
                             updatedFieldsNotification: $updatedFieldsNotification,
                             renderedObjects: $renderedObjects,
@@ -429,7 +538,15 @@ struct SearchMainView: View {
         }
         hasInitiallyLoaded=true
       }
+
+      // Back from the Saved tab, where the saved search may have been renamed or removed
+      refreshSavedSearchLink()
+      // A search may have been sent from the Saved tab before this tab was first shown
+      takeHandoff()
       
+    }
+    .onChange(of: searchHandoff.pendingId) { _ in
+      takeHandoff()
     }
     .onChange(of: selectedHost.item) { newValue in
       
@@ -442,6 +559,13 @@ struct SearchMainView: View {
       
       selectedIndex = ""
       ClearScreen()
+      // Another host's search isn't the saved one, unless it's the saved search being opened
+      savedSearchLink = nil
+
+      if let request = pendingHandoff {
+        pendingHandoff = nil
+        runHandoff(request)
+      }
       
     }
     .onDisappear {
@@ -457,12 +581,16 @@ struct SearchMainView: View {
     .environmentObject(selectedHost)
     .environmentObject(filterObject)
     .onAppear {
-      if lastSeenVersionNotes == "2.0",
-         searchHistoryManager.items.count > 0,
-         !hasShownInitialScreen {
+      // Only on the first appearance after launch, and only once the current
+      // release notes have been seen: MainRoutingView presents them from the
+      // root, and only one sheet can show at a time
+      if !hasShownInitialScreen {
         hasShownInitialScreen = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-          initialRecentScreen = true
+        if lastSeenVersionNotes == MainRoutingView.currentReleaseNotes,
+           searchHistoryManager.items.count > 0 {
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            initialRecentScreen = true
+          }
         }
       }
     }
@@ -513,6 +641,13 @@ struct SearchMainView: View {
         case .recent:
           iosSearchRecentView(searchHistoryManager: searchHistoryManager,
                               request: historyCall)
+
+        case .saveSearch:
+          iosSaveSearchSheet(host: selectedHost.item,
+                             searchIndex: selectedIndex,
+                             selectedFields: selectedFieldKeys,
+                             link: $savedSearchLink,
+                             changes: savedSearchChanges)
           
         }
       }
@@ -559,7 +694,9 @@ struct SearchMainView: View {
       SearchDetailView(itemDetail: itemDetail,
                        presentedSheet: $presentedSheet,
                        fields: $fields,
-                       showDateInputView: $showDateInputView)
+                       showDateInputView: $showDateInputView,
+                       host: selectedHost.item,
+                       searchIndex: selectedIndex)
       .environmentObject(filterObject)
       .onDisappear {
         // animate the views if we are not showing the modal

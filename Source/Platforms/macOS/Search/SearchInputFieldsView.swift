@@ -140,7 +140,7 @@ struct SearchInputFieldsView: View {
             }
           } else if filterObject.relativeRange != nil {
             HStack(spacing:2) {
-              Text(filterObject.relativeRange?.value.string ?? "")
+              Text(filterObject.relativeRange.map { RelativeRangeFilter.editableText(for: $0.value) } ?? "")
               Text(filterObject.relativeRange?.period.rawValue ?? "")
             }
           } else if filterObject.absoluteRange != nil {

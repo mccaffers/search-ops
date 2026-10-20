@@ -14,8 +14,26 @@ struct macosDatePickerRelativeCustomView: View {
   @State var relativeText =  "60"
   @Binding var showingCustomValues : Bool
   @State var datePeriod : SearchDateTimePeriods? = nil
+  @State private var loadedExistingRange = false
+  @FocusState private var valueFocused: Bool
   @ObservedObject var filterObject: FilterObject
   @Binding var selection: macosSearchViewEnum
+
+  /// The typed value as a range, or nil while it isn't a positive number
+  private var customRange: RelativeRangeFilter? {
+    guard let datePeriod = datePeriod else { return nil }
+    return RelativeRangeFilter.from(text: relativeText, period: datePeriod)
+  }
+
+  /// Sets the typed period and closes the picker, like the quick buttons
+  private func applyCustomRange() {
+    guard let range = customRange else { return }
+    filterObject.relativeRange = range
+    if let dateField = filterObject.dateField {
+      filterObject.sort = SortObject(order: .Descending, field: dateField)
+    }
+    selection = .None
+  }
   
     var body: some View {
       if showingCustomValues {
@@ -108,6 +126,13 @@ struct macosDatePickerRelativeCustomView: View {
                     .stroke(Color("BackgroundAlt"), lineWidth: 1)
                 )
                 .frame(maxWidth: .infinity)
+                .focused($valueFocused)
+                .onSubmit(applyCustomRange)
+                #if os(macOS)
+                .onExitCommand {
+                  selection = .None
+                }
+                #endif
               
               Button {
                 showingPeriods = true
@@ -124,21 +149,15 @@ struct macosDatePickerRelativeCustomView: View {
               }
               .buttonStyle(PlainButtonStyle())
               
-              Button {
-                if let datePeriod = datePeriod {
-                  filterObject.relativeRange = RelativeRangeFilter(period: datePeriod,
-                                                                   value: Double(relativeText) ?? 0)
-                  if let dateField = filterObject.dateField {
-                    filterObject.sort = SortObject(order: .Descending, field: dateField)
-                  }
-                }
-                selection = .None
-              } label: {
+              Button(action: applyCustomRange) {
                 Text("Set")
                   .padding(10)
                   .background(Color("PositiveButton"))
                   .clipShape(.rect(cornerRadius: 5))
-              }.buttonStyle(PlainButtonStyle())
+              }
+              .buttonStyle(PlainButtonStyle())
+              .disabled(customRange == nil)
+              .opacity(customRange == nil ? 0.5 : 1)
             }
             
            
@@ -147,16 +166,24 @@ struct macosDatePickerRelativeCustomView: View {
           .background(Color("Background"))
           .padding(.bottom, 10)
           .onAppear {
-            if let value = filterObject.relativeRange?.value {
-              relativeText = String(value)
-            }
-            if let period = filterObject.relativeRange?.period {
-              if datePeriod == nil {
-                datePeriod = period
+            // Only fill in the current range once, so picking a unit keeps what was typed
+            if !loadedExistingRange {
+              loadedExistingRange = true
+              if let value = filterObject.relativeRange?.value {
+                relativeText = RelativeRangeFilter.editableText(for: value)
+              }
+              if let period = filterObject.relativeRange?.period {
+                if datePeriod == nil {
+                  datePeriod = period
+                }
               }
             }
             if datePeriod == nil {
               datePeriod = .Minutes
+            }
+            // Focus once the popup is on screen, so the value can be typed straight away
+            DispatchQueue.main.async {
+              valueFocused = true
             }
           }
           

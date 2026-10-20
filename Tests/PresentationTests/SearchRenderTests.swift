@@ -1324,4 +1324,26 @@ final class SearchRenderTests: XCTestCase  {
     searchRender = nil
     super.tearDown()
   }
+
+  // MARK: - Where each result lives
+
+  func testUpdateResultsKeepsRefsInOrder() {
+    let refs: [DocumentRef?] = [DocumentRef(index: "logs-1", id: "a"), nil, DocumentRef(index: "logs-2", id: "c")]
+    let rendered = Results.UpdateResults(searchResults: [["n": 1], ["n": 2], ["n": 3]],
+                                         resultsFields: RenderedFields(fields: []),
+                                         refs: refs)
+
+    XCTAssertEqual(rendered?.ref(at: 0), DocumentRef(index: "logs-1", id: "a"))
+    XCTAssertNil(rendered?.ref(at: 1))
+    XCTAssertEqual(rendered?.ref(at: 2), DocumentRef(index: "logs-2", id: "c"))
+  }
+
+  func testRefOutsideTheResultsIsNil() {
+    let withoutRefs = Results.UpdateResults(searchResults: [["n": 1]], resultsFields: RenderedFields(fields: []))
+    XCTAssertNil(withoutRefs?.ref(at: 0))
+
+    let rendered = RenderObject(headers: [], results: [], refs: [DocumentRef(index: "logs", id: "a")])
+    XCTAssertNil(rendered.ref(at: -1))
+    XCTAssertNil(rendered.ref(at: 1))
+  }
 }
