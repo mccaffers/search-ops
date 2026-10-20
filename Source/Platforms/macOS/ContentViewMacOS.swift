@@ -13,6 +13,7 @@ import Combine
 public enum sideBar {
   case hosts
   case saved
+  case dashboards
   case settings
   case hidden
   case develop
@@ -107,6 +108,8 @@ struct ContentViewMacOS: View {
   @State var selection: macosSearchViewEnum = .None
   
   @State var refreshMainView = UUID()
+  /// The dashboard open in the Dashboards tab, nil for the list
+  @State var openDashboardId: UUID? = nil
   
   @StateObject var hostsUpdated = HostUpdatedNotifier()
   @StateObject var searchHistoryManager = SearchHistoryDataManager()
@@ -152,7 +155,13 @@ struct ContentViewMacOS: View {
                               sidebar: $sidebar,
                               serverObjects: serverObjects,
                               searchHistoryManager: searchHistoryManager,
-                              searchHandoff: searchHandoff)
+                              searchHandoff: searchHandoff,
+                              onBackToDashboard: { id in
+                                openDashboardId = id
+                                searchHandoff.clearDashboardReturn()
+                                selection = .None
+                                sidebar = .dashboards
+                              })
               .opacity(sidebar == .hidden ? 1 : 0)
               .id(refreshMainView)
               .onChange(of: hostsUpdated.updated) { newValue in
@@ -172,6 +181,18 @@ struct ContentViewMacOS: View {
                                         selection = .None
                                         sidebar = .hidden
                                       })
+            } else if sidebar == .dashboards {
+              macosDashboardsView(fullScreen: $fullScreen,
+                                  serverObjects: serverObjects,
+                                  openDashboardId: $openDashboardId,
+                                  onEdit: { search, dashboard in
+                                    let dataView = search.dataViewId.flatMap { DataViewDataManager().view(id: $0) }
+                                    searchHandoff.send(search.request(dataView: dataView),
+                                                       returningTo: macosDashboardReturn(id: dashboard.id,
+                                                                                         title: dashboard.title))
+                                    selection = .None
+                                    sidebar = .hidden
+                                  })
             } else if sidebar == .hosts {
               macosHostsView(fullScreen:$fullScreen,
                              serverObjects: serverObjects, 
@@ -214,6 +235,7 @@ struct ContentViewMacOS: View {
       DataViewDataManager().pruneOrphans(validHostIds: hostIds)
       SavedDocumentDataManager().pruneOrphans(validHostIds: hostIds)
       SavedSearchDataManager().pruneOrphans(validHostIds: hostIds)
+      DashboardDataManager().pruneMissingSearches(validSearchIds: Set(SavedSearchDataManager().all().map(\.id)))
       // Recent searches saved before field filters kept everything in a nested filter object
       searchHistoryManager.migrateAwayFromFilterObjects()
     }

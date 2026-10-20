@@ -62,13 +62,6 @@ struct iosSearchRecentView: View {
         searchHistoryManager.refresh()
       }
     }
-    .onAppear {
-      UINavigationBar.appearance() .backgroundColor = UIColor(Color("BackgroundAlt"))
-    }
-    .onDisappear {
-      UINavigationBar.appearance().backgroundColor = UIColor(Color("Background"))
-    }
-    
   }
   
 }

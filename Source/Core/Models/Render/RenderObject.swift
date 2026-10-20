@@ -20,4 +20,9 @@ public struct RenderObject {
   public var dateField : SquashedFieldsArray? = nil
   /// Where each document in `results` lives, in the same order. Empty when not known.
   public var refs : [DocumentRef?] = []
+
+  /// Where the document at `index` in `results` lives, nil when that isn't known
+  public func ref(at index: Int) -> DocumentRef? {
+    refs.indices.contains(index) ? refs[index] : nil
+  }
 }

@@ -406,4 +406,29 @@ struct SavedDocumentSearchTests {
     #expect(request.filterObject.absoluteRange == nil)
     #expect(request.filterObject.fieldFilters.first?.negated == false)
   }
+
+  // MARK: - Searching for a value on iOS, in the query box
+
+  @Test func termQuerySearchPutsTheValueInTheQuery() throws {
+    let range = DateInterval(start: Date(timeIntervalSince1970: 1_000), end: Date(timeIntervalSince1970: 5_000))
+    let document = savedDocument(dateField: SavedDateField(field: "event.created", type: "date"), timeRange: range)
+
+    let request = SavedDocumentSearch.termQuerySearch(for: document, field: "user.name", value: "ana",
+                                                      negated: false, dataView: nil)
+
+    #expect(request.index == "logs-*")
+    #expect(request.filterObject.fieldFilters.isEmpty)
+    let query = try #require(request.filterObject.query)
+    #expect(query.values.map(\.string) == ["user.name:\"ana\""])
+    #expect(request.filterObject.dateField?.squashedString == "event.created")
+    #expect(request.filterObject.absoluteRange?.from == range.start)
+  }
+
+  @Test func termQueryQuotesAndEscapesTheValue() {
+    #expect(SavedDocumentSearch.termQuery(field: "message", value: "GET /api", negated: false)
+            == "message:\"GET /api\"")
+    #expect(SavedDocumentSearch.termQuery(field: "path", value: #"C:\temp "a""#, negated: false)
+            == #"path:"C:\\temp \"a\"""#)
+    #expect(SavedDocumentSearch.termQuery(field: "status", value: "500", negated: true) == "NOT status:\"500\"")
+  }
 }

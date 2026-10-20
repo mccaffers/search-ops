@@ -32,6 +32,12 @@ struct ServicesHome: View {
       
     }
     
+    // Saved searches and documents only mean something on their own host
+    for host in deletionArray {
+      SavedDocumentDataManager().deleteByHost(id: host.id)
+      SavedSearchDataManager().deleteByHost(id: host.id)
+    }
+
     await serverObjects.deleteItems(itemsForDeletion: deletionArray)
   }
   

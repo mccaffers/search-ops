@@ -15,7 +15,9 @@ public class Results {
   // Takes a mutlti-dimensional array and returns a RenderedObject
   // Extracts all the fields out of the results
   // This is different to _mapping, as it captures fields that are not mapped
-  public static func UpdateResults(searchResults : [[String: Any]]?, resultsFields:  RenderedFields) -> RenderObject? {
+  /// `refs` are where each document lives, in the same order as `searchResults`
+  public static func UpdateResults(searchResults : [[String: Any]]?, resultsFields:  RenderedFields,
+                                   refs: [DocumentRef?] = []) -> RenderObject? {
     
     var myArray = [OrderedDictionary<String, Any>]()
     if let searchResults = searchResults {
@@ -24,7 +26,8 @@ public class Results {
       }
       
       return RenderObject(headers: resultsFields.fields.filter({$0.visible == true}),
-                          results: myArray)
+                          results: myArray,
+                          refs: refs)
       
     }
     

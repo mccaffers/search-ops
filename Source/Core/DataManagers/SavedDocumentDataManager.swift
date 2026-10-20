@@ -131,6 +131,16 @@ public class SavedDocumentDataManager {
     }
   }
 
+  /// Removes the saved documents with these ids in one write, eg. the ones ticked in the Saved tab
+  public func delete(ids: Set<UUID>) {
+    guard !ids.isEmpty, let realm = realmProvider() else { return }
+    let objects = realm.objects(RealmSavedDocument.self).where { $0.id.in(Array(ids)) }
+    guard !objects.isEmpty else { return }
+    try? realm.write {
+      realm.delete(objects)
+    }
+  }
+
   /// Removes every saved document, eg. from Clear All in the Saved tab
   public func deleteAll() {
     guard let realm = realmProvider() else { return }

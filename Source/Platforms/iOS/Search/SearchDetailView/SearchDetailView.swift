@@ -23,6 +23,13 @@ struct SearchDetailView: View {
   @Binding var presentedSheet: SearchSheet?
   @Binding var fields : [SquashedFieldsArray]
   @Binding var showDateInputView: DateQuery?
+  /// The host and what was searched when the document was found, to save it with
+  var host: HostDetails?
+  var searchIndex: String
+
+  @EnvironmentObject var filterObject: FilterObject
+  @State private var isSaved = false
+  @State private var saveError: String? = nil
   
   func returnJson (input:OrderedDictionary<String, Any>) -> String {
     
@@ -71,6 +78,15 @@ struct SearchDetailView: View {
       if let item = itemDetail.item {
         contents = returnJson(input: item).trimmingCharacters(in: .whitespacesAndNewlines)
       }
+      refreshSaved()
+    }
+    .alert("Couldn't Save", isPresented: Binding(
+      get: { saveError != nil },
+      set: { if !$0 { saveError = nil } }
+    )) {
+      Button("OK", role: .cancel) { }
+    } message: {
+      Text(saveError ?? "")
     }
     .onDisappear {
       //            itemDetail.item = nil
@@ -78,6 +94,15 @@ struct SearchDetailView: View {
     }
 #if os(iOS)
     .toolbar {
+      if canSave {
+        ToolbarItem(placement: .navigationBarTrailing) {
+          Button(action: toggleSaved) {
+            Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+          }
+          .tint(Color("AccentColor"))
+          .accessibilityLabel(isSaved ? "Remove from Saved" : "Save Document")
+        }
+      }
       ToolbarItem(placement: .navigationBarTrailing) {
         Button(toolbarButtonString) {
           if selection == .Fields {
@@ -102,6 +127,48 @@ struct SearchDetailView: View {
     .toolbarBackground(Color("TabBarColor"), for: .navigationBar)
     .navigationBarTitleDisplayMode(navigationTitleSize)
     #endif
+  }
+
+  private var hostId: UUID? {
+    guard let host = host, !host.isInvalidated else { return nil }
+    return host.id
+  }
+
+  /// Only a document whose index and id are known can be found again
+  private var canSave: Bool {
+    hostId != nil && itemDetail.ref != nil
+  }
+
+  private func refreshSaved() {
+    guard let hostId = hostId, let ref = itemDetail.ref else {
+      isSaved = false
+      return
+    }
+    isSaved = SavedDocumentDataManager().find(hostId: hostId, ref: ref) != nil
+  }
+
+  /// Saves the document with the search it was found in, its period pinned to the dates it covers now, or unsaves it
+  private func toggleSaved() {
+    guard let hostId = hostId, let ref = itemDetail.ref else { return }
+    let manager = SavedDocumentDataManager()
+    if isSaved {
+      manager.delete(hostId: hostId, ref: ref)
+      isSaved = false
+      return
+    }
+    let document = SavedDocument.make(hostId: hostId,
+                                      ref: ref,
+                                      searchIndex: searchIndex.trimmingCharacters(in: .whitespacesAndNewlines),
+                                      dataView: nil,
+                                      dateField: filterObject.dateField,
+                                      dateRange: filterObject.snapshotDateRange())
+    do {
+      try manager.save(document)
+      isSaved = true
+      UINotificationFeedbackGenerator().notificationOccurred(.success)
+    } catch {
+      saveError = (error as? SavedDocumentError)?.message ?? error.localizedDescription
+    }
   }
 }
 #endif

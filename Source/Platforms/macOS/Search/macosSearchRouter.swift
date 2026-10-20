@@ -30,8 +30,10 @@ struct macosSearchRouter: View {
   
   @ObservedObject var serverObjects : HostsDataManager
   @ObservedObject var searchHistoryManager : SearchHistoryDataManager
-  /// Searches sent from the Saved tab
+  /// Searches sent from the Saved and Dashboards tabs
   @ObservedObject var searchHandoff : macosSearchHandoff
+  /// Opens the dashboard a search was opened from with Edit
+  var onBackToDashboard: (UUID) -> Void = { _ in }
   
   @StateObject var filterObject : FilterObject = FilterObject()
   /// Replaced to start a fresh search screen, which searches as it appears
@@ -100,6 +102,7 @@ struct macosSearchRouter: View {
       // Going home starts a new search, which isn't the saved one
       if newValue == .WelcomeScreen {
         savedSearchLink = nil
+        searchHandoff.clearDashboardReturn()
       }
     }
     .onChange(of: sidebar) { newValue in
@@ -128,6 +131,12 @@ struct macosSearchRouter: View {
                           pendingSelectedFields: $pendingSelectedFields,
                           pendingColumnWidths: $pendingColumnWidths,
                           savedSearchLink: $savedSearchLink,
+                          dashboardReturn: searchHandoff.dashboardReturn,
+                          onBackToDashboard: {
+                            if let id = searchHandoff.dashboardReturn?.id {
+                              onBackToDashboard(id)
+                            }
+                          },
                           filterObject:filterObject, 
                           selection: $selection,
                           fullScreen: $fullScreen)

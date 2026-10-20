@@ -302,6 +302,8 @@ struct SearchFieldSheetView: View {
       .navigationTitle("Fields")
 #if os(iOS)
       .navigationBarTitleDisplayMode(.inline)
+      .navigationBarBackgroundVisibleBeforeiOS26()
+      .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
       .toolbar {
         ToolbarItem(placement: .navigationBarTrailing) {
           Button("Close") {
@@ -312,14 +314,6 @@ struct SearchFieldSheetView: View {
 #endif
       .id(forceUIChange)
     }
-#if os(iOS)
-    .onAppear {
-      UINavigationBar.appearance() .backgroundColor = UIColor(Color("BackgroundAlt"))
-    }
-    .onDisappear {
-      UINavigationBar.appearance().backgroundColor = UIColor(Color("Background"))
-    }
-#endif
     .onAppear {
       
       Task {

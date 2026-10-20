@@ -23,10 +23,10 @@ struct ReleaseNotesList: View {
     ScrollView{
       VStack(spacing:25) {
         
-        ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 11))!,
-                               buttonText: "Version 4.2",
-                               buttonDescription: "Amazon OpenSearch Service with AWS SigV4, field visibility in document details, a GitHub star link in Settings and lots of fixes",
-                               buttonAction: { showingRelease = "Version 4.2" },  activeButton: true, isLatest: true)
+        ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 19))!,
+                               buttonText: "Version 4.3",
+                               buttonDescription: "Saved searches and documents, Amazon OpenSearch Service with AWS SigV4, field visibility in document details, a GitHub star link in Settings and lots of fixes",
+                               buttonAction: { showingRelease = "Version 4.3" },  activeButton: true, isLatest: true)
         .padding(.top, 15)
         
         ReleaseNotesListButton(releaseDate: Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 10))!,
@@ -156,8 +156,8 @@ struct ReleaseNotesList: View {
         Version_2_0(title: showingRelease)
       } else if showingRelease == "Version 3.0" {
         Version_3_0(title: showingRelease)
-      } else if showingRelease == "Version 4.2" {
-        Version_4_2(title: showingRelease)
+      } else if showingRelease == "Version 4.3" {
+        Version_4_3(title: showingRelease)
       }
     }
   }

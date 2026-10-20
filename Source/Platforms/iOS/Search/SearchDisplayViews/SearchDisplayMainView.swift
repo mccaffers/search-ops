@@ -17,6 +17,8 @@ struct SearchDisplayMainView: View {
   var showingGrid : Bool
   
   @Binding var searchResults : [[String: Any]]?
+  /// Where each of `searchResults` lives, in the same order
+  var resultRefs : [DocumentRef?]
   @ObservedObject var viewableFields: RenderedFields
   @Binding var updatedFieldsNotification : UUID
   @Binding var renderedObjects : RenderObject?
@@ -185,7 +187,8 @@ struct SearchDisplayMainView: View {
     }
     .onChange(of: updatedFieldsNotification) { newValue in
       renderedObjects = Results.UpdateResults(searchResults: searchResults,
-                                              resultsFields: viewableFields)
+                                              resultsFields: viewableFields,
+                                              refs: resultRefs)
       
       
     }

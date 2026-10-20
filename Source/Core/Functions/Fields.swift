@@ -33,7 +33,8 @@ public class Fields {
                                   item: HostDetails?,
                                   selectedIndex: String,
                                   from: Int = 0,
-                                  histogram: SearchHistogramRequest? = nil) async -> ServerResponse {
+                                  histogram: SearchHistogramRequest? = nil,
+                                  size: Int? = nil) async -> ServerResponse {
     
     let queryBuilder = GenericQueryBuilder()
     var response = ServerResponse()
@@ -101,8 +102,8 @@ public class Fields {
                                            range: range,
                                            sortBy: sortBy,
                                            filters: filterObject.fieldFilters)
-    let settingsManager = SettingsDataManager()
-    searchObject.size = settingsManager.documentsPerPage
+    // Documents per page from Settings, unless the caller wants another number, eg. a dashboard panel
+    searchObject.size = size ?? SettingsDataManager().documentsPerPage
     searchObject.from = from
     if let histogram = histogram {
       searchObject.aggs = SearchHistogram.aggregation(histogram)
