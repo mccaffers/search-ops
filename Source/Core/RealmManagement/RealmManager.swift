@@ -20,7 +20,10 @@ public class RealmManager : RealmManagerProtocol {
   // 13: RealmSavedSearch updated date. Optional, so nil is right for older searches
   // 14: RealmSavedSearch column widths. Older searches had none, so the empty list needs nothing
   // 15: RealmSavedSearch relative periods and now flags. Empty and false read as the fixed dates older searches had
-  public static let schemaVersion : UInt64 = 15
+  // 16: RealmDashboard and its embedded RealmDashboardPanel. New classes only, so the migration block needs nothing
+  // 17: RealmDashboardPanel grid frames. Zero widths read as the old width, height and column count, so nothing to migrate
+  // 18: RealmDashboardPanel column widths. Older panels had none, so the empty list needs nothing
+  public static let schemaVersion : UInt64 = 18
   
   // Debug builds only: launching with SEARCHOPS_IN_MEMORY_STORE=1 keeps the database in memory,
   // so the app never reads the encryption key from the Keychain or writes a realm file.
@@ -29,14 +32,17 @@ public class RealmManager : RealmManagerProtocol {
 
   private let realmClient: RealmClientProtocol
   private let realmUtilities: RealmUtilitiesProtocol
+  private let keyManagement: RealmKeyManagementProtocol
   private let environment: [String: String]
 
   // Enable the injection a different realm client for testing
   public init(realmClient: RealmClientProtocol = RealmClient(),
               realmUtilities: RealmUtilitiesProtocol = RealmUtilities(),
+              keyManagement: RealmKeyManagementProtocol = RealmKeyManagement(),
               environment: [String: String] = ProcessInfo.processInfo.environment) {
     self.realmClient = realmClient
     self.realmUtilities = realmUtilities
+    self.keyManagement = keyManagement
     self.environment = environment
   }
 
@@ -50,6 +56,11 @@ public class RealmManager : RealmManagerProtocol {
   
   @MainActor
   private static var realmInstance: Realm?
+  
+  // True when the encryption key couldn't be read and this launch runs on an in-memory realm,
+  // so the root views can tell the user their data isn't loaded and nothing will be saved
+  @MainActor
+  public private(set) static var keyUnavailable = false
     
   static let migrationBlock: MigrationBlock = { migration, oldSchemaVersion in
       if oldSchemaVersion < 3 {
@@ -69,23 +80,13 @@ public class RealmManager : RealmManagerProtocol {
       }
   }
     
-  private func getRealmConfig() -> Realm.Configuration {
-      let migrationBlock = RealmManager.migrationBlock
-      
-      do {
-          return try Realm.Configuration(
-              encryptionKey: RealmKeyManagement.generateOrGetKey(),
-              schemaVersion: RealmManager.schemaVersion,
-              migrationBlock: migrationBlock
-          )
-      } catch {
-          SystemLogger().message("Error loading realm config with encryption key", level: .fatal)
-          
-          return Realm.Configuration(
-              schemaVersion: RealmManager.schemaVersion,
-              migrationBlock: migrationBlock
-          )
-      }
+  // Throws when there is no encryption key to open the realm on disk with
+  private func getRealmConfig() throws -> Realm.Configuration {
+      return try Realm.Configuration(
+          encryptionKey: keyManagement.generateOrGetKey(),
+          schemaVersion: RealmManager.schemaVersion,
+          migrationBlock: RealmManager.migrationBlock
+      )
   }
   
   private func getRealmConfigInMemory() -> Realm.Configuration {
@@ -96,6 +97,7 @@ public class RealmManager : RealmManagerProtocol {
   @MainActor
   public func clearRealmInstance() {
     RealmManager.realmInstance = nil
+    RealmManager.keyUnavailable = false
     try? realmUtilities.deleteRealmDatabase()
   }
   
@@ -114,7 +116,16 @@ public class RealmManager : RealmManagerProtocol {
       SystemLogger().message("Loading in memory instance without encryption", level: .warn)
       config = getRealmConfigInMemory()
     } else {
-      config = getRealmConfig()
+      do {
+        config = try getRealmConfig()
+      } catch {
+        // Without the key the realm on disk can't be opened, and must not be deleted:
+        // the key may still be in the Keychain (eg. the user denied the prompt this time).
+        // Run in memory for this launch instead, the file stays as it is for the next one
+        SystemLogger().message("No encryption key available, loading an in memory realm database. Nothing will be saved until the app can read the key from the Keychain", level: .fatal)
+        RealmManager.keyUnavailable = true
+        config = getRealmConfigInMemory()
+      }
     }
     
 

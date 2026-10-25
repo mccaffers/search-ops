@@ -63,3 +63,17 @@ public class MockKeychainOperationsValidResponse: KeychainOperationsProtocol {
   }
 }
 
+
+// The Keychain has no key, and refuses to store a new one (SecItemAdd returns a failure status)
+public class MockKeychainOperationsAddFails: KeychainOperationsProtocol {
+  public func SecItemCopyMatching(query: [String : Any]) throws -> Data {
+    throw KeychainManagerError.noItemFound
+  }
+  
+  public func SecItemAdd(query: [String : Any]) throws -> Bool {
+    return false
+  }
+  public func SecItemDelete(query: [String : Any]) throws -> Bool {
+    return true
+  }
+}

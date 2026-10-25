@@ -60,6 +60,8 @@ final class RealmTests: XCTestCase {
     XCTAssertNil(realm?.configuration.fileURL)
     XCTAssertNotNil(realm?.configuration.inMemoryIdentifier)
     XCTAssertNil(realm?.configuration.encryptionKey)
+    // Asking for memory isn't a missing key, so no alert
+    XCTAssertFalse(RealmManager.keyUnavailable)
   }
 
   @MainActor func testInMemoryStoreFlagOnlyAcceptsOne() throws {
@@ -93,6 +95,35 @@ final class RealmTests: XCTestCase {
     XCTAssert(realm != nil)
     XCTAssertEqual(realUtilitiesMock.deleteCalledCount, 1)
 
+  }
+  
+  // eg. the user pressed Deny on the Keychain prompt: run in memory, and keep the realm on disk for next time
+  // The on-disk realm fails as InvalidDatabase, which would delete it if the manager ever tried to open it
+  @MainActor func testKeyUnavailableLoadsInMemoryWithoutDeleting() throws {
+    let realmClientMock = MockRealmClientAlwaysFailsOnFile()
+    let realmUtilitiesMock = RealmUtilitiesMock()
+    
+    let realm = RealmManager(realmClient: realmClientMock,
+                             realmUtilities: realmUtilitiesMock,
+                             keyManagement: MockRealmKeyManagementUnavailable(),
+                             environment: [:]).getRealm()
+    
+    XCTAssertNotNil(realm?.configuration.inMemoryIdentifier)
+    XCTAssertNil(realm?.configuration.fileURL)
+    XCTAssertEqual(realmUtilitiesMock.deleteCalledCount, 0)
+    // Tells the root views to show the "Couldn't Load Your Data" alert
+    XCTAssertTrue(RealmManager.keyUnavailable)
+    
+    // Clearing the instance clears the flag, so the next realm starts afresh
+    RealmManager().clearRealmInstance()
+    XCTAssertFalse(RealmManager.keyUnavailable)
+  }
+  
+}
+
+public class MockRealmKeyManagementUnavailable : RealmKeyManagementProtocol {
+  public func generateOrGetKey() throws -> Data {
+    throw KeychainManagerError.unhandledError(status: errSecAuthFailed)
   }
   
 }

@@ -58,7 +58,7 @@ struct ElasticHelpView: View {
   
     .background(Color("Background"))
     .navigationBarTitle("Guidance")
-    .toolbarBackground(.visible, for: .navigationBar)
+    .navigationBarBackgroundVisibleBeforeiOS26()
     .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
 
   }

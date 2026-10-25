@@ -150,6 +150,73 @@ struct SavedDocumentTests {
     #expect(searches.first?.searches.count == 1)
   }
 
+  @Test func textFilterMatchesEveryWordAnywhereInTheItem() {
+    let otherHost = UUID()
+    let dataViewId = UUID()
+    let named = SavedDocument(hostId: hostId, docIndex: "trades-2026.10", docId: "abc123", title: "Big fill")
+    let plain = SavedDocument(hostId: hostId, docIndex: "logs", docId: "zzz")
+    let search = SavedSearch(hostId: hostId, searchIndex: "live-function-logs", dataViewId: dataViewId,
+                             query: "runID:\"74fc\"",
+                             fieldFilters: [FieldFilter(field: "level", value: "ERROR")])
+    let staging = SavedSearch(hostId: otherHost, searchIndex: "metrics-*", query: "cpu")
+    let groups = [
+      SavedDocumentGroup(id: hostId, hostName: "Trading", documents: [named, plain], searches: [search]),
+      SavedDocumentGroup(id: otherHost, hostName: "Staging", documents: [], searches: [staging])
+    ]
+    let names = [dataViewId: "Function Logs"]
+    func ids(_ text: String) -> Set<UUID> {
+      let filtered = SavedTextFilter.apply(text, to: groups, dataViewNames: names)
+      return Set(filtered.flatMap { $0.documents.map(\.id) + $0.searches.map(\.id) })
+    }
+
+    #expect(SavedTextFilter.apply("", to: groups) == groups)
+    #expect(SavedTextFilter.apply("   ", to: groups) == groups)
+    // Titles, ids and indices, ignoring case
+    #expect(ids("big FILL") == [named.id])
+    #expect(ids("ABC1") == [named.id])
+    #expect(ids("trades") == [named.id])
+    // Queries, filters and data view names
+    #expect(ids("74fc") == [search.id])
+    #expect(ids("error") == [search.id])
+    #expect(ids("function logs") == [search.id])
+    // A host's name matches all its items, and every word has to match
+    #expect(ids("staging") == [staging.id])
+    #expect(ids("trading logs") == [plain.id, search.id])
+    #expect(ids("staging logs").isEmpty)
+    // Hosts with no matches are left out
+    #expect(SavedTextFilter.apply("cpu", to: groups).map(\.hostName) == ["Staging"])
+  }
+
+  @Test func selectionKeepsOnlyTheTicksTheFilterShows() {
+    let document = SavedDocument(hostId: hostId, docIndex: "logs", docId: "a")
+    let search = SavedSearch(hostId: hostId, searchIndex: "logs-*")
+    let groups = [SavedDocumentGroup(id: hostId, hostName: "Production", documents: [document], searches: [search])]
+    let gone = UUID()
+    let ticked: Set<UUID> = [document.id, search.id, gone]
+
+    let split = SavedSelection.split(ticked, in: groups)
+    #expect(split.documents == [document.id])
+    #expect(split.searches == [search.id])
+
+    #expect(SavedSelection.visible(ticked, in: groups) == [document.id, search.id])
+    #expect(SavedSelection.visible(ticked, in: SavedItemFilter.searches.apply(groups)) == [search.id])
+    #expect(SavedSelection.visible(ticked, in: SavedItemFilter.documents.apply(groups)) == [document.id])
+    #expect(SavedSelection.visible(ticked, in: []).isEmpty)
+  }
+
+  @Test func deletingTheSelectionNamesWhatsTicked() {
+    #expect(SavedSelection.deleteTitle(documents: 1, searches: 0) == "Delete 1 saved document?")
+    #expect(SavedSelection.deleteTitle(documents: 0, searches: 2) == "Delete 2 saved searches?")
+    #expect(SavedSelection.deleteTitle(documents: 2, searches: 1) == "Delete 3 saved items?")
+
+    #expect(SavedSelection.deleteMessage(documents: 0, searches: 1)
+            == "The selected saved search will be removed from this Mac.")
+    #expect(SavedSelection.deleteMessage(documents: 3, searches: 0)
+            == "The 3 selected saved documents will be removed from this Mac. Documents on the cluster aren't affected.")
+    #expect(SavedSelection.deleteMessage(documents: 1, searches: 1)
+            == "The 2 selected saved items will be removed from this Mac. Documents on the cluster aren't affected.")
+  }
+
   @Test func periodTitleShowsTheFixedDates() {
     let range = DateInterval(start: now - 3600, end: now)
     let document = SavedDocument(hostId: hostId, docIndex: "logs", docId: "abc", timeRange: range)

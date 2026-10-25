@@ -68,7 +68,7 @@ struct SettingsHome: View {
         .background(Color("Background"))
         .frame(maxWidth: .infinity, alignment: .leading)
         .tint(Color("TextColor"))
-        .toolbarBackground(.visible, for: .navigationBar)
+        .navigationBarBackgroundVisibleBeforeiOS26()
         .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
         .toolbarBackground(Color("TabBarColor"), for: .tabBar)
         

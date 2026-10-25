@@ -14,11 +14,25 @@ struct MainRoutingView: View {
   @AppStorage("showInitialScreen") private var showInitialScreen: Bool = true
   @AppStorage("lastSeenVersionNotes") private var lastSeenVersionNotes: String = ""
   
+  // The release notes shown at launch, until the user has seen them once.
+  // Must match a VersionSheetEnum raw value.
+  static let currentReleaseNotes = "4.3"
+  
   private enum VersionSheetEnum : String, Identifiable {
-    case Version1_94
-    case Version2_0
-    case Version3_0
+    case Version1_94 = "1.94"
+    case Version2_0 = "2.0"
+    case Version3_0 = "3.0"
+    case Version4_3 = "4.3"
     public var id: String { rawValue }
+  }
+  
+  private static let currentVersionSheet = VersionSheetEnum(rawValue: currentReleaseNotes)
+  
+  // Not on a launch where the encryption key couldn't be read: ContentView's alert telling the
+  // user their data isn't loaded can't show while a sheet is up. The notes stay unseen, so they
+  // show on the next launch instead
+  static func releaseNotesDue(lastSeen: String, keyUnavailable: Bool) -> Bool {
+    return !keyUnavailable && lastSeen != currentReleaseNotes
   }
 
   @State private var versionSheet : VersionSheetEnum?
@@ -34,13 +48,19 @@ struct MainRoutingView: View {
       }
     }.onAppear {
       
-      if  "3.0" != lastSeenVersionNotes {
-        showingVersionSheet = true
-      }
+      // Without a matching sheet nothing would clear showingVersionSheet,
+      // leaving the tabs redacted and disabled
+      assert(Self.currentVersionSheet != nil, "No VersionSheetEnum case for \(Self.currentReleaseNotes)")
       
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-        if "3.0" != lastSeenVersionNotes {
-          versionSheet = .Version3_0
+      if let sheet = Self.currentVersionSheet,
+         Self.releaseNotesDue(lastSeen: lastSeenVersionNotes,
+                              keyUnavailable: RealmManager.keyUnavailable) {
+        showingVersionSheet = true
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+          if Self.currentReleaseNotes != lastSeenVersionNotes {
+            versionSheet = sheet
+          }
         }
       }
       
@@ -77,6 +97,19 @@ struct MainRoutingView: View {
   
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
               lastSeenVersionNotes = "3.0"
+            }
+            
+            withAnimation {
+              showingVersionSheet = false
+            }
+          }
+        
+      case .Version4_3:
+        Version_4_3(showContinueButton:true)
+          .onDisappear {
+  
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+              lastSeenVersionNotes = sheet.rawValue
             }
             
             withAnimation {

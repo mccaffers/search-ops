@@ -25,137 +25,14 @@ struct Version_3_0: View {
   var body: some View {
     
     ZStack {
-      NavigationStack {
-        ScrollView {
-          VStack (spacing:0) {
-            
-            VStack(alignment: .leading, spacing:5) {
-              VStack(alignment:.leading, spacing:10) {
-                
-                HStack {
-                  Text("Open Source")
-                    .foregroundStyle(LinearGradient(colors: [Color("LabelBackgroundBorder"), .purple], startPoint: .trailing, endPoint: .leading))
-                    .font(.system(size: 26))
-                  Spacer()
-                  
-                }
-                
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .bold()
-                .padding(.top, 10)
-                
-                VStack(alignment:.leading, spacing:15) {
-                  VStack(alignment:.leading, spacing:5) {
-                    Text("SearchOps is now completely Open Source, available to see the entire application on Github with a Convenience Pricing Model")
-                      .padding(.bottom, 10)
-                    
-                    Image("github_repo")
-                      .resizable()
-                      .aspectRatio(contentMode: .fit)
-                      .frame(maxWidth: 400)
-                      .padding(2)
-                      .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                          .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
-                      )
-                      .padding(.bottom, 10)
-                    Text("You can view all of the code on github.com/mccaffers/search-ops")
-                      .padding(.bottom, 10)
-                    
-                    Text("The application is now trialing a **Convenience Pricing Model**")
-                      .padding(.bottom, 10)
-                    
-                    Text("Source code is open and free on Github. Users can pay a one time small fee (a few pounds/dollars) to skip the hassle of compiling and installing from source by getting through the App Store with automatic updates. This provides insight into the underlying codebase and supports further development, thank you!")
-                      .padding(.bottom, 10)
-                    
-                  }
-                }.padding(.top, 5)
-                
-              }
-              
-              HostAddDivider()
-                .padding(.vertical, 10)
-              
-              VStack(alignment: .leading,spacing:10) {
-                HStack {
-                  GradientButtonView(title: "iPhone & iPad")
-                  GradientButtonView(title: "macOS")
-                }
-                
-                HStack {
-                  GradientButtonView(title: "No Tracking or Analytics")
-                  GradientButtonView(title: "Open Source")
-                }
-                
-              }
-              
-              if showContinueButton {
-                
-                HostAddDivider()
-                  .padding(.vertical, 10)
-                
-                if !orientation.isLandscape {
-                  
-                  VStack {
-                    Image(systemName: "hand.draw")
-                    Text("Swipe down to close")
-                  }
-                  .frame(maxWidth: .infinity)
-                  .font(.footnote)
-                  .foregroundStyle(Color("TextSecondary"))
-                  .padding(.bottom, 10)
-                } else {
-                  Button {
-                    dismiss()
-                  } label: {
-                    Text("Continue")
-                      .font(.system(size: 20))
-                      .foregroundColor(.white)
-                      .padding(.vertical, 15)
-                      .frame(maxWidth: .infinity)
-                      .background(Color("Button"))
-                      .cornerRadius(5)
-                  }
-                  .frame(maxWidth: .infinity, alignment: .center)
-                  .padding(.bottom, 20)
-                }
-              }
-              
-              
-              Spacer()
-              
-            }
-            .padding(.horizontal, 20)
-            
-          }
+      if showContinueButton {
+        // Shown as the launch sheet, so it needs its own navigation bar
+        NavigationStack {
+          content
         }
-        .toolbar {
-          ToolbarItem(placement: .navigationBarTrailing) {
-            Text("June 2025")
-              .foregroundColor(Color("TextSecondary"))
-          }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
-        
-        .background(Color("Background").edgesIgnoringSafeArea(.all))
-        
-        .frame(maxWidth: .infinity)
-        .onAppear {
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {  // Delay of 2 seconds
-            
-            if !showContinueButton && !showFireworks {
-              fireworkSettings.showFireworks = true
-            }
-            showFireworks = true
-            
-          }
-          
-          
-        }
+      } else {
+        // Pushed from Release Notes, so it uses the Settings stack
+        content
       }
       
       
@@ -184,6 +61,140 @@ struct Version_3_0: View {
        
       }
       
+      
+      
+    }
+  }
+
+  private var content: some View {
+    ScrollView {
+      VStack (spacing:0) {
+        Text("June 2025")
+          .font(.subheadline)
+          .foregroundStyle(Color("TextSecondary"))
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, 20)
+          .padding(.top, 5)
+        
+        VStack(alignment: .leading, spacing:5) {
+          VStack(alignment:.leading, spacing:10) {
+            
+            HStack {
+              Text("Open Source")
+                .foregroundStyle(LinearGradient(colors: [Color("LabelBackgroundBorder"), .purple], startPoint: .trailing, endPoint: .leading))
+                .font(.system(size: 26))
+              Spacer()
+              
+            }
+            
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .bold()
+            .padding(.top, 10)
+            
+            VStack(alignment:.leading, spacing:15) {
+              VStack(alignment:.leading, spacing:5) {
+                Text("SearchOps is now completely Open Source, available to see the entire application on Github with a Convenience Pricing Model")
+                  .padding(.bottom, 10)
+                
+                Image("github_repo")
+                  .resizable()
+                  .aspectRatio(contentMode: .fit)
+                  .frame(maxWidth: 400)
+                  .padding(2)
+                  .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                      .stroke(LinearGradient(colors: [Color("LabelBackgroundBorder"),  Color("Purple")], startPoint: .bottomTrailing, endPoint: .topLeading), lineWidth: 2)
+                  )
+                  .padding(.bottom, 10)
+                Text("You can view all of the code on github.com/mccaffers/search-ops")
+                  .padding(.bottom, 10)
+                
+                Text("The application is now trialing a **Convenience Pricing Model**")
+                  .padding(.bottom, 10)
+                
+                Text("Source code is open and free on Github. Users can pay a one time small fee (a few pounds/dollars) to skip the hassle of compiling and installing from source by getting through the App Store with automatic updates. This provides insight into the underlying codebase and supports further development, thank you!")
+                  .padding(.bottom, 10)
+                
+              }
+            }.padding(.top, 5)
+            
+          }
+          
+          HostAddDivider()
+            .padding(.vertical, 10)
+          
+          VStack(alignment: .leading,spacing:10) {
+            HStack {
+              GradientButtonView(title: "iPhone & iPad")
+              GradientButtonView(title: "macOS")
+            }
+            
+            HStack {
+              GradientButtonView(title: "No Tracking or Analytics")
+              GradientButtonView(title: "Open Source")
+            }
+            
+          }
+          .padding(.bottom, 20)
+          
+          if showContinueButton {
+            
+            HostAddDivider()
+              .padding(.vertical, 10)
+            
+            if !orientation.isLandscape {
+              
+              VStack {
+                Image(systemName: "hand.draw")
+                Text("Swipe down to close")
+              }
+              .frame(maxWidth: .infinity)
+              .font(.footnote)
+              .foregroundStyle(Color("TextSecondary"))
+              .padding(.bottom, 10)
+            } else {
+              Button {
+                dismiss()
+              } label: {
+                Text("Continue")
+                  .font(.system(size: 20))
+                  .foregroundColor(.white)
+                  .padding(.vertical, 15)
+                  .frame(maxWidth: .infinity)
+                  .background(Color("Button"))
+                  .cornerRadius(5)
+              }
+              .frame(maxWidth: .infinity, alignment: .center)
+              .padding(.bottom, 20)
+            }
+          }
+          
+          
+          Spacer()
+          
+        }
+        .padding(.horizontal, 20)
+        
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .navigationTitle(title)
+    .navigationBarTitleDisplayMode(.large)
+    .navigationBarBackgroundVisibleBeforeiOS26()
+    .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
+    
+    .background(Color("Background").edgesIgnoringSafeArea(.all))
+    
+    .frame(maxWidth: .infinity)
+    .onAppear {
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {  // Delay of 2 seconds
+        
+        if !showContinueButton && !showFireworks {
+          fireworkSettings.showFireworks = true
+        }
+        showFireworks = true
+        
+      }
       
       
     }

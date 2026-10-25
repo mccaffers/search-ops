@@ -19,6 +19,10 @@ struct SearchQueryBuilder: View {
   @Binding var loading: Bool
   
   var selectedIndex : String
+  /// Whether the search came from the Saved tab, or has been saved
+  var isSavedSearch = false
+  /// Whether it differs from the saved search it came from
+  var hasUnsavedChanges = false
   
   @EnvironmentObject var selectedHost: HostDetailsWrap
   
@@ -54,6 +58,10 @@ struct SearchQueryBuilder: View {
   @State private var scrollViewProxy: ScrollViewProxy? = nil
   
   var stopTimer : () -> ()
+
+  /// Grid, Timer and Save show just an icon, so they can stay narrow and leave Search most of the row
+  static let iconButtonWidth = CGFloat(44)
+  static let iconButtonMaxWidth = CGFloat(52)
 
   
   func abbreviateTimeUnit(_ unit: TimeUnit) -> String {
@@ -148,9 +156,11 @@ struct SearchQueryBuilder: View {
           HStack(spacing:4) {
             Image(systemName: "list.dash")
             Text("Fields")
+              .lineLimit(1)
           }
+          .fixedSize()
+          .padding(.horizontal, 14)
           .frame(height: 50)
-          .frame(maxWidth: .infinity)
           .foregroundColor(Color("ButtonText").opacity(buttonDisabled() ? 0.4 : 1))
           .background(Color("Button"))
           .cornerRadius(5)
@@ -162,23 +172,16 @@ struct SearchQueryBuilder: View {
           showingGrid.toggle()
         } label: {
           
-          VStack (spacing:4) {
-            HStack {
-              Image(systemName: !showingGrid ? "square.grid.3x3.fill" : "line.3.horizontal")
-              
-              
-              Text(!showingGrid ? "Grid" : "List")
-            }
-            
-          }
+          Image(systemName: !showingGrid ? "square.grid.3x3.fill" : "line.3.horizontal")
           .frame(height: 50)
-          .frame(maxWidth: .infinity)
+          .frame(minWidth: Self.iconButtonWidth, maxWidth: Self.iconButtonMaxWidth)
           .foregroundColor(Color("ButtonText").opacity(buttonDisabled() ? 0.4 : 1))
           .background(Color("Button"))
           .cornerRadius(5)
           
         }
         .disabled(buttonDisabled())
+        .accessibilityLabel(!showingGrid ? "Grid" : "List")
 
         Button  {
           if let schedule = schedule {
@@ -200,19 +203,17 @@ struct SearchQueryBuilder: View {
               }
               
             } else {
-              HStack(spacing:4) {
-                Image(systemName: "clock.arrow.2.circlepath")
-                Text("Timer")
-              }
+              Image(systemName: "clock.arrow.2.circlepath")
             }
           }
           .frame(height: 50)
-          .frame(maxWidth: .infinity)
+          .frame(minWidth: Self.iconButtonWidth, maxWidth: Self.iconButtonMaxWidth)
           .foregroundColor(Color("ButtonText").opacity(buttonDisabled() ? 0.4 : 1))
           .background(schedule == nil ? Color("Button") : Color("WarnTextHighlighted"))
           .cornerRadius(5)
         }
         .disabled(buttonDisabled())
+        .accessibilityLabel(schedule == nil ? "Timer" : "Stop Timer")
         
         Button  {
           makeSearchRequest=true
@@ -246,6 +247,7 @@ struct SearchQueryBuilder: View {
               HStack (spacing:3){
                 Image(systemName: "magnifyingglass")
                 Text("Search")
+                  .lineLimit(1)
               }
               .frame(height: 40)
             }
@@ -257,6 +259,28 @@ struct SearchQueryBuilder: View {
             
           }
         }.disabled(buttonDisabled())
+
+        // Just the icon, filled once the search is saved, with a dot when it's changed since
+        Button {
+          presentedSheet = .saveSearch
+        } label: {
+          Image(systemName: isSavedSearch ? "bookmark.fill" : "bookmark")
+            .frame(height: 50)
+            .frame(minWidth: Self.iconButtonWidth, maxWidth: Self.iconButtonMaxWidth)
+            .foregroundColor(Color("ButtonText").opacity(buttonDisabled() ? 0.4 : 1))
+            .background(Color("Button"))
+            .cornerRadius(5)
+            .overlay(alignment: .topTrailing) {
+              if isSavedSearch && hasUnsavedChanges {
+                Circle()
+                  .fill(Color("AccentColor"))
+                  .frame(width: 8, height: 8)
+                  .padding(7)
+              }
+            }
+        }
+        .disabled(buttonDisabled())
+        .accessibilityLabel(!isSavedSearch ? "Save Search" : hasUnsavedChanges ? "Update Saved Search" : "Saved Search")
       }
     }
   }

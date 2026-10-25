@@ -13,13 +13,15 @@ struct SearchNavigationStack: View {
   
   @ObservedObject var searchHistoryManager : SearchHistoryDataManager
   @ObservedObject var filterHistoryDataManager : FilterHistoryDataManager
+  @ObservedObject var searchHandoff : iosSearchHandoff
   @Binding var hasShownInitialScreen : Bool
   
   var body: some View {
     
     NavigationStack {
       SearchMainView(searchHistoryManager: searchHistoryManager,
-                     filterHistoryDataManager: filterHistoryDataManager, 
+                     filterHistoryDataManager: filterHistoryDataManager,
+                     searchHandoff: searchHandoff,
                      hasShownInitialScreen: $hasShownInitialScreen)
     }
     .frame(maxWidth: .infinity, alignment: .leading)

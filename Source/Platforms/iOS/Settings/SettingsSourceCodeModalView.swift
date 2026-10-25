@@ -56,7 +56,7 @@ struct SettingsSourceCodeModalView: View {
     }.background(Color("Background"))
       .navigationTitle("Open Source")
       .navigationBarTitleDisplayMode(.large)
-      .toolbarBackground(.visible, for: .navigationBar)
+      .navigationBarBackgroundVisibleBeforeiOS26()
       .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
   }
 }

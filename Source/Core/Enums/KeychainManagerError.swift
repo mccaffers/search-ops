@@ -12,4 +12,5 @@ public enum KeychainManagerError: Error, Equatable {
     case noItemFound
     case unexpectedData
     case unhandledError(status: OSStatus)
+    case addFailed
 }

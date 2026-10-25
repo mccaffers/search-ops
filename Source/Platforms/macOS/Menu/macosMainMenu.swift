@@ -74,6 +74,17 @@ struct macosMainMenu: View {
             text: "Saved",
             buttonColor : sidebar == .saved ? Color("ButtonHighlighted") : Color("Button")
         )
+
+        CustomButtonView(
+            action: {
+              sidebar = .dashboards
+              sidebarHistory = nil
+              serverObjects.refresh()
+            },
+            iconName: "square.grid.2x2",
+            text: "Dash",
+            buttonColor : sidebar == .dashboards ? Color("ButtonHighlighted") : Color("Button")
+        )
   
 
         CustomButtonView(

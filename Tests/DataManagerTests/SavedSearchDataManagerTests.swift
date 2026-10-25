@@ -207,6 +207,20 @@ struct SavedSearchDataManagerTests {
     #expect(manager.all().map(\.query) == ["b"])
   }
 
+  @Test func deleteIdsRemovesOnlyThoseSearches() throws {
+    let a = try manager.save(draft("a"))
+    let b = try manager.save(draft("b"))
+    try manager.save(draft("c"))
+
+    manager.delete(ids: [a.id, b.id, UUID()])
+
+    #expect(manager.all().map(\.query) == ["c"])
+    // No ids, or ids already gone, change nothing
+    manager.delete(ids: [])
+    manager.delete(ids: [a.id])
+    #expect(manager.all().map(\.query) == ["c"])
+  }
+
   @Test func deleteAllRemovesEveryHostsSearches() throws {
     try manager.save(draft("a"))
     try manager.save(draft("b", host: UUID()))

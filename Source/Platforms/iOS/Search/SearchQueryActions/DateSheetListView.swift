@@ -116,7 +116,7 @@ struct DateSheetListView: View {
 		.navigationTitle(title)
 #if os(iOS)
 		.navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(.visible, for: .navigationBar)
+        .navigationBarBackgroundVisibleBeforeiOS26()
         .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
       #endif
 		.padding(.top, 10)

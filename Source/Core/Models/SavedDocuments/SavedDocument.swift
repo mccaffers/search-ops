@@ -157,6 +157,81 @@ public enum SavedItemFilter: String, CaseIterable {
   }
 }
 
+/// Free text typed above the Saved list, matched against the saved items as they're kept on this device
+public enum SavedTextFilter {
+  /// The items matching every word of the text, ignoring case, leaving out hosts that then have none.
+  /// A word can match a title, query, index, document id, filter, data view name or the host's name.
+  /// `dataViewNames` gives the names of the data views the items were saved from.
+  public static func apply(_ text: String, to groups: [SavedDocumentGroup],
+                           dataViewNames: [UUID: String] = [:]) -> [SavedDocumentGroup] {
+    let words = text.split(whereSeparator: \.isWhitespace).map(String.init)
+    guard !words.isEmpty else { return groups }
+
+    func matches(_ fields: [String?]) -> Bool {
+      // Joined on a newline so a word can't match across two fields
+      let haystack = fields.compactMap { $0 }.joined(separator: "\n")
+      return words.allSatisfy { haystack.localizedCaseInsensitiveContains($0) }
+    }
+
+    return groups.compactMap { group in
+      let documents = group.documents.filter { document in
+        matches([group.hostName, document.title, document.displayTitle, document.docIndex, document.docId,
+                 document.searchIndex, document.dataViewId.flatMap { dataViewNames[$0] }])
+      }
+      let searches = group.searches.filter { search in
+        matches([group.hostName, search.title, search.displayTitle, search.query, search.searchIndex,
+                 search.dataViewId.flatMap { dataViewNames[$0] }]
+                + search.fieldFilters.flatMap { [$0.field, $0.value] })
+      }
+      guard !documents.isEmpty || !searches.isEmpty else { return nil }
+      return SavedDocumentGroup(id: group.id, hostName: group.hostName, documents: documents, searches: searches)
+    }
+  }
+}
+
+/// Saved items ticked in the Saved tab, to delete together
+public enum SavedSelection {
+  /// The ticked ids the groups still show, eg. after the switch changes, so nothing hidden gets deleted
+  public static func visible(_ ids: Set<UUID>, in groups: [SavedDocumentGroup]) -> Set<UUID> {
+    let split = split(ids, in: groups)
+    return split.documents.union(split.searches)
+  }
+
+  /// The ticked ids the groups show, as documents and searches, as they're kept apart
+  public static func split(_ ids: Set<UUID>, in groups: [SavedDocumentGroup]) -> (documents: Set<UUID>,
+                                                                                  searches: Set<UUID>) {
+    let documents = Set(groups.flatMap { $0.documents.map(\.id) })
+    let searches = Set(groups.flatMap { $0.searches.map(\.id) })
+    return (ids.intersection(documents), ids.intersection(searches))
+  }
+
+  /// eg. "Delete 3 saved items?"
+  public static func deleteTitle(documents: Int, searches: Int) -> String {
+    "Delete \(documents + searches) \(noun(documents: documents, searches: searches))?"
+  }
+
+  /// eg. "The 3 selected saved items will be removed from this Mac. Documents on the cluster aren't affected."
+  public static func deleteMessage(documents: Int, searches: Int) -> String {
+    let count = documents + searches
+    let noun = noun(documents: documents, searches: searches)
+    let items = count == 1 ? "The selected \(noun)" : "The \(count) selected \(noun)"
+    let cluster = documents > 0 ? " Documents on the cluster aren't affected." : ""
+    return "\(items) will be removed from this Mac.\(cluster)"
+  }
+
+  /// "saved documents" or "saved searches" when they're all one kind, otherwise "saved items"
+  static func noun(documents: Int, searches: Int) -> String {
+    let one = documents + searches == 1
+    if searches == 0 {
+      return one ? "saved document" : "saved documents"
+    }
+    if documents == 0 {
+      return one ? "saved search" : "saved searches"
+    }
+    return "saved items"
+  }
+}
+
 /// One host's saved documents and searches
 public struct SavedDocumentGroup: Identifiable, Equatable {
   /// The host's id
