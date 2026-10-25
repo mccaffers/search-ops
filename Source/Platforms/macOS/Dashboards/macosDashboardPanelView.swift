@@ -20,29 +20,44 @@ struct macosDashboardPanelView: View {
   /// The data view it was saved from, nil when there's none or it's been deleted
   var dataViewName: String?
   var rowLimit: Int
-  var width: DashboardPanelWidth
-  var height: DashboardPanelHeight
+  /// Its place on the grid, for the size choices in its edit mode menu
+  var frame: DashboardGridFrame
   /// Changes when the dashboard is refreshed
   var refreshToken: UUID
+  /// Edit mode: shows the Edit and Remove buttons, right-clicking the header sizes the panel, and column borders can
+  /// be dragged
+  var isEditing: Bool
+  /// Column widths set on this panel, by `DashboardColumn.savedKey`
+  var columnWidths: [String: Double]
+  var onSetColumnWidths: ([String: Double]) -> Void
+  /// Dragging the header moves the panel
+  var moveHandle: macosDashboardMoveHandle
   var onEdit: () -> Void
-  var onResize: (DashboardPanelWidth, DashboardPanelHeight) -> Void
+  /// A new width in columns and height in rows
+  var onResize: (Int, Int) -> Void
   var onRemove: () -> Void
+
+  /// Around the panel's contents. The grid lines its resize arrows up with it.
+  static let padding: CGFloat = 12
+  static let footerHeight: CGFloat = 14
 
   @State private var result: DashboardPanelResult? = nil
   @State private var isLoading = false
   @State private var lastRun: Date? = nil
-  /// Replaced to search again from the panel's menu
-  @State private var panelRefresh = UUID()
+  @State private var hoveringTitle = false
+  @State private var hoveringGrip = false
+  /// Each column fitted to the documents found, measured once per search
+  @State private var automaticWidths: [DashboardColumn: Double] = [:]
 
   /// What the panel's search depends on. A change searches again, cancelling a search still going.
   struct RunKey: Equatable {
     let search: SavedSearch
     let rowLimit: Int
-    let refresh: [UUID]
+    let refresh: UUID
   }
 
   private var runKey: RunKey {
-    RunKey(search: search, rowLimit: rowLimit, refresh: [refreshToken, panelRefresh])
+    RunKey(search: search, rowLimit: rowLimit, refresh: refreshToken)
   }
 
   /// eg. "Production · logs-* · Last hour"
@@ -62,15 +77,29 @@ struct macosDashboardPanelView: View {
     VStack(alignment: .leading, spacing: 8) {
       header
       content
-        .frame(height: macosDashboardTableView.height(rowLimit: rowLimit))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .clipped()
       footer
     }
-    .padding(12)
-    .frame(maxWidth: .infinity, alignment: .topLeading)
+    .padding(Self.padding)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(RoundedRectangle(cornerRadius: 5).fill(Color("Button")))
+    .overlay(alignment: .top) {
+      if moveHandle.isEnabled {
+        grip
+      }
+    }
+    .onChange(of: moveHandle.isEnabled) { isEnabled in
+      // Edit mode ended under the pointer, so the hand it pushed has to go
+      if !isEnabled && hoveringGrip {
+        hoveringGrip = false
+        NSCursor.pop()
+      }
+    }
     .task(id: runKey) {
       await run()
     }
+    .preference(key: DashboardPanelLoadingKey.self, value: isLoading)
   }
 
   private var header: some View {
@@ -88,50 +117,97 @@ struct macosDashboardPanelView: View {
           .truncationMode(.middle)
       }
       .help(search.query.isEmpty ? search.displayTitle : "\(search.displayTitle)\n\(search.query)")
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.trailing, 8)
+      // The title and the space beside it are the handle the panel is dragged by
+      .contentShape(Rectangle())
+      .onHover { inside in
+        // Only pops the hand it pushed
+        let showHand = inside && moveHandle.isEnabled
+        guard showHand != hoveringTitle else { return }
+        hoveringTitle = showHand
+        if showHand {
+          NSCursor.openHand.push()
+        } else {
+          NSCursor.pop()
+        }
+      }
+      .gesture(moveHandle.gesture, including: moveHandle.isEnabled ? .all : .subviews)
 
-      Spacer(minLength: 8)
-
-      Button("Edit", action: onEdit)
-        .buttonStyle(macosDataViewButtonStyle())
-        .disabled(host == nil)
-        .help(host == nil
-              ? "The host this search was saved from no longer exists"
-              : "Open this search in the Search tab to change it")
-
-      macosDashboardMenuButton {
-        Button("Refresh") { panelRefresh = UUID() }
-        Button("Edit in Search", action: onEdit)
+      if isEditing {
+        Button("Edit", action: onEdit)
+          .buttonStyle(macosDataViewButtonStyle())
           .disabled(host == nil)
-        Divider()
-        SwiftUI.Picker("Width", selection: Binding(get: { width }, set: { onResize($0, height) })) {
-          ForEach(DashboardPanelWidth.allCases, id: \.self) { option in
-            Text(option.title).tag(option)
-          }
-        }
-        SwiftUI.Picker("Height", selection: Binding(get: { height }, set: { onResize(width, $0) })) {
-          ForEach(DashboardPanelHeight.allCases, id: \.self) { option in
-            Text("\(option.title), \(option.rowLimit) documents").tag(option)
-          }
-        }
-        Divider()
-        Button("Remove from Dashboard", role: .destructive, action: onRemove)
+          .help(host == nil
+                ? "The host this search was saved from no longer exists"
+                : "Open this search in the Search tab to change it")
+        Button("Remove", action: onRemove)
+          .buttonStyle(macosDataViewButtonStyle(destructive: true))
+          .help("Remove this search from the dashboard")
       }
     }
+    .modifier(macosDashboardPanelSizeMenu(isEnabled: isEditing) {
+      SwiftUI.Picker("Width", selection: Binding(get: { frame.w }, set: { onResize($0, frame.h) })) {
+        ForEach(DashboardLayout.widthPresets, id: \.w) { option in
+          Text(option.title).tag(option.w)
+        }
+      }
+      SwiftUI.Picker("Height", selection: Binding(get: { frame.h }, set: { onResize(frame.w, $0) })) {
+        ForEach(DashboardLayout.heightPresets, id: \.documents) { option in
+          Text("\(option.title), \(option.documents) documents").tag(DashboardLayout.height(fitting: option.documents))
+        }
+      }
+      Button("Reset Column Widths") { onSetColumnWidths([:]) }
+        .disabled(columnWidths.isEmpty)
+    })
+  }
+
+  /// Three lines along the top edge in edit mode, showing the panel can be dragged by its header. They light up
+  /// while the header is hovered or the panel is moving, and can be dragged themselves.
+  private var grip: some View {
+    let highlighted = hoveringTitle || hoveringGrip || moveHandle.isMoving
+    return Image(systemName: "line.3.horizontal")
+      .font(.system(size: 11, weight: .semibold))
+      .foregroundColor(Color(highlighted ? "TextColor" : "TextSecondary"))
+      .frame(width: 88, height: 12)
+      .background(RoundedRectangle(cornerRadius: 5).fill(highlighted ? Color("ButtonHighlighted") : Color.clear))
+      .contentShape(Rectangle())
+      .onHover { inside in
+        guard inside != hoveringGrip else { return }
+        hoveringGrip = inside
+        if inside {
+          NSCursor.openHand.push()
+        } else {
+          NSCursor.pop()
+        }
+      }
+      .gesture(moveHandle.gesture)
+      .help("Drag to move this panel")
   }
 
   @ViewBuilder
   private var content: some View {
     if let result = result, let error = result.error {
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(spacing: 6) {
+        Image(systemName: "exclamationmark.triangle.fill")
+          .font(.system(size: 22))
+          .foregroundColor(.red)
+          .padding(.bottom, 2)
         Text(error.title)
-          .font(.system(size: 12, weight: .semibold))
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundColor(Color("TextColor"))
         Text(error.message)
           .font(.system(size: 12))
+          .foregroundColor(Color("TextSecondary"))
+          .multilineTextAlignment(.center)
           .lineLimit(4)
           .textSelection(.enabled)
       }
-      .foregroundColor(Color("WarnText"))
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 14)
+      .frame(maxWidth: 420)
+      .background(RoundedRectangle(cornerRadius: 5).fill(Color("BackgroundAlt")))
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
     } else if let result = result {
       if result.rows.isEmpty {
         Text(search.period == nil ? "No documents found" : "No documents in this time period")
@@ -139,7 +215,22 @@ struct macosDashboardPanelView: View {
           .foregroundColor(Color("TextSecondary"))
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
-        macosDashboardTableView(columns: result.columns, rows: result.rows, rowLimit: rowLimit)
+        let preferred = DashboardColumnWidths.preferred(columns: result.columns,
+                                                        automatic: automaticWidths,
+                                                        search: search.columnWidths,
+                                                        panel: columnWidths)
+        macosDashboardTableView(columns: result.columns,
+                                rows: result.rows,
+                                rowLimit: rowLimit,
+                                preferredWidths: preferred.widths,
+                                setColumns: preferred.set,
+                                isEditing: isEditing,
+                                onResizeColumn: { column, width in
+                                  var widths = columnWidths
+                                  widths[column.savedKey] = width
+                                  onSetColumnWidths(widths)
+                                },
+                                onFitColumns: { fitColumns(result) })
           .opacity(isLoading ? 0.6 : 1)
       }
     } else {
@@ -172,7 +263,18 @@ struct macosDashboardPanelView: View {
     }
     .font(.system(size: 11))
     .foregroundColor(Color("TextSecondary"))
-    .frame(minHeight: 14)
+    .frame(minHeight: Self.footerHeight)
+    // Room for the resize arrows the grid puts on this line in edit mode
+    .padding(.trailing, moveHandle.isEnabled ? 22 : 0)
+  }
+
+  /// Every column but the last, which fills the row, sized to its whole header and documents
+  private func fitColumns(_ result: DashboardPanelResult) {
+    let fitted = DashboardColumnWidths.fittedToContents(columns: Array(result.columns.dropLast()),
+                                                        rows: Array(result.rows.prefix(rowLimit))) {
+      Double(macosTableSearchView.measureText($0, bold: $1))
+    }
+    onSetColumnWidths(columnWidths.merging(fitted) { _, new in new })
   }
 
   /// Searches for the panel's documents, waiting its turn so a big dashboard doesn't search all at once
@@ -194,34 +296,35 @@ struct macosDashboardPanelView: View {
     }
     // A newer search took over, or the panel went away
     guard let found = found, !Task.isCancelled else { return }
+    automaticWidths = DashboardColumnWidths.automatic(columns: found.columns, rows: Array(found.rows.prefix(rowLimit))) {
+      Double(macosTableSearchView.measureText($0, bold: $1))
+    }
     result = found
     lastRun = Date.now
     isLoading = false
   }
 }
 
-/// "…" opening a panel's menu, filled on hover
-struct macosDashboardMenuButton<Items: View>: View {
+/// True while any panel on the dashboard is searching, so the Refresh button can show it
+struct DashboardPanelLoadingKey: PreferenceKey {
+  static let defaultValue = false
+
+  static func reduce(value: inout Bool, nextValue: () -> Bool) {
+    value = value || nextValue()
+  }
+}
+
+/// Right-clicking a panel's header in edit mode offers its sizes and resets its column widths
+private struct macosDashboardPanelSizeMenu<Items: View>: ViewModifier {
+  var isEnabled: Bool
   @ViewBuilder var items: Items
 
-  @State private var hovering = false
-
-  var body: some View {
-    Menu {
-      items
-    } label: {
-      Image(systemName: "ellipsis")
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundColor(Color(hovering ? "TextColor" : "TextSecondary"))
-        .frame(width: 24, height: 24)
-        .background(RoundedRectangle(cornerRadius: 5).fill(hovering ? Color("ButtonHighlighted") : Color.clear))
-        .contentShape(Rectangle())
+  func body(content: Content) -> some View {
+    if isEnabled {
+      content.contextMenu { items }
+    } else {
+      content
     }
-    .menuStyle(.borderlessButton)
-    .menuIndicator(.hidden)
-    .fixedSize()
-    .onHover { hovering = $0 }
-    .help("More actions")
   }
 }
 #endif

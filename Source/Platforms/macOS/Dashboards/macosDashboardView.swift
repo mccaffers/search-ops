@@ -7,7 +7,6 @@
 // ---------------------------------------
 
 import SwiftUI
-import UniformTypeIdentifiers
 
 #if os(macOS)
 
@@ -27,12 +26,12 @@ struct macosDashboardView: View {
   @State private var message: String? = nil
   /// Replaced to make every panel search again
   @State private var refreshToken = UUID()
-  /// The panel being dragged to a new place
-  @State private var dragging: UUID? = nil
+  /// Edit mode: panels can be moved, resized and removed. A dashboard always opens in view mode.
+  @State private var isEditing = false
+  /// Some panel is still searching, after a refresh or as the dashboard opens
+  @State private var isRefreshing = false
 
   private let manager = DashboardDataManager()
-
-  static let gridSpacing: CGFloat = 10
 
   private var hostNames: [UUID: String] {
     Dictionary(serverObjects.items.filter { !$0.isInvalidated }.map { ($0.id, $0.name) },
@@ -65,51 +64,27 @@ struct macosDashboardView: View {
         if dashboard.panels.isEmpty {
           emptyState
         } else {
-          layoutBar(dashboard)
-
-          ScrollView {
-            grid(dashboard)
-              .padding(.bottom, 10)
-          }
-          // Dropped between panels, or outside them
-          .onDrop(of: [UTType.text], delegate: macosDashboardDropOutsideDelegate(dragging: $dragging))
+          macosDashboardGridView(panels: dashboard.panels,
+                                 isEditing: isEditing,
+                                 onCommit: { frames in
+                                   update { try manager.setLayout(id: dashboardId, frames: frames) }
+                                 },
+                                 onDoneEditing: { isEditing = false },
+                                 panel: panelView)
+            .onPreferenceChange(DashboardPanelLoadingKey.self) { isRefreshing = $0 }
         }
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .onAppear(perform: reload)
+    // Nothing left to arrange
+    .onChange(of: dashboard?.panels.isEmpty ?? true) { isEmpty in
+      if isEmpty {
+        isEditing = false
+      }
+    }
     .task(id: dashboard?.refreshSeconds ?? 0) {
       await autoRefresh(every: dashboard?.refreshSeconds ?? 0)
-    }
-  }
-
-  /// Columns and auto refresh, under the title
-  private func layoutBar(_ dashboard: Dashboard) -> some View {
-    HStack(spacing: 10) {
-      HStack(spacing: 6) {
-        Text("Columns")
-          .font(.system(size: 12))
-          .foregroundColor(Color("TextSecondary"))
-        HStack(spacing: 2) {
-          ForEach(Array(Dashboard.columnRange), id: \.self) { count in
-            macosSettingsSegment(title: "\(count)", selected: dashboard.columns == count) {
-              update { try manager.setColumns(id: dashboardId, columns: count) }
-            }
-          }
-        }
-        .padding(2)
-        .background(RoundedRectangle(cornerRadius: 5).fill(Color("Button")))
-      }
-
-      macosDashboardRefreshMenu(seconds: dashboard.refreshSeconds) { seconds in
-        update { try manager.setRefreshInterval(id: dashboardId, seconds: seconds) }
-      }
-
-      Spacer()
-
-      Text("Drag a panel to move it")
-        .font(.system(size: 11))
-        .foregroundColor(Color("TextSecondary"))
     }
   }
 
@@ -124,20 +99,39 @@ struct macosDashboardView: View {
 
       Spacer()
 
-      if dashboard?.panels.isEmpty == false {
-        Button {
-          refreshToken = UUID()
-        } label: {
-          HStack(spacing: 4) {
-            Image(systemName: "arrow.clockwise")
-            Text("Refresh")
-          }
+      if let dashboard = dashboard, !dashboard.panels.isEmpty {
+        if isEditing {
+          Text("Drag a title to move a panel, or an edge to resize it. Esc when done.")
+            .font(.system(size: 11))
+            .foregroundColor(Color("TextSecondary"))
+            .lineLimit(1)
+            .padding(.trailing, 4)
         }
-        .buttonStyle(macosDataViewButtonStyle())
-        .keyboardShortcut("r", modifiers: .command)
-        .help("Run every search on this dashboard again")
+
+        macosDashboardRefreshButton(isRefreshing: isRefreshing,
+                                    seconds: dashboard.refreshSeconds,
+                                    onRefresh: { refreshToken = UUID() },
+                                    onSetInterval: { seconds in
+                                      update { try manager.setRefreshInterval(id: dashboardId, seconds: seconds) }
+                                    })
 
         addSearchButton
+
+        Button {
+          withAnimation(.easeOut(duration: 0.18)) {
+            isEditing.toggle()
+          }
+        } label: {
+          HStack(spacing: 4) {
+            if !isEditing {
+              Image(systemName: "pencil")
+            }
+            Text(isEditing ? "Done" : "Edit Layout")
+          }
+        }
+        .buttonStyle(macosDataViewButtonStyle(confirmed: isEditing))
+        .keyboardShortcut("e", modifiers: .command)
+        .help(isEditing ? "Stop moving and resizing panels" : "Move, resize and remove panels")
       }
     }
     .padding(.top, 10)
@@ -187,51 +181,25 @@ struct macosDashboardView: View {
     .padding()
   }
 
-  /// The panels in rows of the dashboard's number of columns, full width panels on rows of their own
-  private func grid(_ dashboard: Dashboard) -> some View {
-    let rows = Dashboard.rows(dashboard.panels, columns: dashboard.columns)
-    return VStack(spacing: Self.gridSpacing) {
-      ForEach(rows, id: \.first?.id) { row in
-        HStack(alignment: .top, spacing: Self.gridSpacing) {
-          ForEach(row) { panel in
-            panelView(panel)
-              .opacity(dragging == panel.id ? 0.5 : 1)
-              .onDrag {
-                dragging = panel.id
-                return NSItemProvider(object: panel.id.uuidString as NSString)
-              }
-              .onDrop(of: [UTType.text],
-                      delegate: macosDashboardDropDelegate(target: panel.id,
-                                                           dragging: $dragging,
-                                                           onMove: move))
-          }
-          // Keeps a short row's panels the same width as the rest
-          if row.first?.width != .full {
-            ForEach(row.count..<dashboard.columns, id: \.self) { _ in
-              Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
-            }
-          }
-        }
-      }
-    }
-    .animation(.default, value: dashboard.panels)
-  }
-
   @ViewBuilder
-  private func panelView(_ panel: DashboardPanel) -> some View {
+  private func panelView(_ panel: DashboardPanel, moveHandle: macosDashboardMoveHandle) -> some View {
     if let search = searches[panel.savedSearchId] {
       macosDashboardPanelView(search: search,
                               host: host(id: search.hostId),
                               hostName: hostNames[search.hostId],
                               dataViewName: search.dataViewId.flatMap { dataViewNames[$0] },
-                              rowLimit: panel.height.rowLimit,
-                              width: panel.width,
-                              height: panel.height,
+                              rowLimit: panel.rowLimit,
+                              frame: panel.frame,
                               refreshToken: refreshToken,
+                              isEditing: isEditing,
+                              columnWidths: panel.columnWidths,
+                              onSetColumnWidths: { widths in
+                                update { try manager.setColumnWidths(id: dashboardId, panelId: panel.id, widths: widths) }
+                              },
+                              moveHandle: moveHandle,
                               onEdit: { onEdit(search) },
-                              onResize: { width, height in
-                                update { try manager.setPanelSize(id: dashboardId, panelId: panel.id,
-                                                                  width: width, height: height) }
+                              onResize: { w, h in
+                                update { try manager.setPanelSize(id: dashboardId, panelId: panel.id, w: w, h: h) }
                               },
                               onRemove: { remove(panel) })
     }
@@ -260,22 +228,17 @@ struct macosDashboardView: View {
     dataViewNames = names
   }
 
+  /// Adds the searches, then turns on edit mode so the new panels can be put in place
   private func add(_ ids: [UUID]) {
     addingSearches = false
     update { try manager.addPanels(id: dashboardId, savedSearchIds: ids) }
+    if !ids.isEmpty && message == nil {
+      isEditing = true
+    }
   }
 
   private func remove(_ panel: DashboardPanel) {
     update { try manager.removePanel(id: dashboardId, panelId: panel.id) }
-  }
-
-  /// Puts the dragged panel in the place of the one it's over, saving the order straight away
-  private func move(_ moving: UUID, onto target: UUID) {
-    guard let dashboard = dashboard else { return }
-    let ids = dashboard.panels.map(\.id)
-    let reordered = Dashboard.reordered(ids, moving: moving, onto: target)
-    guard reordered != ids else { return }
-    update { try manager.setPanelOrder(id: dashboardId, panelIds: reordered) }
   }
 
   /// Makes every panel search again every `seconds`, until the interval changes or the dashboard closes
@@ -299,83 +262,91 @@ struct macosDashboardView: View {
   }
 }
 
-/// Moves the dragged panel as it passes over another
-struct macosDashboardDropDelegate: DropDelegate {
-  let target: UUID
-  @Binding var dragging: UUID?
-  var onMove: (UUID, UUID) -> Void
-
-  func dropEntered(info: DropInfo) {
-    if let dragging = dragging, dragging != target {
-      onMove(dragging, target)
-    }
-  }
-
-  func dropUpdated(info: DropInfo) -> DropProposal? {
-    DropProposal(operation: .move)
-  }
-
-  func performDrop(info: DropInfo) -> Bool {
-    dragging = nil
-    return true
-  }
-}
-
-/// Ends a drag that's let go away from a panel. The order was saved as the panel moved.
-struct macosDashboardDropOutsideDelegate: DropDelegate {
-  @Binding var dragging: UUID?
-
-  func dropUpdated(info: DropInfo) -> DropProposal? {
-    DropProposal(operation: .move)
-  }
-
-  func performDrop(info: DropInfo) -> Bool {
-    dragging = nil
-    return true
-  }
-}
-
-/// "Auto refresh: Off", choosing how often every panel searches again
-struct macosDashboardRefreshMenu: View {
+/// "Refresh" joined to a darker "⟳ Off" that chooses how often every panel searches again by itself. The menu's
+/// label is an image and a single Text: a borderless menu only draws the first plain text of its label.
+struct macosDashboardRefreshButton: View {
+  var isRefreshing: Bool
   var seconds: Int
-  var onChange: (Int) -> Void
+  var onRefresh: () -> Void
+  var onSetInterval: (Int) -> Void
 
-  @State private var hovering = false
+  @State private var hoveringRefresh = false
+  @State private var hoveringInterval = false
 
   var body: some View {
-    Menu {
-      ForEach(Dashboard.refreshIntervals, id: \.self) { option in
-        Button {
-          onChange(option)
-        } label: {
-          if option == seconds {
-            Label(Dashboard.refreshTitle(option), systemImage: "checkmark")
-          } else {
-            Text(Dashboard.refreshTitle(option))
+    HStack(spacing: 0) {
+      Button(action: onRefresh) {
+        HStack(spacing: 4) {
+          macosDashboardRefreshIcon(isSpinning: isRefreshing)
+          Text("Refresh")
+        }
+        .font(.system(size: 12, weight: .medium))
+        .foregroundColor(Color("TextColor"))
+        .padding(.horizontal, 12)
+        .frame(minHeight: 26)
+        .background(hoveringRefresh ? Color("ButtonHighlighted") : Color("Button"))
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .onHover { hoveringRefresh = $0 }
+      .keyboardShortcut("r", modifiers: .command)
+      .help(isRefreshing ? "Searching… Click to run every search on this dashboard again"
+                         : "Run every search on this dashboard again")
+
+      Menu {
+        Section("Auto Refresh") {
+          ForEach(Dashboard.refreshIntervals, id: \.self) { option in
+            Button {
+              onSetInterval(option)
+            } label: {
+              if option == seconds {
+                Label(Dashboard.refreshTitle(option), systemImage: "checkmark")
+              } else {
+                Text(Dashboard.refreshTitle(option))
+              }
+            }
           }
         }
+      } label: {
+        HStack(spacing: 4) {
+          Image(systemName: "arrow.triangle.2.circlepath")
+            .font(.system(size: 11, weight: .medium))
+          Text(Dashboard.shortRefreshTitle(seconds))
+            .font(.system(size: 12, weight: .medium))
+        }
       }
-    } label: {
-      HStack(spacing: 4) {
-        Text("Auto refresh:")
-          .foregroundColor(Color("TextSecondary"))
-        Text(Dashboard.refreshTitle(seconds))
-          .foregroundColor(Color("TextColor"))
-        Image(systemName: "chevron.down")
-          .font(.system(size: 9, weight: .semibold))
-          .foregroundColor(Color("TextSecondary"))
-      }
-      .font(.system(size: 12))
-      .padding(.horizontal, 8)
-      .frame(minHeight: 28)
-      .background(RoundedRectangle(cornerRadius: 5).fill(hovering ? Color("ButtonHighlighted") : Color("Button")))
+      .menuStyle(.borderlessButton)
+      .menuIndicator(.hidden)
+      // Green while auto refresh is on. A borderless menu ignores its label's foreground colour, but not a tint.
+      .tint(seconds > 0 ? Color.green : nil)
+      .fixedSize()
+      .padding(.horizontal, 10)
+      .frame(minHeight: 26)
+      .background(hoveringInterval ? Color("ButtonHighlighted") : Color("BackgroundAlt"))
       .contentShape(Rectangle())
+      .onHover { hoveringInterval = $0 }
+      .help("Auto refresh: \(Dashboard.refreshTitle(seconds)). How often every search on this dashboard runs again.")
     }
-    .menuStyle(.borderlessButton)
-    .menuIndicator(.hidden)
-    .fixedSize()
-    .onHover { hovering = $0 }
-    .help("How often every search on this dashboard runs again")
+    .clipShape(RoundedRectangle(cornerRadius: 5))
+    .animation(.easeInOut(duration: 0.15), value: hoveringRefresh)
+    .animation(.easeInOut(duration: 0.15), value: hoveringInterval)
+  }
+}
+
+/// The Refresh button's arrow, turning while any panel is still searching
+struct macosDashboardRefreshIcon: View {
+  var isSpinning: Bool
+
+  var body: some View {
+    TimelineView(.animation(paused: !isSpinning)) { context in
+      Image(systemName: "arrow.clockwise")
+        .rotationEffect(.degrees(isSpinning ? angle(at: context.date) : 0))
+    }
+  }
+
+  /// One turn a second
+  private func angle(at date: Date) -> Double {
+    date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1) * 360
   }
 }
 

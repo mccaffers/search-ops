@@ -19,6 +19,7 @@ struct ContentView: View {
   @StateObject var orientation = Orientation()
   @State var initialOrientationIsLandScape = false
   @State var loaded : Bool = false
+  @State private var showingKeyUnavailable = false
   
   @AppStorage("keychainMigrationCompleted") private var keychainMigrationCompleted: Bool = false
   
@@ -33,8 +34,11 @@ struct ContentView: View {
       print("Response from performMigrationIfNecessary()", response)
 #endif
       SystemLogger().message("Migration status: \(response)")
-      SystemLogger().message("Adding keychainMigrationComplete to userDefaults, so migration checks are ignored in the future")
-      keychainMigrationCompleted = true
+      // A failed migration leaves the legacy key in place, so try again on the next launch
+      if response.success {
+        SystemLogger().message("Adding keychainMigrationComplete to userDefaults, so migration checks are ignored in the future")
+        keychainMigrationCompleted = true
+      }
     }
     
     let realm = RealmManager().getRealm()
@@ -70,6 +74,7 @@ struct ContentView: View {
     .onAppear {
       
       _ = LoadRealm()
+      showingKeyUnavailable = RealmManager.keyUnavailable
       
       if UIDevice.current.orientation == .portraitUpsideDown ||
           UIDevice.current.orientation == .faceUp ||
@@ -85,6 +90,11 @@ struct ContentView: View {
       
     }
     .environmentObject(orientation)
+    .alert("Couldn't Load Your Data", isPresented: $showingKeyUnavailable) {
+      Button("OK", role: .cancel) { }
+    } message: {
+      Text("Search Ops couldn't read its encryption key from the Keychain, so your hosts and saved searches aren't loaded. Nothing has been deleted.\n\nAnything you add now won't be saved. Close Search Ops and open it again to try once more.")
+    }
     
   }
   

@@ -24,8 +24,9 @@ public class KeychainManager : KeychainManagerProtocol {
       self.keyGenerator = keyGenerator
   }
   
-  // Builds the query for the Keychain operations
-  public func query() -> Data? {
+  // Reads the key from the Keychain. Throws KeychainManagerError.noItemFound only when there is no key,
+  // so callers can tell a missing key apart from one they may not read (eg. the user denied the prompt)
+  public func read() throws -> Data {
     
     let query = [kSecClass as String            : kSecClassGenericPassword as String,
                  kSecAttrService as String      : "searchops",
@@ -34,11 +35,12 @@ public class KeychainManager : KeychainManagerProtocol {
                  kSecReturnAttributes as String : kCFBooleanTrue!,
                  kSecMatchLimit as String       : kSecMatchLimitOne] as [String : Any]
     
-    do {
-      return try keychainOps.SecItemCopyMatching(query: query)
-    } catch _ {
-      return nil
-    }
+    return try keychainOps.SecItemCopyMatching(query: query)
+  }
+  
+  // Builds the query for the Keychain operations
+  public func query() -> Data? {
+    return try? read()
   }
       
   // Builds the query for the Keychain operations
@@ -63,14 +65,9 @@ public class KeychainManager : KeychainManagerProtocol {
       kSecAttrAccount as String  : "realm",
       kSecValueData as String    : key as AnyObject]
     
-    do {
-      let response = try keychainOps.SecItemAdd(query: query)
-      print("Response", response)
-      if response {
-        return key
-      }
-    } catch _ {
-      return nil
+    // Only hand back a key the Keychain has stored, a realm encrypted with any other key can never be opened again
+    guard try keychainOps.SecItemAdd(query: query) else {
+      throw KeychainManagerError.addFailed
     }
     
     return key

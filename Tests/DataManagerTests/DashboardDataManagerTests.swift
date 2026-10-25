@@ -46,7 +46,6 @@ struct DashboardDataManagerTests {
     let stored = try #require(manager.dashboard(id: created.id))
     #expect(stored.title == "Ops")
     #expect(stored.panels.isEmpty)
-    #expect(stored.columns == Dashboard.defaultColumns)
     #expect(stored.refreshSeconds == 0)
     #expect(stored.updatedDate == nil)
   }
@@ -75,11 +74,9 @@ struct DashboardDataManagerTests {
     #expect(manager.all().map(\.id) == [kept.id])
   }
 
-  @Test func columnsAreClampedAndMarkTheDashboardUpdated() throws {
-    let created = try manager.create(title: "Ops")
-    #expect(try manager.setColumns(id: created.id, columns: 3).columns == 3)
-    #expect(try manager.setColumns(id: created.id, columns: 7).columns == 3)
-    #expect(try manager.setColumns(id: created.id, columns: 0).columns == 1)
+  @Test func layoutChangesMarkTheDashboardUpdated() throws {
+    let created = try dashboard(showing: [try savedSearch().id])
+    try manager.setPanelSize(id: created.id, panelId: created.panels[0].id, w: 12, h: 5)
     #expect(manager.dashboard(id: created.id)?.updatedDate != nil)
   }
 
@@ -97,47 +94,120 @@ struct DashboardDataManagerTests {
 
   // MARK: - Panels
 
-  @Test func addingPanelsAppendsThemAndSkipsSearchesAlreadyShown() throws {
+  @Test func addingPanelsFillsTheGridAndSkipsSearchesAlreadyShown() throws {
     let first = try savedSearch()
     let second = try savedSearch()
+    let third = try savedSearch()
     let created = try dashboard(showing: [first.id])
 
-    let updated = try manager.addPanels(id: created.id, savedSearchIds: [second.id, first.id, second.id])
+    let updated = try manager.addPanels(id: created.id, savedSearchIds: [second.id, first.id, second.id, third.id])
 
-    #expect(updated.panels.map(\.savedSearchId) == [first.id, second.id])
-    #expect(updated.panels.allSatisfy { $0.width == .single && $0.height == .medium })
+    #expect(updated.panels.map(\.savedSearchId) == [first.id, second.id, third.id])
+    let w = DashboardLayout.defaultWidth, h = DashboardLayout.defaultHeight
+    #expect(updated.panels.map(\.frame) == [DashboardGridFrame(x: 0, y: 0, w: w, h: h),
+                                            DashboardGridFrame(x: w, y: 0, w: w, h: h),
+                                            DashboardGridFrame(x: 0, y: h, w: w, h: h)])
   }
 
-  @Test func removePanelRemovesOnlyThatPanel() throws {
-    let first = try savedSearch()
-    let second = try savedSearch()
-    let created = try dashboard(showing: [first.id, second.id])
+  @Test func aNewPanelFillsTheGapLeftByARemovedOne() throws {
+    let ids = try (0..<3).map { _ in try savedSearch().id }
+    let created = try dashboard(showing: Array(ids[0..<2]))
+    let removed = try manager.removePanel(id: created.id, panelId: created.panels[0].id)
+
+    let updated = try manager.addPanels(id: removed.id, savedSearchIds: [ids[2]])
+
+    #expect(updated.panels.first { $0.savedSearchId == ids[2] }?.frame.x == 0)
+    #expect(updated.panels.first { $0.savedSearchId == ids[2] }?.frame.y == 0)
+  }
+
+  @Test func removePanelRemovesOnlyThatPanelAndThePanelsBelowRise() throws {
+    let ids = try (0..<3).map { _ in try savedSearch().id }
+    let created = try dashboard(showing: ids)
 
     let updated = try manager.removePanel(id: created.id, panelId: created.panels[0].id)
 
-    #expect(updated.panels.map(\.savedSearchId) == [second.id])
+    #expect(updated.panels.map(\.savedSearchId) == [ids[2], ids[1]])
+    #expect(updated.panels.map(\.frame.y) == [0, 0])
+    #expect(manager.dashboard(id: created.id) == updated)
   }
 
-  @Test func setPanelOrderKeepsPanelsLeftOutAfterTheOnesGiven() throws {
-    let ids = try (0..<4).map { _ in try savedSearch().id }
+  @Test func setLayoutSavesTheFramesAndTidiesOverlaps() throws {
+    let ids = try (0..<2).map { _ in try savedSearch().id }
     let created = try dashboard(showing: ids)
-    let panels = created.panels.map(\.id)
+    let a = created.panels[0].id, b = created.panels[1].id
 
-    let updated = try manager.setPanelOrder(id: created.id, panelIds: [panels[2], panels[0]])
+    // B dropped on top of A, and a panel that isn't on the dashboard
+    let updated = try manager.setLayout(id: created.id, frames: [b: DashboardGridFrame(x: 0, y: 0, w: 12, h: 4),
+                                                                 UUID(): DashboardGridFrame(x: 0, y: 0, w: 2, h: 3)])
 
-    #expect(updated.panels.map(\.id) == [panels[2], panels[0], panels[1], panels[3]])
-    // Panels keep their own ids and sizes when they move
-    #expect(updated.panels.map(\.savedSearchId) == [ids[2], ids[0], ids[1], ids[3]])
+    #expect(updated.panels.count == 2)
+    #expect(updated.frames[b] == DashboardGridFrame(x: 0, y: 0, w: 12, h: 4))
+    #expect(updated.frames[a]?.y == 4)
+    #expect(manager.dashboard(id: created.id) == updated)
   }
 
-  @Test func setPanelSizeChangesOnlyThatPanel() throws {
+  @Test func setPanelSizePushesThePanelsInItsWayBelow() throws {
     let created = try dashboard(showing: [try savedSearch().id, try savedSearch().id])
+    let a = created.panels[0].id, b = created.panels[1].id
 
-    let updated = try manager.setPanelSize(id: created.id, panelId: created.panels[1].id, width: .full, height: .large)
+    let updated = try manager.setPanelSize(id: created.id, panelId: a, w: 12, h: 4)
 
-    #expect(updated.panels.map(\.width) == [.single, .full])
-    #expect(updated.panels.map(\.height) == [.medium, .large])
-    #expect(manager.dashboard(id: created.id)?.panels.map(\.height) == [.medium, .large])
+    #expect(updated.frames[a] == DashboardGridFrame(x: 0, y: 0, w: 12, h: 4))
+    #expect(updated.frames[b]?.y == 4)
+    #expect(manager.dashboard(id: created.id)?.frames == updated.frames)
+  }
+
+  @Test func columnWidthsAreSavedOnThePanelAndLeaveTheSearchAlone() throws {
+    let search = try savedSearch()
+    let created = try dashboard(showing: [search.id, try savedSearch().id])
+    let panel = created.panels[0].id
+
+    let updated = try manager.setColumnWidths(id: created.id, panelId: panel,
+                                              widths: ["field:env": 90, "field:message": 99_999, "field:gone": 0])
+
+    #expect(updated.panels[0].columnWidths == ["field:env": 90, "field:message": DashboardColumnWidths.maxSetWidth])
+    #expect(updated.panels[1].columnWidths.isEmpty)
+    #expect(manager.dashboard(id: created.id)?.panels[0].columnWidths == updated.panels[0].columnWidths)
+    #expect(searches.all().first { $0.id == search.id }?.columnWidths.isEmpty == true)
+  }
+
+  @Test func columnWidthsSurviveMovingAndResizingAndCanBeReset() throws {
+    let created = try dashboard(showing: [try savedSearch().id, try savedSearch().id])
+    let panel = created.panels[0].id
+    try manager.setColumnWidths(id: created.id, panelId: panel, widths: ["field:env": 90])
+
+    try manager.setPanelSize(id: created.id, panelId: panel, w: 12, h: 5)
+    let moved = try manager.setLayout(id: created.id, frames: [panel: DashboardGridFrame(x: 0, y: 9, w: 12, h: 5)])
+    #expect(moved.panels.first { $0.id == panel }?.columnWidths == ["field:env": 90])
+
+    let reset = try manager.setColumnWidths(id: created.id, panelId: panel, widths: [:])
+    #expect(reset.panels.first { $0.id == panel }?.columnWidths.isEmpty == true)
+  }
+
+  @Test func panelsSavedBeforeTheGridKeepTheirLayout() throws {
+    let ids = (0..<3).map { _ in UUID() }
+    let panelIds = (0..<3).map { _ in UUID() }
+    let object = RealmDashboard()
+    object.id = UUID()
+    object.title = "Old"
+    object.columns = 2
+    for (index, size) in [("single", "small"), ("single", "large"), ("full", "")].enumerated() {
+      let panel = RealmDashboardPanel()
+      panel.id = panelIds[index]
+      panel.savedSearchId = ids[index]
+      panel.width = size.0
+      panel.height = size.1
+      object.panels.append(panel)
+    }
+    try realm.write { realm.add(object) }
+
+    let frames = try #require(manager.dashboard(id: object.id)).frames
+
+    #expect(frames[panelIds[0]] == DashboardGridFrame(x: 0, y: 0, w: 6, h: DashboardLayout.height(fitting: 5)))
+    #expect(frames[panelIds[1]] == DashboardGridFrame(x: 6, y: 0, w: 6, h: DashboardLayout.height(fitting: 20)))
+    // Medium when there's no height, and on a row of its own below the taller of the two
+    #expect(frames[panelIds[2]] == DashboardGridFrame(x: 0, y: DashboardLayout.height(fitting: 20), w: 12,
+                                                      h: DashboardLayout.height(fitting: 10)))
   }
 
   // MARK: - Saved searches going away

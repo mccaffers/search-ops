@@ -71,63 +71,68 @@ public class DashboardDataManager {
   }
 
   @discardableResult
-  public func setColumns(id: UUID, columns: Int) throws -> Dashboard {
-    try change(id: id) { $0.columns = Dashboard.clampedColumns(columns) }
-  }
-
-  @discardableResult
   public func setRefreshInterval(id: UUID, seconds: Int) throws -> Dashboard {
     try change(id: id) { $0.refreshSeconds = max(0, seconds) }
   }
 
   // MARK: - Panels
 
-  /// Adds a panel at the end for each saved search, skipping searches the dashboard already shows
+  /// Adds a panel for each saved search, each in the first gap it fits, skipping searches the dashboard already shows
   @discardableResult
   public func addPanels(id: UUID, savedSearchIds: [UUID]) throws -> Dashboard {
     try change(id: id) { object in
+      var frames = object.eject().frames
+      object.store(frames)
       var shown = Set(object.panels.map(\.savedSearchId))
       for searchId in savedSearchIds where shown.insert(searchId).inserted {
-        object.panels.append(RealmDashboardPanel(panel: DashboardPanel(savedSearchId: searchId)))
+        let panel = DashboardPanel(savedSearchId: searchId, frame: DashboardLayout.insertionFrame(frames))
+        frames[panel.id] = panel.frame
+        object.panels.append(RealmDashboardPanel(panel: panel))
       }
     }
   }
 
+  /// Removes the panel, and the panels below rise into the space it took
   @discardableResult
   public func removePanel(id: UUID, panelId: UUID) throws -> Dashboard {
     try change(id: id) { object in
+      let frames = DashboardLayout.remove(object.eject().frames, id: panelId)
       if let index = object.panels.firstIndex(where: { $0.id == panelId }) {
         object.panels.remove(at: index)
       }
+      object.store(frames)
     }
   }
 
-  /// Puts the panels in the order of `panelIds`. Panels left out keep their order after the ones given.
+  /// Saves where the panels sit, eg. after one is dragged. Panels left out keep their place, and any overlaps or gaps
+  /// are tidied away.
   @discardableResult
-  public func setPanelOrder(id: UUID, panelIds: [UUID]) throws -> Dashboard {
+  public func setLayout(id: UUID, frames: DashboardLayout.Frames) throws -> Dashboard {
     try change(id: id) { object in
-      let current = Array(object.panels.map { $0.eject() })
-      let position = Dictionary(panelIds.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
-      let ordered = current.enumerated().sorted { lhs, rhs in
-        let left = position[lhs.element.id] ?? panelIds.count + lhs.offset
-        let right = position[rhs.element.id] ?? panelIds.count + rhs.offset
-        return left < right
-      }.map(\.element)
-      guard ordered != current else { return }
-      object.panels.removeAll()
-      object.panels.append(objectsIn: ordered.map(RealmDashboardPanel.init))
+      var current = object.eject().frames
+      for (panelId, frame) in frames where current[panelId] != nil {
+        current[panelId] = frame
+      }
+      object.store(DashboardLayout.compact(current, preferring: Set(frames.keys)))
     }
   }
 
+  /// Resizes one panel to `w` columns by `h` rows, the panels in its way going below it
   @discardableResult
-  public func setPanelSize(id: UUID,
-                           panelId: UUID,
-                           width: DashboardPanelWidth,
-                           height: DashboardPanelHeight) throws -> Dashboard {
+  public func setPanelSize(id: UUID, panelId: UUID, w: Int, h: Int) throws -> Dashboard {
+    try change(id: id) { object in
+      let frames = DashboardLayout.resize(object.eject().frames, id: panelId,
+                                          to: DashboardGridFrame(x: 0, y: 0, w: w, h: h))
+      object.store(frames)
+    }
+  }
+
+  /// Replaces the panel's own column widths. Empty goes back to the saved search's.
+  @discardableResult
+  public func setColumnWidths(id: UUID, panelId: UUID, widths: [String: Double]) throws -> Dashboard {
     try change(id: id) { object in
       guard let panel = object.panels.first(where: { $0.id == panelId }) else { return }
-      panel.width = width.rawValue
-      panel.height = height.rawValue
+      panel.widths = widths.filter { $0.value > 0 }.mapValues(DashboardColumnWidths.clampedSetWidth)
     }
   }
 

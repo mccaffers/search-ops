@@ -118,6 +118,7 @@ struct ContentViewMacOS: View {
   @StateObject var manageCoordinator = ManageNavigationCoordinator()
   
   @FocusState var focusedField: String?
+  @State private var showingKeyUnavailable = false
   
   var body: some View {
     NavigationStack {
@@ -238,6 +239,16 @@ struct ContentViewMacOS: View {
       DashboardDataManager().pruneMissingSearches(validSearchIds: Set(SavedSearchDataManager().all().map(\.id)))
       // Recent searches saved before field filters kept everything in a nested filter object
       searchHistoryManager.migrateAwayFromFilterObjects()
+      // The data managers above have opened the realm by now
+      showingKeyUnavailable = RealmManager.keyUnavailable
+    }
+    .alert("Couldn't Load Your Data", isPresented: $showingKeyUnavailable) {
+      Button("OK", role: .cancel) { }
+      Button("Quit Search Ops") {
+        NSApplication.shared.terminate(nil)
+      }
+    } message: {
+      Text("Search Ops couldn't read its encryption key from the Keychain, so your hosts and saved searches aren't loaded. Nothing has been deleted.\n\nAnything you add now won't be saved. Quit Search Ops and open it again, and choose Allow if macOS asks to use the Keychain.")
     }
     
   }

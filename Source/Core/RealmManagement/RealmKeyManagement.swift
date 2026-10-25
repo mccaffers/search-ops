@@ -9,34 +9,40 @@
 import Foundation
 import RealmSwift
 
-public class RealmKeyManagement {
+public protocol RealmKeyManagementProtocol {
+  func generateOrGetKey() throws -> Data
+}
+
+public class RealmKeyManagement : RealmKeyManagementProtocol {
+  
+  private let keychainManager: KeychainManagerProtocol
+  
+  public init(keychainManager: KeychainManagerProtocol = KeychainManager()) {
+    self.keychainManager = keychainManager
+  }
+  
   // Retrieve the existing encryption key for the app if it exists or create a new one
-  public static func generateOrGetKey() throws -> Data? {
+  // Throws when there is no key Realm can safely use, eg. the user denied the Keychain prompt
+  // or a new key couldn't be stored. Never replace a key we failed to read, the realm on disk needs it
+  public func generateOrGetKey() throws -> Data {
     
-    var key : Data?
-    
-    // Double check it exists
-    let outcome = KeychainManager().query()
-    
-    // Success! Realm key exists in the keychain, lets return the key
-    if outcome != nil{
-      SystemLogger().message("Found an encryption key in the Keychain")
-      return outcome!
-    }
-    
-    SystemLogger().message("No encryption key found in Keychain")
-    // If not, lets generate a key and add it to the keychain
     do {
-      // KeyGenerator can throw
-      // SecAddItem can throw
-      key = try KeychainManager().add()
+      let key = try keychainManager.read()
+      // Success! Realm key exists in the keychain, lets return the key
+      SystemLogger().message("Found an encryption key in the Keychain")
+      return key
+    } catch KeychainManagerError.noItemFound {
+      SystemLogger().message("No encryption key found in Keychain")
     } catch let error {
-      print(error)
+      SystemLogger().message("Couldn't read the encryption key from the Keychain: \(error)", level: .fatal)
+      throw error
     }
     
-    // If we get this far, there has been a problem
-    // but realm will continue with encyrption turned off
-    // but we need to notify the users, maybe with the option of retry?
+    // If not, lets generate a key and add it to the keychain
+    // KeyGenerator can throw, and add throws when the Keychain doesn't store the key
+    guard let key = try keychainManager.add(input: nil) else {
+      throw KeychainManagerError.addFailed
+    }
     return key
   }
  

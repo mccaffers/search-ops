@@ -16,13 +16,6 @@ struct DashboardTests {
 
   // MARK: - Dashboard
 
-  @Test func columnsAreKeptBetweenOneAndThree() {
-    #expect(Dashboard(title: "A", columns: 0).columns == 1)
-    #expect(Dashboard(title: "A", columns: 2).columns == 2)
-    #expect(Dashboard(title: "A", columns: 9).columns == 3)
-    #expect(Dashboard(title: "A").columns == Dashboard.defaultColumns)
-  }
-
   @Test func newTitlesSkipTakenNamesWhateverTheirCase() {
     #expect(Dashboard.newTitle(existing: []) == "Dashboard")
     #expect(Dashboard.newTitle(existing: ["Errors"]) == "Dashboard")
@@ -30,44 +23,30 @@ struct DashboardTests {
     #expect(Dashboard.newTitle(existing: ["Dashboard", "Dashboard 2", "Dashboard 4"]) == "Dashboard 3")
   }
 
-  @Test func draggingAPanelOntoAnotherTakesItsPlace() {
-    let ids = (0..<4).map { _ in UUID() }
-    // Forwards: the panels in between move back by one
-    #expect(Dashboard.reordered(ids, moving: ids[0], onto: ids[2]) == [ids[1], ids[2], ids[0], ids[3]])
-    // Backwards: the panels in between move along by one
-    #expect(Dashboard.reordered(ids, moving: ids[3], onto: ids[1]) == [ids[0], ids[3], ids[1], ids[2]])
-    // Onto itself, or an id that isn't there, changes nothing
-    #expect(Dashboard.reordered(ids, moving: ids[1], onto: ids[1]) == ids)
-    #expect(Dashboard.reordered(ids, moving: UUID(), onto: ids[1]) == ids)
+  @Test func panelsAreInReadingOrder() {
+    let bottom = DashboardPanel(savedSearchId: UUID(), frame: DashboardGridFrame(x: 0, y: 7, w: 6, h: 3))
+    let right = DashboardPanel(savedSearchId: UUID(), frame: DashboardGridFrame(x: 6, y: 0, w: 6, h: 7))
+    let left = DashboardPanel(savedSearchId: UUID(), frame: DashboardGridFrame(x: 0, y: 0, w: 6, h: 7))
+    let dashboard = Dashboard(title: "A", panels: [bottom, right, left])
+    #expect(dashboard.panels.map(\.id) == [left.id, right.id, bottom.id])
   }
 
-  @Test func savedSearchIdsAreListedOnceInGridOrder() {
+  @Test func movingPanelsKeepsReadingOrderAndLeavesOthersWhereTheyAre() {
+    let a = DashboardPanel(savedSearchId: UUID(), frame: DashboardGridFrame(x: 0, y: 0, w: 6, h: 7))
+    let b = DashboardPanel(savedSearchId: UUID(), frame: DashboardGridFrame(x: 6, y: 0, w: 6, h: 7))
+    let moved = Dashboard(title: "A", panels: [a, b]).with(frames: [a.id: DashboardGridFrame(x: 0, y: 7, w: 12, h: 3)])
+    #expect(moved.panels.map(\.id) == [b.id, a.id])
+    #expect(moved.frames == [a.id: DashboardGridFrame(x: 0, y: 7, w: 12, h: 3), b.id: b.frame])
+  }
+
+  @Test func savedSearchIdsAreListedOnceInReadingOrder() {
     let first = UUID()
     let second = UUID()
-    let dashboard = Dashboard(title: "A", panels: [DashboardPanel(savedSearchId: second),
-                                                   DashboardPanel(savedSearchId: first),
-                                                   DashboardPanel(savedSearchId: second)])
+    func at(_ x: Int, _ y: Int) -> DashboardGridFrame { DashboardGridFrame(x: x, y: y, w: 6, h: 3) }
+    let dashboard = Dashboard(title: "A", panels: [DashboardPanel(savedSearchId: second, frame: at(0, 3)),
+                                                   DashboardPanel(savedSearchId: first, frame: at(6, 0)),
+                                                   DashboardPanel(savedSearchId: second, frame: at(0, 0))])
     #expect(dashboard.savedSearchIds == [second, first])
-  }
-
-  @Test func panelsFillRowsOfTheNumberOfColumns() {
-    let panels = (0..<5).map { _ in DashboardPanel(savedSearchId: UUID()) }
-    let rows = Dashboard.rows(panels, columns: 2)
-    #expect(rows.map { $0.map(\.id) } == [[panels[0].id, panels[1].id],
-                                          [panels[2].id, panels[3].id],
-                                          [panels[4].id]])
-    #expect(Dashboard.rows(panels, columns: 1).count == 5)
-    #expect(Dashboard.rows([], columns: 3).isEmpty)
-  }
-
-  @Test func aFullWidthPanelTakesARowOfItsOwn() {
-    let a = DashboardPanel(savedSearchId: UUID())
-    let wide = DashboardPanel(savedSearchId: UUID(), width: .full)
-    let b = DashboardPanel(savedSearchId: UUID())
-    let c = DashboardPanel(savedSearchId: UUID())
-    // It ends the row it interrupts early, and the panels after it start a new row
-    let rows = Dashboard.rows([a, wide, b, c], columns: 3)
-    #expect(rows.map { $0.map(\.id) } == [[a.id], [wide.id], [b.id, c.id]])
   }
 
   @Test func refreshTitles() {
@@ -75,11 +54,89 @@ struct DashboardTests {
     #expect(Dashboard.refreshTitle(30) == "30 seconds")
     #expect(Dashboard.refreshTitle(60) == "1 minute")
     #expect(Dashboard.refreshTitle(900) == "15 minutes")
+    #expect(Dashboard.shortRefreshTitle(0) == "Off")
+    #expect(Dashboard.shortRefreshTitle(30) == "30s")
+    #expect(Dashboard.shortRefreshTitle(60) == "1m")
+    #expect(Dashboard.shortRefreshTitle(900) == "15m")
   }
 
-  @Test func biggerPanelsSearchForMoreDocuments() {
-    #expect(DashboardPanelHeight.small.rowLimit < DashboardPanelHeight.medium.rowLimit)
-    #expect(DashboardPanelHeight.medium.rowLimit < DashboardPanelHeight.large.rowLimit)
+  @Test func tallerPanelsSearchForMoreDocuments() {
+    let short = DashboardPanel(savedSearchId: UUID(), frame: DashboardGridFrame(x: 0, y: 0, w: 6, h: 5))
+    let tall = DashboardPanel(savedSearchId: UUID(), frame: DashboardGridFrame(x: 0, y: 0, w: 6, h: 12))
+    #expect(short.rowLimit < tall.rowLimit)
+    #expect(tall.rowLimit == DashboardLayout.rowLimit(height: 12))
+  }
+
+  // MARK: - Column widths
+
+  /// Every character 6 points wide, headers 7
+  private func measure(_ text: String, _ bold: Bool) -> Double {
+    Double(text.count) * (bold ? 7 : 6)
+  }
+
+  @Test func columnsAreKeyedLikeTheSearchTab() {
+    #expect(DashboardColumn.date("@timestamp").savedKey == "date:@timestamp")
+    #expect(DashboardColumn.field("status").savedKey == "field:status")
+    #expect(DashboardColumn.document.savedKey == "document")
+  }
+
+  @Test func automaticWidthsFitTheWidestHeaderOrCellWithinTheLimits() {
+    let columns: [DashboardColumn] = [.field("env"), .field("message"), .field("id")]
+    let rows = [DashboardRow(id: 0, cells: ["demo", String(repeating: "x", count: 500), nil]),
+                DashboardRow(id: 1, cells: ["production", "short", nil])]
+    let widths = DashboardColumnWidths.automatic(columns: columns, rows: rows, measure: measure)
+    // "production" is 60 wide, plus padding
+    #expect(widths[.field("env")] == 60 + DashboardColumnWidths.cellPadding)
+    #expect(widths[.field("message")] == DashboardColumnWidths.maxWidth)
+    #expect(widths[.field("id")] == DashboardColumnWidths.minWidth)
+  }
+
+  @Test func aPanelsWidthWinsOverTheSearchsWhichWinsOverTheAutomaticOne() {
+    let columns: [DashboardColumn] = [.field("a"), .field("b"), .field("c")]
+    let automatic: [DashboardColumn: Double] = [.field("a"): 80, .field("b"): 80, .field("c"): 80]
+    let result = DashboardColumnWidths.preferred(columns: columns,
+                                                 automatic: automatic,
+                                                 search: ["field:a": 200, "field:b": 150],
+                                                 panel: ["field:a": 120, "field:c": 9000])
+    #expect(result.widths == [.field("a"): 120, .field("b"): 150, .field("c"): DashboardColumnWidths.maxSetWidth])
+    #expect(result.set == [.field("a"), .field("b"), .field("c")])
+    // Nothing set: all automatic
+    #expect(DashboardColumnWidths.preferred(columns: columns, automatic: automatic, search: [:], panel: [:]).set.isEmpty)
+  }
+
+  @Test func theLastColumnFillsTheRestOfTheRow() {
+    let columns: [DashboardColumn] = [.date("@timestamp"), .field("env"), .field("message")]
+    let preferred: [DashboardColumn: Double] = [.date("@timestamp"): 160, .field("env"): 80, .field("message"): 300]
+    let widths = DashboardColumnWidths.fitted(columns: columns, preferred: preferred, set: [], available: 900)
+    #expect(widths == [160, 80, 660])
+  }
+
+  @Test func whenRoomRunsOutFittedColumnsShrinkBeforeSetOnes() {
+    let columns: [DashboardColumn] = [.field("a"), .field("b"), .field("c")]
+    let preferred: [DashboardColumn: Double] = [.field("a"): 260, .field("b"): 160, .field("c"): 100]
+    // a and b want 420, leaving 30 for c: 30 short of its 60
+    let widths = DashboardColumnWidths.fitted(columns: columns, preferred: preferred, set: [.field("b")], available: 450)
+    #expect(widths == [230, 160, 60])
+    // Fitted columns can't go below 60, so then the set one gives way too
+    let tight = DashboardColumnWidths.fitted(columns: columns, preferred: preferred, set: [.field("b")], available: 200)
+    #expect(tight[0] == DashboardColumnWidths.minWidth)
+    #expect(tight[1] == 80)
+    #expect(tight[2] == DashboardColumnWidths.minWidth)
+    #expect(tight.reduce(0, +) == 200)
+  }
+
+  @Test func fittingToContentsGoesPastTheAutomaticLimitKeyedForSaving() {
+    let columns: [DashboardColumn] = [.field("message"), .field("id")]
+    let rows = [DashboardRow(id: 0, cells: [String(repeating: "x", count: 100), nil])]
+    let widths = DashboardColumnWidths.fittedToContents(columns: columns, rows: rows, measure: measure)
+    #expect(widths["field:message"] == 600 + DashboardColumnWidths.cellPadding)
+    // Only the header: "id" in bold
+    #expect(widths["field:id"] == 14 + DashboardColumnWidths.cellPadding)
+  }
+
+  @Test func aSingleColumnTakesTheWholeRow() {
+    #expect(DashboardColumnWidths.fitted(columns: [.document], preferred: [.document: 300], set: [], available: 500) == [500])
+    #expect(DashboardColumnWidths.fitted(columns: [], preferred: [:], set: [], available: 500).isEmpty)
   }
 
   // MARK: - Panel columns and cells

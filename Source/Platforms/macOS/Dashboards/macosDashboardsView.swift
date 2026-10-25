@@ -216,11 +216,10 @@ struct macosDashboardRowView: View {
 
   @State private var isHovered = false
 
-  /// eg. "3 searches · 2 columns · refreshes every 5 minutes"
+  /// eg. "3 searches · refreshes every 5 minutes"
   var details: String {
     let count = dashboard.panels.count
     var parts = [count == 0 ? "No searches" : "\(count) \(count == 1 ? "search" : "searches")"]
-    parts.append("\(dashboard.columns) \(dashboard.columns == 1 ? "column" : "columns")")
     if dashboard.refreshSeconds > 0 {
       parts.append("refreshes every \(Dashboard.refreshTitle(dashboard.refreshSeconds))")
     }

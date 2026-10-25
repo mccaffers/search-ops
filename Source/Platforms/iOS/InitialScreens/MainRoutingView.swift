@@ -27,6 +27,13 @@ struct MainRoutingView: View {
   }
   
   private static let currentVersionSheet = VersionSheetEnum(rawValue: currentReleaseNotes)
+  
+  // Not on a launch where the encryption key couldn't be read: ContentView's alert telling the
+  // user their data isn't loaded can't show while a sheet is up. The notes stay unseen, so they
+  // show on the next launch instead
+  static func releaseNotesDue(lastSeen: String, keyUnavailable: Bool) -> Bool {
+    return !keyUnavailable && lastSeen != currentReleaseNotes
+  }
 
   @State private var versionSheet : VersionSheetEnum?
   @State private var showingVersionSheet = false
@@ -46,7 +53,8 @@ struct MainRoutingView: View {
       assert(Self.currentVersionSheet != nil, "No VersionSheetEnum case for \(Self.currentReleaseNotes)")
       
       if let sheet = Self.currentVersionSheet,
-         Self.currentReleaseNotes != lastSeenVersionNotes {
+         Self.releaseNotesDue(lastSeen: lastSeenVersionNotes,
+                              keyUnavailable: RealmManager.keyUnavailable) {
         showingVersionSheet = true
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
