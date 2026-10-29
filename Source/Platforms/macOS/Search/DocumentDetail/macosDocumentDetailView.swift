@@ -161,35 +161,18 @@ struct DocumentValueCell: View {
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
 
-      // The buttons keep their space when hidden, so the value doesn't reflow as the pointer moves
-      HStack(spacing: 2) {
-        DocumentFilterButton(systemImage: copied ? "checkmark" : "doc.on.doc",
-                             isActive: copied,
-                             help: copied ? "Copied" : "Copy value",
-                             accessibilityLabel: "Copy \(displayValue)") {
-          NSPasteboard.general.clearContents()
-          NSPasteboard.general.setString(filterValue ?? displayValue, forType: .string)
-          copied = true
-        }
-        .opacity(isHovered ? 1 : 0)
-
-        if let filterValue = filterValue, let onFilter = onFilter {
-          HStack(spacing: 2) {
-            DocumentFilterButton(systemImage: "plus.magnifyingglass",
-                                 isActive: activeFilter == false,
-                                 help: activeFilter == false ? "Already filtering for this value" : "Filter for value",
-                                 accessibilityLabel: "Filter for \(displayValue)") {
-              onFilter(filterValue, false)
-            }
-            DocumentFilterButton(systemImage: "minus.magnifyingglass",
-                                 isActive: activeFilter == true,
-                                 help: activeFilter == true ? "Already filtering out this value" : "Filter out value",
-                                 accessibilityLabel: "Filter out \(displayValue)") {
-              onFilter(filterValue, true)
-            }
-          }
-          .opacity(isHovered || activeFilter != nil ? 1 : 0)
-        }
+      // A value already filtered on always shows its filter buttons, so they take their own space
+      if activeFilter != nil {
+        actionButtons
+      }
+    }
+    // Otherwise they show over the end of the value on hover, so the value can use the column's full width
+    // and doesn't reflow as the pointer moves
+    .overlay(alignment: .topTrailing) {
+      if activeFilter == nil && isHovered {
+        actionButtons
+          .padding(.leading, 4)
+          .background(Color("BackgroundAlt"))
       }
     }
     .contentShape(Rectangle())
@@ -197,6 +180,35 @@ struct DocumentValueCell: View {
       isHovered = hovering
       if !hovering {
         copied = false
+      }
+    }
+  }
+
+  private var actionButtons: some View {
+    HStack(spacing: 2) {
+      DocumentFilterButton(systemImage: copied ? "checkmark" : "doc.on.doc",
+                           isActive: copied,
+                           help: copied ? "Copied" : "Copy value",
+                           accessibilityLabel: "Copy \(displayValue)") {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(filterValue ?? displayValue, forType: .string)
+        copied = true
+      }
+      .opacity(isHovered ? 1 : 0)
+
+      if let filterValue = filterValue, let onFilter = onFilter {
+        DocumentFilterButton(systemImage: "plus.magnifyingglass",
+                             isActive: activeFilter == false,
+                             help: activeFilter == false ? "Already filtering for this value" : "Filter for value",
+                             accessibilityLabel: "Filter for \(displayValue)") {
+          onFilter(filterValue, false)
+        }
+        DocumentFilterButton(systemImage: "minus.magnifyingglass",
+                             isActive: activeFilter == true,
+                             help: activeFilter == true ? "Already filtering out this value" : "Filter out value",
+                             accessibilityLabel: "Filter out \(displayValue)") {
+          onFilter(filterValue, true)
+        }
       }
     }
   }

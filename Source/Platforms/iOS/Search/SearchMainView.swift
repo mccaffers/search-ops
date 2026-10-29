@@ -90,6 +90,13 @@ struct SearchMainView: View {
     /// Searches sent from the Saved tab
     @ObservedObject var searchHandoff : iosSearchHandoff
     @EnvironmentObject var serverObjects : HostsDataManager
+
+    /// Searches left behind by a deleted host don't count, or the sheet opens empty
+    private var hasHistoryForCurrentHosts: Bool {
+      let hostIDs = Set(serverObjects.items.filter { !$0.isInvalidated }.map { $0.id })
+      return !searchHistoryManager.groupByDate(hostIDs: hostIDs).isEmpty
+    }
+
     /// A search from the Saved tab waiting for its host to be selected
     @State private var pendingHandoff : SearchHandoffRequest? = nil
     /// The saved search being shown, so saving again can update it
@@ -587,7 +594,7 @@ struct SearchMainView: View {
       if !hasShownInitialScreen {
         hasShownInitialScreen = true
         if lastSeenVersionNotes == MainRoutingView.currentReleaseNotes,
-           searchHistoryManager.items.count > 0 {
+           hasHistoryForCurrentHosts {
           DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             initialRecentScreen = true
           }

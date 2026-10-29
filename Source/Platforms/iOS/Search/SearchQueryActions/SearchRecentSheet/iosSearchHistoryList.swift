@@ -143,8 +143,13 @@ struct iosSearchHistoryList: View {
     return myList.sorted { $0.date > $1.date }
   }
   
-  func sortedKeys () -> Array<Date> {
-    let filteredByDate = searchManager.groupByDate()
+  /// Only searches whose host still exists, so a deleted host leaves no empty days behind
+  func historyByDate() -> [Date: [SearchEvent]] {
+    let hostIDs = Set(serverObjects.items.filter { !$0.isInvalidated }.map { $0.id })
+    return searchManager.groupByDate(hostIDs: hostIDs)
+  }
+
+  func sortedKeys (_ filteredByDate: [Date: [SearchEvent]]) -> Array<Date> {
     if itemLimit == 0 {
       return Array(filteredByDate.keys.sorted {$0 > $1})
     } else {
@@ -168,12 +173,12 @@ struct iosSearchHistoryList: View {
         }
 
       
-      if searchManager.items.count > 0 {
+      let filteredByDate = historyByDate()
+      if !filteredByDate.isEmpty {
         ScrollView {
           LazyVStack(spacing:0) {
             
-            let filteredByDate = searchManager.groupByDate()
-            ForEach(sortedKeys(), id:\.self) { el in
+            ForEach(sortedKeys(filteredByDate), id:\.self) { el in
               
               //            var theDate = filteredByDate[el] as? Date
               Text(formattedDateStringCalendar(from: el))

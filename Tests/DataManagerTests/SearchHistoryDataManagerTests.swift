@@ -117,6 +117,47 @@ class SearchHistoryDataManagerTests: XCTestCase {
     XCTAssertEqual(result[july2]?[0].index, "index3")
   }
   
+  @MainActor
+  func testGroupByDateOnlyKeepsGivenHosts() {
+    // Given a search on a host that still exists, and one on a deleted host the day before
+    let keptHost = UUID()
+    let deletedHost = UUID()
+    let today = Date(timeIntervalSince1970: 1625184000) // July 2, 2021
+    let yesterday = Date(timeIntervalSince1970: 1625097600) // July 1, 2021
+
+    let kept = createRealmSearchEvent(from: createSearchEvent(date: today, index: "kept"))
+    kept.host = keptHost
+    let orphaned = createRealmSearchEvent(from: createSearchEvent(date: yesterday, index: "orphaned"))
+    orphaned.host = deletedHost
+    dataManager.items = [kept, orphaned]
+
+    // When
+    let result = dataManager.groupByDate(hostIDs: [keptHost])
+
+    // Then the deleted host's day is gone, not left empty
+    XCTAssertEqual(result.keys.count, 1)
+    XCTAssertEqual(result[Calendar.current.startOfDay(for: today)]?.map(\.index), ["kept"])
+    XCTAssertTrue(dataManager.groupByDate(hostIDs: []).isEmpty)
+    XCTAssertEqual(dataManager.groupByDate().keys.count, 2)
+  }
+
+  @MainActor
+  func testStaticListSkipsSearchesDeletedByAnotherManager() throws {
+    // Given a search this manager has loaded
+    let host = UUID()
+    let event = createFullSearchEvent(host: host, index: "logs", query: "error")
+    let realm = try XCTUnwrap(RealmManager().getRealm())
+    try realm.write { realm.add(event) }
+    dataManager.refresh()
+    XCTAssertEqual(dataManager.staticList().filter { $0.host == host }.count, 1)
+
+    // When another manager deletes it, as deleting its host does
+    SearchHistoryDataManager().deleteByHost(id: host)
+
+    // Then the stale copy is skipped rather than read
+    XCTAssertFalse(dataManager.staticList().contains { $0.host == host })
+  }
+
   private func createSearchEvent(date: Date, index: String) -> SearchEvent {
     let event = SearchEvent()
     event.date = date

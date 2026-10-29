@@ -21,7 +21,8 @@ public class SearchHistoryDataManager: ObservableObject {
   /// Converts Realm objects to static SearchEvent objects
   /// - Returns: An array of SearchEvent objects
   public func staticList() -> [SearchEvent] {
-    return items.map { item in
+    // Skip searches deleted through another manager (e.g. with their host) since the last refresh
+    return items.filter { !$0.isInvalidated }.map { item in
       let event = SearchEvent()
       
       // Convert filter data
@@ -136,11 +137,16 @@ public class SearchHistoryDataManager: ObservableObject {
   }
   
   /// Groups search events by date
+  /// - Parameter hostIDs: When given, only searches run on these hosts are kept, so history
+  ///   left behind by a deleted host doesn't show up as an empty day
   /// - Returns: A dictionary with dates as keys and arrays of SearchEvent as values
-  public func groupByDate() -> Dictionary<Date, [SearchEvent]> {
+  public func groupByDate(hostIDs: Set<UUID>? = nil) -> Dictionary<Date, [SearchEvent]> {
     var dateDictionary: [Date: [SearchEvent]] = [:]
     
     for item in orderedByDate() {
+      if let hostIDs = hostIDs {
+        guard let host = item.host, hostIDs.contains(host) else { continue }
+      }
       let calendar = Calendar.current
       let dateComponents = calendar.dateComponents([.year, .month, .day], from: item.date)
       if let dateOnly = calendar.date(from: dateComponents) {
