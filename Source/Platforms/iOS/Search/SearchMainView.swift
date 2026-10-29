@@ -87,6 +87,22 @@ struct SearchMainView: View {
     @StateObject var filterObject : FilterObject = FilterObject()
     @ObservedObject var searchHistoryManager : SearchHistoryDataManager
     @ObservedObject var filterHistoryDataManager : FilterHistoryDataManager
+    /// Searches sent from the Saved tab
+    @ObservedObject var searchHandoff : iosSearchHandoff
+    @EnvironmentObject var serverObjects : HostsDataManager
+
+    /// Searches left behind by a deleted host don't count, or the sheet opens empty
+    private var hasHistoryForCurrentHosts: Bool {
+      let hostIDs = Set(serverObjects.items.filter { !$0.isInvalidated }.map { $0.id })
+      return !searchHistoryManager.groupByDate(hostIDs: hostIDs).isEmpty
+    }
+
+    /// A search from the Saved tab waiting for its host to be selected
+    @State private var pendingHandoff : SearchHandoffRequest? = nil
+    /// The saved search being shown, so saving again can update it
+    @State var savedSearchLink : SavedSearchLink? = nil
+    /// The fields of a saved search being opened, until the mapping has loaded and they're picked in Fields
+    @State private var pendingSelectedFields : [String]? = nil
   
 	// -----------------------------------------------
 	// FIELDS
@@ -577,8 +593,11 @@ struct SearchMainView: View {
       // root, and only one sheet can show at a time
       if !hasShownInitialScreen {
         hasShownInitialScreen = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-          initialRecentScreen = true
+        if lastSeenVersionNotes == MainRoutingView.currentReleaseNotes,
+           hasHistoryForCurrentHosts {
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            initialRecentScreen = true
+          }
         }
       }
     }
