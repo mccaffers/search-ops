@@ -28,7 +28,7 @@ struct ServerItemViewActionsDeleteView: View {
                 presentAlert=true
                 
             }, label: {
-                Text("Remove from Pocket Ops").foregroundColor(.white)
+                Text("Remove from Search Ops").foregroundColor(.white)
                     .font(.system(size: 15))
                     .frame(maxWidth: .infinity)
 										.padding(.vertical, 15)
@@ -73,7 +73,7 @@ struct ServerItemViewActionsDeleteView: View {
             // 4
 					
 					if !item.isInvalidated {
-						Text("Are you sure you want to remove " + item.name + " from Pocket Ops")
+						Text("Are you sure you want to remove " + item.name + " from Search Ops?")
 					}
             
         })

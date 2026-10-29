@@ -348,14 +348,22 @@ struct macosDashboardResizeHandle: View {
     ZStack {
       Color.clear
       if showsGrip {
+        // Highlighted and enlarged on hover, so it's clear the panel can be resized from here
+        RoundedRectangle(cornerRadius: 5)
+          .fill(Color("ButtonHighlighted"))
+          .opacity(hovering ? 1 : 0)
         Image(systemName: "arrow.up.left.and.arrow.down.right")
           .font(.system(size: 10, weight: .semibold))
           .foregroundColor(Color(hovering ? "TextColor" : "TextSecondary"))
+          .scaleEffect(hovering ? 1.3 : 1)
       }
     }
     .contentShape(Rectangle())
+    .help(showsGrip ? "Drag to resize" : "")
     .onHover { inside in
-      hovering = inside
+      withAnimation(.easeOut(duration: 0.12)) {
+        hovering = inside
+      }
       if inside { cursor.push() } else { NSCursor.pop() }
     }
   }

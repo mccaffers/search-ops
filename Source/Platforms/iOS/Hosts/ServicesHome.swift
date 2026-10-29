@@ -32,8 +32,10 @@ struct ServicesHome: View {
       
     }
     
-    // Saved searches and documents only mean something on their own host
+    // Search history, saved searches and documents only mean something on their own host
     for host in deletionArray {
+      SearchHistoryDataManager().deleteByHost(id: host.id)
+      DataViewDataManager().deleteByHost(id: host.id)
       SavedDocumentDataManager().deleteByHost(id: host.id)
       SavedSearchDataManager().deleteByHost(id: host.id)
     }
