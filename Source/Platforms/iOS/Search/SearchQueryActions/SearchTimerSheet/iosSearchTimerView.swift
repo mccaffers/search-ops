@@ -61,6 +61,10 @@ struct iosSearchTimerView: View {
         .background(Color("Background"))
         .navigationTitle("Repeat Frequency")
         .navigationBarTitleDisplayMode(.inline)
+        // Colour only this sheet's bar. A global UINavigationBar.appearance() background
+        // stays behind after the sheet closes and hides large titles on iOS 26
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(Color("BackgroundAlt"), for: .navigationBar)
         .toolbar {
           if orientation.isLandscape {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -74,12 +78,6 @@ struct iosSearchTimerView: View {
             }
           }
         }
-      }
-      .onAppear {
-        UINavigationBar.appearance() .backgroundColor = UIColor(Color("BackgroundAlt"))
-      }
-      .onDisappear {
-        UINavigationBar.appearance().backgroundColor = UIColor(Color("Background"))
       }
 
     }
